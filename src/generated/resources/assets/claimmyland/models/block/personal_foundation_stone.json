@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "claimmyland:block/personal_foundation_stone"
+  }
+}

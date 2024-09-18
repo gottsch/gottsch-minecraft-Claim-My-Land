@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "intersects=good": {
+      "model": "claimmyland:block/good_buffer"
+    },
+    "intersects=bad": {
+      "model": "claimmyland:block/bad_buffer"
+    }
+  }
+}

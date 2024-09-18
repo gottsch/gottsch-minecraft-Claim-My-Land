@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "intersects=good": {
+      "model": "claimmyland:block/good_citizen_border"
+    },
+    "intersects=bad": {
+      "model": "claimmyland:block/bad_border"
+    }
+  }
+}

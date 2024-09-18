@@ -1,0 +1,7 @@
+{
+	"parent": "claimmyland:block/border_block",
+	"textures": {
+		"0": "claimmyland:block/purple",
+		"particle": "claimmyland:block/purple"
+	}
+}
