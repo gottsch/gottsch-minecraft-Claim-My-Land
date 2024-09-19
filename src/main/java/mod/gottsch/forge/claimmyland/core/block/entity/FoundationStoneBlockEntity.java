@@ -19,7 +19,10 @@
  */
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
+import com.google.common.collect.Maps;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.block.BorderBlock;
+import mod.gottsch.forge.claimmyland.core.block.BorderPosition;
 import mod.gottsch.forge.claimmyland.core.block.IBorderBlock;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.config.Config;
@@ -29,10 +32,12 @@ import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.gottschcore.block.FacingBlock;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -44,29 +49,25 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Create by Mark Gottschling on Sep 14, 2024
  */
-public abstract class FoundationStoneBlockEntity extends BlockEntity {
-    private static final String PARCEL_ID = "parcel_id";
-    private static final String OWNER_ID = "owner_id";
+public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity {
+//    private static final String PARCEL_ID = "parcel_id";
+//    private static final String OWNER_ID = "owner_id";
     private static final String DEED_ID = "deed_id";
     private static final String NATION_ID = "nation_id";
     private static final String PARCEL_TYPE = "parcel_type";
-    private static final String COORDS = "coords";
+//    private static final String COORDS = "coords";
     private static final String SIZE = "size";
     private static final String OVERLAPS = "overlaps";
-    private static final String EXPIRE_TIME = "expire_time";
+//    private static final String EXPIRE_TIME = "expire_time";
     private static final String HAS_PARCEL = "has_parcel";
 
     private static final int TICKS_PER_SECOND = 20;
@@ -74,19 +75,19 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
     private static final int ONE_MINUTE = 60 * TICKS_PER_SECOND;
     private static final int FIVE_MINUTES = 5 * ONE_MINUTE;
 
-    /*
-     * relative box coords around (0, 0, 0)
-     * ie a size of (0, -5, 0) -> (5, 5, 5) = (5, 11, 5).
-     * when foundation stone is at (1, 1, 1), then the box
-     * is (1, -4, 1) -> (6, 6, 6).
-     */
-    private Box relativeBox;
+//    /*
+//     * relative box coords around (0, 0, 0)
+//     * ie a size of (0, -5, 0) -> (5, 5, 5) = (5, 11, 5).
+//     * when foundation stone is at (1, 1, 1), then the box
+//     * is (1, -4, 1) -> (6, 6, 6).
+//     */
+//    private Box relativeBox;
 
-    // unique id of the parcel this block entity represents
-    private UUID parcelId;
-
-    // unique id of the owner
-    private UUID ownerId;
+//    // unique id of the parcel this block entity represents
+//    private UUID parcelId;
+//
+//    // unique id of the owner
+//    private UUID ownerId;
 
     // unique id of of deed that created this block / block entity
     // TODO might not be necessary when adding TransferDeed
@@ -95,267 +96,389 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
     // unique id of the nation this parcel belong to
     private UUID nationId;
 
-    // type of parcel this block entity represents
-    private String parcelType;
+//    // type of parcel this block entity represents
+//    private String parcelType;
 
-    // starting/min coords
-    private ICoords coords;
+//    // starting/min coords
+//    private ICoords coords;
 
     // transient list of overlapping parcel boxes
     private List<Box> overlaps;
 
     // time when this block entity expires
-    private long expireTime;
+//    private long expireTime;
 
     // flag if this block entity has an existing parcel ie this was placed to display borders of a parcel
     private boolean hasParcel;
 
+//    private static final Map<BorderDisplayPosition, BlockState> borderMap = Maps.newHashMap();
+
+//    static {
+//        BlockState state = ModBlocks.PERSONAL_BORDER.get().defaultBlockState();
+//        borderMap.put(BorderDisplayPosition.NORTH_TOP, state.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.TOP));
+//    }
+
+    /**
+     *
+     * @param type
+     * @param pos
+     * @param state
+     */
     public FoundationStoneBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
 //        super(ModBlockEntities.FOUNDATION_STONE_ENTITY_TYPE.get(), pos, state);
         super(type, pos, state);
     }
 
-    /**
-     * gets an absolute box at a coords using the block entity
-     * @return
-     */
-    public Box getAbsoluteBox() {
-        ICoords myCoords = Coords.of(this.worldPosition);
-        return new Box(myCoords.add(getRelativeBox().getMinCoords()),
-                myCoords.add(getRelativeBox().getMaxCoords()));
-    }
+//    public abstract Block getBorderBlock();
 
-    /**
-     * gets an absolute box at a given coords using the parcel box
-     *
-     * @param coords
-     * @return
-     */
-    public Box getAbsoluteBox(ICoords coords) {
-        return new Box(coords.add(getRelativeBox().getMinCoords()),
-                coords.add(getRelativeBox().getMaxCoords()));
-    }
+//    /**
+//     * gets an absolute box at a coords using the block entity
+//     * @return
+//     */
+//    public Box getAbsoluteBox() {
+//        ICoords myCoords = Coords.of(this.worldPosition);
+//        return new Box(myCoords.add(getRelativeBox().getMinCoords()),
+//                myCoords.add(getRelativeBox().getMaxCoords()));
+//    }
+//
+//    /**
+//     * gets an absolute box at a given coords using the parcel box
+//     *
+//     * @param coords
+//     * @return
+//     */
+//    public Box getAbsoluteBox(ICoords coords) {
+//        return new Box(coords.add(getRelativeBox().getMinCoords()),
+//                coords.add(getRelativeBox().getMaxCoords()));
+//    }
+//
+//    /**
+//     * get the absolute box for display purposes.
+//     * nation parcel have special rules and only display 10 blocks in either y direction,
+//     * because a nation parcel has max y values.
+//     * @param coords
+//     * @return
+//     */
+//    public Box getBorderDisplayBox(ICoords coords) {
+//
+//        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PERSONAL;
+//
+//        Box box;
+//        // check for nation block and make the box only +/-10 in height
+//        if (parcelType == ParcelType.NATION) {
+//            box = new Box(coords.add(getRelativeBox().getMinCoords().withY(-10)),
+//                    coords.add(getRelativeBox().getMaxCoords().withY(9))); // 10-1
+//        }
+//        else {
+//            box = getAbsoluteBox(coords);
+//        }
+//        return box;
+//    }
 
-    /**
-     * get the absolute box for display purposes.
-     * nation parcel have special rules and only display 10 blocks in either y direction,
-     * because a nation parcel has max y values.
-     * @param coords
-     * @return
-     */
-    public Box getBorderDisplayBox(ICoords coords) {
+//    /**
+//     * get the size of the buffer radius for the parcel type
+//     * @return
+//     */
+//    public int getBufferSize() {
+//        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PERSONAL;
+//        return switch (parcelType) {
+//            case PERSONAL -> Config.SERVER.general.parcelBufferRadius.get();
+//            case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
+//            case CITIZEN, CITIZEN_CLAIM_ZONE -> 0;
+//        };
+//    }
 
-        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PERSONAL;
+//    /*
+//     * border cud operations
+//     */
+//    public void placeParcelBorder() {
+//        Level level = getLevel();
+//        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//
+//        ICoords coords;
+//        int bufferRadius = 1;
+//        if (parcel.isPresent()) {
+//            ClaimMyLand.LOGGER.debug("place parcel border, parcel by id -> {}", parcel.get());
+//            coords = parcel.get().getCoords();
+//            if (parcel.get() instanceof NationParcel) {
+//                coords = coords.withY(getBlockPos().getY());
+//            }
+//            bufferRadius = parcel.get().getBufferSize();
+//        } else {
+//            coords = new Coords(this.getBlockPos());
+//            bufferRadius = getBufferSize();
+//        }
+//        ClaimMyLand.LOGGER.debug("using coords for outlines -> {}", coords);
+//        // add the border
+//        Box box = getBorderDisplayBox(coords);
+//        BlockState borderState = getBorderBlockState(box);
+//        placeParcelBorder(box, borderState);
+//
+//        // inflate the box
+//        Box bufferedBox = ModUtil.inflate(box, bufferRadius);
+//        BlockState bufferState = getBufferBlockState(box, bufferedBox);
+//        placeParcelBorder(bufferedBox, bufferState);
+//    }
+//
+//    public void placeParcelBorder(Box box, BlockState state) {
+//        // TODO AIR should be a tag and can replace air, water, and BorderBlocks
+//        addParcelBorder(box, Blocks.AIR, state);
+//    }
 
-        Box box;
-        // check for nation block and make the box only +/-10 in height
-        if (parcelType == ParcelType.NATION) {
-            box = new Box(coords.add(getRelativeBox().getMinCoords().withY(-10)),
-                    coords.add(getRelativeBox().getMaxCoords().withY(9))); // 10-1
-        }
-        else {
-            box = getAbsoluteBox(coords);
-        }
-        return box;
-    }
 
-    /**
-     * get the size of the buffer radius for the parcel type
-     * @return
-     */
-    public int getBufferSize() {
-        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PERSONAL;
-        return switch (parcelType) {
-            case PERSONAL -> Config.SERVER.general.parcelBufferRadius.get();
-            case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
-            case CITIZEN, CITIZEN_CLAIM_ZONE -> 0;
-        };
-    }
+//    /**
+//     * // TODO move to BorderStoneBlockEntity which is responsible to adding borders to the world.
+//     * intended to replace world block (ex Air) with a BorderBlock
+//     * whose blockState will be modified for the specific position it is in.
+//     * therefor the BlockState must be of a Border/BufferBlock with only the
+//     * INTERSECTS state value set. the others (FACING, POSITION) will be set here.
+//     * TODO could possibly extends BlockState (BorderBlockState) so that the method
+//     * signature is specific to a BorderBlockState
+//     * @param box
+//     * @param removeBlock
+//     * @param intersectsBlockState
+//     */
+//    private void addParcelBorder(Box box, Block removeBlock, BlockState intersectsBlockState) {
+//        /* NOTE the for loops.
+//         * for x is "<=" because the Box was reduced by 1 during creation to ensure
+//         * it is the right size when including the origin.
+//         * thus y & z are "<" because we are iterating 2 less (1 on each side) because
+//         * the border is already generated by the x for loop.
+//         */
+//        // TODO currently this is a very generic method which draws the borders by
+//        // replacing instances of removeBlock with blockState. However, blockState
+//        // concrete class is not known and thus modifications to it's state cannot be
+//        // performed because you can't know what states are available unless you
+//        // interrogate it to determine it's class, which nullifies the purpose of the
+//        // generic method.
+//        // TODO SOLUTION create method signature that takes in an array/map of blockStates
+//        // for the different positions of the border. another method signature would only take one blockState
+//        // and would populate the map with the same blockState for all positions (convenience method
+//        // to remove border with air)
+//
+//        // only iterate over the outline coords
+//        for (int x = 0; x < ModUtil.getSize(box).getX(); x++) {
+//            // north, bottom
+//            BlockPos pos = box.getMinCoords().toPos().offset(x, 0, 0);
+//            replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM));
+//
+//            // north, top
+//            BlockPos pos2 = pos.offset(0, ModUtil.getSize(box).getY()-1, 0);
+//            replaceParcelBorderBlock(level, pos2, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.TOP));
+//
+//            // south, bottom
+//            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos3, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM));
+//
+//            // south, top
+//            BlockPos pos4 = pos.offset(0, ModUtil.getSize(box).getY()-1, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos4, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.TOP));
+//        }
+//
+//        for (int z = 1; z < ModUtil.getSize(box).getZ(); z++) {
+//            BlockPos pos = box.getMinCoords().toPos().offset(0, 0, z);
+//            replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.WEST).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM));
+//
+//            BlockPos pos2 = pos.offset(0, ModUtil.getSize(box).getY()-1, 0);
+//            replaceParcelBorderBlock(level, pos2, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.WEST).setValue(BorderBlock.POSITION, BorderPosition.TOP));
+//
+//            BlockPos pos3 = pos.offset(ModUtil.getSize(box).getX()-1, 0, 0);
+//            replaceParcelBorderBlock(level, pos3, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.EAST).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM));
+//
+//            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX()-1, ModUtil.getSize(box).getY()-1, 0);
+//            replaceParcelBorderBlock(level, pos4, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.EAST).setValue(BorderBlock.POSITION, BorderPosition.TOP));
+//        }
+//
+//        // vertical edges
+//        for (int y = 1; y < ModUtil.getSize(box).getY(); y++) {
+//            BlockPos pos = box.getMinCoords().toPos().offset(0, y, 0);
+//            replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.LEFT));
+//
+//            BlockPos pos2 = pos.offset(ModUtil.getSize(box).getX()-1, 0, 0);
+//            replaceParcelBorderBlock(level, pos2, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.RIGHT));
+//
+//            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos3, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.RIGHT));
+//
+//            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX()-1, 0, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos4, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH ).setValue(BorderBlock.POSITION, BorderPosition.LEFT));
+//        }
+//
+//        // NOTE there is a mismatch of _LEFT | _RIGHT positions depending on your perspective.
+//        // the Left currently is used in the Right world position ie at point (x, y, z) facing south (you as an observer of the outline), and vice versa
+//        // the models are backwards as well.
+//        // however, if you ARE the outline, then the positions align to the correct directions.
+//
+//        // corners
+//        BlockPos pos = box.getMinCoords().toPos().offset(0, ModUtil.getSize(box).getY()-1, 0);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.TOP_LEFT));
+//
+//        pos = box.getMinCoords().toPos().offset(0, 0, 0);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM_LEFT));
+//
+//        pos = box.getMinCoords().toPos().offset(ModUtil.getSize(box).getX()-1, ModUtil.getSize(box).getY()-1, 0);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.TOP_RIGHT));
+//
+//        pos = box.getMinCoords().toPos().offset(ModUtil.getSize(box).getX()-1, 0, 0);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM_RIGHT));
+//
+//        // south corners
+//        pos = box.getMinCoords().toPos().offset(0, ModUtil.getSize(box).getY()-1, ModUtil.getSize(box).getZ()-1);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.TOP_RIGHT));
+//
+//        pos = box.getMinCoords().toPos().offset(0, 0, ModUtil.getSize(box).getZ()-1);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM_RIGHT));
+//
+//        pos = box.getMinCoords().toPos().offset(ModUtil.getSize(box).getX()-1, ModUtil.getSize(box).getY()-1, ModUtil.getSize(box).getZ()-1);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.TOP_LEFT));
+//
+//        pos = box.getMinCoords().toPos().offset(ModUtil.getSize(box).getX()-1, 0, ModUtil.getSize(box).getZ()-1);
+//        replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM_LEFT));
+//
+//    }
+//
+//    private void replaceParcelBorderBlock(Level level, BlockPos pos, Block removeBlock, BlockState blockState) {
+//        BlockState borderState = level.getBlockState(pos);
+//        if ((borderState instanceof IBorderBlock) || borderState.is(removeBlock) || borderState.canBeReplaced()) {
+//            level.setBlockAndUpdate(pos, blockState);
+//        }
+//    }
+//
+//    /**
+//     * this is intended to remove any BorderBlocks with another Block
+//     * that only uses a pre-setup blockState.
+//     * @param box
+//     * @param removeBlock
+//     * @param blockState
+//     */
+//    private void replaceParcelBorder(Box box, Block removeBlock, BlockState blockState) {
+//        // only iterate over the outline coords
+//        for (int x = 0; x < ModUtil.getSize(box).getX(); x++) {
+//            BlockPos pos = box.getMinCoords().toPos().offset(x, 0, 0);
+//            replaceParcelBorderBlock(level, pos, removeBlock, blockState);
+//
+//            BlockPos pos2 = pos.offset(0, ModUtil.getSize(box).getY()-1, 0);
+//            replaceParcelBorderBlock(level, pos2, removeBlock, blockState);
+//
+//            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos3, removeBlock, blockState);
+//
+//            BlockPos pos4 = pos.offset(0, ModUtil.getSize(box).getY()-1, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos4, removeBlock, blockState);
+//        }
+//
+//        for (int z = 1; z < ModUtil.getSize(box).getZ(); z++) {
+//            BlockPos pos = box.getMinCoords().toPos().offset(0, 0, z);
+//            BlockState borderState = level.getBlockState(pos);
+//            replaceParcelBorderBlock(level, pos, removeBlock, blockState);
+//
+//            BlockPos pos2 = pos.offset(0, ModUtil.getSize(box).getY()-1, 0);
+//            replaceParcelBorderBlock(level, pos2, removeBlock, blockState);
+//
+//            BlockPos pos3 = pos.offset(ModUtil.getSize(box).getX()-1, 0, 0);
+//            replaceParcelBorderBlock(level, pos3, removeBlock, blockState);
+//
+//            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX()-1, ModUtil.getSize(box).getY()-1, 0);
+//            replaceParcelBorderBlock(level, pos4, removeBlock, blockState);
+//        }
+//
+//        for (int y = 1; y < ModUtil.getSize(box).getY(); y++) {
+//            BlockPos pos = box.getMinCoords().toPos().offset(0, y, 0);
+//            BlockState borderState = level.getBlockState(pos);
+//            replaceParcelBorderBlock(level, pos, removeBlock, blockState);
+//
+//            BlockPos pos2 = pos.offset(ModUtil.getSize(box).getX()-1, 0, 0);
+//            replaceParcelBorderBlock(level, pos2, removeBlock, blockState);
+//
+//            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos3, removeBlock, blockState);
+//
+//            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX()-1, 0, ModUtil.getSize(box).getZ()-1);
+//            replaceParcelBorderBlock(level, pos4, removeBlock, blockState);
+//        }
+//    }
+//
+//    /**
+//     * removes the border blocks from the border coords
+//     */
+//    public void removeParcelBorder() {
+//        Level level = getLevel();
+//        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//        ICoords coords = new Coords(this.getBlockPos());
+//        if (parcel.isPresent()) {
+//            coords = new Coords(parcel.get().getCoords());
+//            if (parcel.get() instanceof NationParcel) {
+//                coords = coords.withY(getBlockPos().getY());
+//            }
+//        }
+//        removeParcelBorder(coords);
+//    }
+//
+//    public void removeParcelBorder(ICoords coords) {
+//        Box box = getBorderDisplayBox(coords);
+////        BlockState borderState = getBorderBlockState(box);
+//
+//        replaceParcelBorder(box, getBorderBlock(), Blocks.AIR.defaultBlockState());
+//        box = ModUtil.inflate(box, getBufferSize());
+//        replaceParcelBorder(box, ModBlocks.BUFFER.get(), Blocks.AIR.defaultBlockState());
+//    }
 
-    /*
-     * border cud operations
-     */
-    public void placeParcelBorder() {
-        Level level = getLevel();
-        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//    /**
+//     * @param box
+//     * @return
+//     */
+//    protected abstract BlockState getBorderBlockState(Box box);
+//
+//    // determines what state the buffer block is
+//    protected abstract BlockState getBufferBlockState(Box box, Box bufferedBox);
 
-        ICoords coords;
-        int bufferRadius = 1;
-        if (parcel.isPresent()) {
-            ClaimMyLand.LOGGER.debug("place parcel border, parcel by id -> {}", parcel.get());
-            coords = parcel.get().getCoords();
-            if (parcel.get() instanceof NationParcel) {
-                coords = coords.withY(getBlockPos().getY());
-            }
-            bufferRadius = parcel.get().getBufferSize();
-        } else {
-            coords = new Coords(this.getBlockPos());
-            bufferRadius = getBufferSize();
-        }
-        ClaimMyLand.LOGGER.debug("using coords for outlines -> {}", coords);
-        // add the border
-        Box box = getBorderDisplayBox(coords);
-        BlockState borderState = getBorderBlockState(box);
-        placeParcelBorder(box, borderState);
-
-        // inflate the box
-        Box bufferedBox = ModUtil.inflate(box, bufferRadius);
-        BlockState bufferState = getBufferBlockState(box, bufferedBox);
-        placeParcelBorder(bufferedBox, bufferState);
-    }
-
-    public void placeParcelBorder(Box box, BlockState state) {
-        // TODO AIR should be a tag and can replace air, water, and BorderBlocks
-        addParcelBorder(box, Blocks.AIR, state);
-    }
-
-    /**
-     *
-     * @param box
-     * @param removeBlock
-     * @param blockState
-     */
-    private void addParcelBorder(Box box, Block removeBlock, BlockState blockState) {
-        /* NOTE the for loops.
-         * for x is "<=" because the Box was reduced by 1 during creation to ensure
-         * it is the right size when including the origin.
-         * thus y & z are "<" because we are iterating 2 less (1 on each side) because
-         * the border is already generated by the x for loop.
-         */
-        // only iterate over the outline coords
-        for (int x = 0; x < ModUtil.getSize(box).getX(); x++) {
-            BlockPos pos = box.getMinCoords().toPos().offset(x, 0, 0);
-            BlockState borderState = level.getBlockState(pos);
-            replaceParcelBorderBlock(level, pos, removeBlock, blockState);
-
-            BlockPos pos2 = pos.offset(0, ModUtil.getSize(box).getY()-1, 0);
-            replaceParcelBorderBlock(level, pos2, removeBlock, blockState);
-
-            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
-            replaceParcelBorderBlock(level, pos3, removeBlock, blockState);
-
-            BlockPos pos4 = pos.offset(0, ModUtil.getSize(box).getY()-1, ModUtil.getSize(box).getZ()-1);
-            replaceParcelBorderBlock(level, pos4, removeBlock, blockState);
-        }
-
-        for (int z = 1; z < ModUtil.getSize(box).getZ(); z++) {
-            BlockPos pos = box.getMinCoords().toPos().offset(0, 0, z);
-            BlockState borderState = level.getBlockState(pos);
-            replaceParcelBorderBlock(level, pos, removeBlock, blockState);
-
-            BlockPos pos2 = pos.offset(0, ModUtil.getSize(box).getY()-1, 0);
-            replaceParcelBorderBlock(level, pos2, removeBlock, blockState);
-
-            BlockPos pos3 = pos.offset(ModUtil.getSize(box).getX()-1, 0, 0);
-            replaceParcelBorderBlock(level, pos3, removeBlock, blockState);
-
-            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX()-1, ModUtil.getSize(box).getY()-1, 0);
-            replaceParcelBorderBlock(level, pos4, removeBlock, blockState);
-        }
-
-        for (int y = 1; y < ModUtil.getSize(box).getY(); y++) {
-            BlockPos pos = box.getMinCoords().toPos().offset(0, y, 0);
-            BlockState borderState = level.getBlockState(pos);
-            replaceParcelBorderBlock(level, pos, removeBlock, blockState);
-
-            BlockPos pos2 = pos.offset(ModUtil.getSize(box).getX()-1, 0, 0);
-            replaceParcelBorderBlock(level, pos2, removeBlock, blockState);
-
-            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
-            replaceParcelBorderBlock(level, pos3, removeBlock, blockState);
-
-            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX()-1, 0, ModUtil.getSize(box).getZ()-1);
-            replaceParcelBorderBlock(level, pos4, removeBlock, blockState);
-        }
-    }
-
-    private void replaceParcelBorderBlock(Level level, BlockPos pos, Block removeBlock, BlockState blockState) {
-        BlockState borderState = level.getBlockState(pos);
-        if ((borderState instanceof IBorderBlock) || borderState.is(removeBlock) || borderState.canBeReplaced()) {
-            level.setBlockAndUpdate(pos, blockState);
-        }
-    }
-
-    /**
-     * removes the border blocks from the border coords
-     */
-    public void removeParcelBorder() {
-        Level level = getLevel();
-        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
-        ICoords coords = new Coords(this.getBlockPos());
-        if (parcel.isPresent()) {
-            coords = new Coords(parcel.get().getCoords());
-            if (parcel.get() instanceof NationParcel) {
-                coords = coords.withY(getBlockPos().getY());
-            }
-        }
-        removeParcelBorder(coords);
-    }
-
-    public void removeParcelBorder(ICoords coords) {
-        Box box = getBorderDisplayBox(coords);
-        BlockState borderState = getBorderBlockState(box);
-
-        addParcelBorder(box, borderState.getBlock(), Blocks.AIR.defaultBlockState());
-        box = ModUtil.inflate(box, getBufferSize());
-        addParcelBorder(box, ModBlocks.BUFFER.get(), Blocks.AIR.defaultBlockState());
-    }
-
-    /**
-     * @param box
-     * @return
-     */
-    protected abstract BlockState getBorderBlockState(Box box);
-
-    // determines what state the buffer block is
-    protected abstract BlockState getBufferBlockState(Box box, Box bufferedBox);
-
-    // TODO this is a dangerous call.
-    // the intent to to take a non-buffered parcel box and test against the buffered list
-    // if overlaps with a buffered parcel and not owner by the same owner, then fail
-    // HOWEVER one could pass in an non-buffered list and if owned by the same person,
-    // you could have overlapping parcels, essentially reducing the size of one parcel.
-    // TODO SOLUTION to make this work, the list should not be passed in, but performed with the method.
-    // however then you would not be able to perform any filters or anything.
-
-    public boolean hasBoxToBufferedIntersections(Box box, List<Parcel> parcels) {
-        for (Parcel overlapParcel : parcels) {
-            /*
-             * if parcel of foundation stone has same owner as parcel in world, ignore buffers,
-             * but check border overlaps. parcels owned by the same player can be touching.
-             */
-            if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-                // get the existing owned parcel
-                Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-
-                // test if the parcels intersect
-                if (optionalOwnedParcel.isPresent() && ModUtil.intersects(box, optionalOwnedParcel.get().getBox())) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        }
-        return false;
-    }
+//    // TODO this is a dangerous call.
+//    // the intent to to take a non-buffered parcel box and test against the buffered list
+//    // if overlaps with a buffered parcel and not owner by the same owner, then fail
+//    // HOWEVER one could pass in an non-buffered list and if owned by the same person,
+//    // you could have overlapping parcels, essentially reducing the size of one parcel.
+//    // TODO SOLUTION to make this work, the list should not be passed in, but performed with the method.
+//    // however then you would not be able to perform any filters or anything.
+//    // TODO 9-18-2024 SOLUTION use as intended with a proper method name
+//    // and add method comments to indicate what is expected
+//    public boolean hasBoxToBufferedIntersections(Box box, List<Parcel> parcels) {
+//        for (Parcel overlapParcel : parcels) {
+//            /*
+//             * if parcel of foundation stone has same owner as parcel in world, ignore buffers,
+//             * but check border overlaps. parcels owned by the same player can be touching.
+//             */
+//            if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+//                // get the existing owned parcel
+//                Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+//
+//                // test if the parcels intersect
+//                if (optionalOwnedParcel.isPresent() && ModUtil.intersects(box, optionalOwnedParcel.get().getBox())) {
+//                    return true;
+//                }
+//            } else {
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
 
     @Override
     public void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
 
-        if (ObjectUtils.isNotEmpty(getRelativeBox())) {
-            CompoundTag sizeTag = new CompoundTag();
-            getRelativeBox().save(sizeTag);
-            tag.put(SIZE, sizeTag); // TODO rename SIZE to RELATIVE_BOX
-        }
-
-        if (ObjectUtils.isNotEmpty(getParcelId())) {
-            tag.putUUID(PARCEL_ID, getParcelId());
-        }
-
-        if (ObjectUtils.isNotEmpty(getOwnerId())) {
-            tag.putUUID(OWNER_ID, getOwnerId());
-        }
+//        if (ObjectUtils.isNotEmpty(getRelativeBox())) {
+//            CompoundTag sizeTag = new CompoundTag();
+//            getRelativeBox().save(sizeTag);
+//            tag.put(SIZE, sizeTag); // TODO rename SIZE to RELATIVE_BOX
+//        }
+//
+//        if (ObjectUtils.isNotEmpty(getParcelId())) {
+//            tag.putUUID(PARCEL_ID, getParcelId());
+//        }
+//
+//        if (ObjectUtils.isNotEmpty(getOwnerId())) {
+//            tag.putUUID(OWNER_ID, getOwnerId());
+//        }
 
         if (ObjectUtils.isNotEmpty(getDeedId())) {
             tag.putUUID(DEED_ID, getDeedId());
@@ -369,11 +492,11 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
             tag.putString(PARCEL_TYPE, getParcelType());
         }
 
-        if (ObjectUtils.isNotEmpty(getCoords())) {
-            CompoundTag coordsTag = new CompoundTag();
-            getCoords().save(coordsTag);
-            tag.put(COORDS, coordsTag);
-        }
+//        if (ObjectUtils.isNotEmpty(getCoords())) {
+//            CompoundTag coordsTag = new CompoundTag();
+//            getCoords().save(coordsTag);
+//            tag.put(COORDS, coordsTag);
+//        }
 
         // TODO why are we saving this if it is transient
         ListTag list = new ListTag();
@@ -384,7 +507,7 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
         });
         tag.put(OVERLAPS, list);
 
-        tag.putLong(EXPIRE_TIME, getExpireTime());
+//        tag.putLong(EXPIRE_TIME, getExpireTime());
 
         tag.putBoolean(HAS_PARCEL, hasParcel());
     }
@@ -392,20 +515,20 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
     @Override
     public void load(CompoundTag tag) {
         super.load(tag);
-
-        if (tag.contains(SIZE)) {
-            setRelativeBox(Box.load(tag.getCompound(SIZE)));
-        } else {
-            setRelativeBox(Deed.DEFAULT_SIZE);
-            ClaimMyLand.LOGGER.warn("size of parcel was not found. using default size.");
-        }
-
-        if (tag.contains(PARCEL_ID)) {
-            setParcelId(tag.getUUID(PARCEL_ID));
-        }
-        if (tag.contains(OWNER_ID)) {
-            setOwnerId(tag.getUUID(OWNER_ID));
-        }
+//
+//        if (tag.contains(SIZE)) {
+//            setRelativeBox(Box.load(tag.getCompound(SIZE)));
+//        } else {
+//            setRelativeBox(Deed.DEFAULT_SIZE);
+//            ClaimMyLand.LOGGER.warn("size of parcel was not found. using default size.");
+//        }
+//
+//        if (tag.contains(PARCEL_ID)) {
+//            setParcelId(tag.getUUID(PARCEL_ID));
+//        }
+//        if (tag.contains(OWNER_ID)) {
+//            setOwnerId(tag.getUUID(OWNER_ID));
+//        }
         if (tag.contains(DEED_ID)) {
             setDeedId(tag.getUUID(DEED_ID));
         }
@@ -415,9 +538,9 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
         if (tag.contains(PARCEL_TYPE)) {
             setParcelType(tag.getString(PARCEL_TYPE));
         }
-        if (tag.contains(COORDS)) {
-            setCoords(Coords.EMPTY.load((CompoundTag) tag.get(COORDS)));
-        }
+//        if (tag.contains(COORDS)) {
+//            setCoords(Coords.EMPTY.load((CompoundTag) tag.get(COORDS)));
+//        }
 
         // TODO why are we loading this if it is transient?
         getOverlaps().clear();
@@ -431,9 +554,9 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
             });
         }
 
-        if (tag.contains(EXPIRE_TIME)) {
-            setExpireTime(tag.getLong(EXPIRE_TIME));
-        }
+//        if (tag.contains(EXPIRE_TIME)) {
+//            setExpireTime(tag.getLong(EXPIRE_TIME));
+//        }
 
         if (tag.contains(HAS_PARCEL)) {
             setHasParcel(tag.getBoolean(HAS_PARCEL));
@@ -478,12 +601,12 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
         handleUpdateTag(tag);
     }
 
-    public UUID getParcelId() {
-        return parcelId;
-    }
-    public void setParcelId(UUID parcelId) {
-        this.parcelId = parcelId;
-    }
+//    public UUID getParcelId() {
+//        return parcelId;
+//    }
+//    public void setParcelId(UUID parcelId) {
+//        this.parcelId = parcelId;
+//    }
 
     public UUID getDeedId() {
         return deedId;
@@ -499,35 +622,35 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
         this.nationId = nationId;
     }
 
-    public String getParcelType() {
-        return parcelType;
-    }
-    public void setParcelType(String parcelType) {
-        this.parcelType = parcelType;
-    }
+//    public String getParcelType() {
+//        return parcelType;
+//    }
+//    public void setParcelType(String parcelType) {
+//        this.parcelType = parcelType;
+//    }
 
-    // TODO rename getRelativeBox()
-    public Box getRelativeBox() {
-        return relativeBox;
-    }
-    public void setRelativeBox(Box relativeBox) {
-        this.relativeBox = relativeBox;
-    }
+//    public Box getRelativeBox() {
+//        return relativeBox;
+//    }
+//    public void setRelativeBox(Box relativeBox) {
+//        this.relativeBox = relativeBox;
+//    }
 
-    public UUID getOwnerId() {
-        return ownerId;
-    }
-    public void setOwnerId(UUID ownerId) {
-        this.ownerId = ownerId;
-    }
+//    public UUID getOwnerId() {
+//        return ownerId;
+//    }
+//    public void setOwnerId(UUID ownerId) {
+//        this.ownerId = ownerId;
+//    }
 
-    public ICoords getCoords() {
-        return coords;
-    }
-    public void setCoords(ICoords coords) {
-        this.coords = coords;
-    }
+//    public ICoords getCoords() {
+//        return coords;
+//    }
+//    public void setCoords(ICoords coords) {
+//        this.coords = coords;
+//    }
 
+    // TODO needed
     //    @Override
     public List<Box> getOverlaps() {
         if (overlaps == null) {
@@ -535,20 +658,23 @@ public abstract class FoundationStoneBlockEntity extends BlockEntity {
         }
         return overlaps;
     }
+    // TODO needed?
     public void setOverlaps(List<Box> overlaps) {
         this.overlaps = overlaps;
     }
 
-    public long getExpireTime() {
-        return expireTime;
-    }
-    public void setExpireTime(long expireTime) {
-        this.expireTime = expireTime;
-    }
+//    public long getExpireTime() {
+//        return expireTime;
+//    }
+//    public void setExpireTime(long expireTime) {
+//        this.expireTime = expireTime;
+//    }
 
+    // TODO needed?
     public boolean hasParcel() {
         return hasParcel;
     }
+    // TODO needed?
     public void setHasParcel(boolean hasParcel) {
         this.hasParcel = hasParcel;
     }

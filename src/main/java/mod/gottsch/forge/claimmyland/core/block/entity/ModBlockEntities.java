@@ -33,6 +33,9 @@ public class ModBlockEntities {
 //    public static final RegistryObject<BlockEntityType<FoundationStoneBlockEntity>> FOUNDATION_STONE_ENTITY_TYPE =
 //            Registration.BLOCK_ENTITIES.register("foundation_stone_block_entity",
 //                    () -> BlockEntityType.Builder.of(FoundationStoneBlockEntity::new, ModBlocks.FOUNDATION_STONE.get()).build(null));
+    public static final RegistryObject<BlockEntityType<BorderStoneBlockEntity>> BORDER_STONE_ENTITY_TYPE =
+            Registration.BLOCK_ENTITIES.register("personal_border_stone_block_entity",
+                    () -> BlockEntityType.Builder.of(BorderStoneBlockEntity::new, ModBlocks.PERSONAL_BORDER_STONE.get()).build(null));
 
     public static final RegistryObject<BlockEntityType<PersonalFoundationStoneBlockEntity>> PERSONAL_FOUNDATION_STONE_ENTITY_TYPE =
             Registration.BLOCK_ENTITIES.register("personal_foundation_stone_block_entity",

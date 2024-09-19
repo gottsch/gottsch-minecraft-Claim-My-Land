@@ -4,6 +4,7 @@ import mod.gottsch.forge.claimmyland.core.block.BorderBlock;
 import mod.gottsch.forge.claimmyland.core.block.BorderStatus;
 import mod.gottsch.forge.claimmyland.core.block.BufferBlock;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
+import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.CitizenZoneParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
@@ -11,12 +12,17 @@ import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
+import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Create by Mark Gottschling on Sep 18, 2204
+ */
 public class PersonalFoundationStoneBlockEntity extends FoundationStoneBlockEntity {
 
     /**
@@ -26,6 +32,16 @@ public class PersonalFoundationStoneBlockEntity extends FoundationStoneBlockEnti
      */
     public PersonalFoundationStoneBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.PERSONAL_FOUNDATION_STONE_ENTITY_TYPE.get(), pos, state);
+    }
+
+    @Override
+    public int getBufferSize() {
+      return Config.SERVER.general.parcelBufferRadius.get();
+    }
+
+    @Override
+    public Block getBorderBlock() {
+        return ModBlocks.PERSONAL_BORDER.get();
     }
 
     @Override
@@ -149,4 +165,10 @@ public class PersonalFoundationStoneBlockEntity extends FoundationStoneBlockEnti
         }
         return blockState;
     }
+
+    @Override
+    public Box getBorderDisplayBox(ICoords coords) {
+        return getAbsoluteBox(coords);
+    }
+
 }

@@ -32,6 +32,12 @@ import net.minecraftforge.registries.RegistryObject;
  * Created by Mark Gottschling on Sep 14, 2024
  */
 public class ModBlocks {
+    public static final RegistryObject<Block> PERSONAL_BORDER_STONE = Registration.BLOCKS.register("personal_border_stone",
+            () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+
+    public static final RegistryObject<Block> NATION_BORDER_STONE = Registration.BLOCKS.register("nation_border_stone",
+            () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+
 //    public static final RegistryObject<Block> FOUNDATION_STONE = Registration.BLOCKS.register("foundation_stone",
 //            () -> new FoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
 

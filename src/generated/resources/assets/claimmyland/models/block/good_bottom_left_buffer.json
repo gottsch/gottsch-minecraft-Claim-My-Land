@@ -1,0 +1,6 @@
+{
+  "parent": "claimmyland:block/bottom_left_buffer_block",
+  "textures": {
+    "0": "claimmyland:block/white"
+  }
+}

@@ -1,0 +1,436 @@
+{
+  "variants": {
+    "facing=down,intersects=bad,position=bottom": {
+      "model": "claimmyland:block/bad_bottom_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=bad,position=bottom_left": {
+      "model": "claimmyland:block/bad_bottom_left_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=bad,position=bottom_right": {
+      "model": "claimmyland:block/bad_bottom_right_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=bad,position=left": {
+      "model": "claimmyland:block/bad_left_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=bad,position=right": {
+      "model": "claimmyland:block/bad_right_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=bad,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=bad,position=top_left": {
+      "model": "claimmyland:block/bad_top_left_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=bad,position=top_right": {
+      "model": "claimmyland:block/bad_top_right_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=bottom": {
+      "model": "claimmyland:block/good_bottom_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=bottom_left": {
+      "model": "claimmyland:block/good_bottom_left_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=bottom_right": {
+      "model": "claimmyland:block/good_bottom_right_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=left": {
+      "model": "claimmyland:block/good_left_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=right": {
+      "model": "claimmyland:block/good_right_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=top_left": {
+      "model": "claimmyland:block/good_top_left_personal_border",
+      "uvlock": true
+    },
+    "facing=down,intersects=good,position=top_right": {
+      "model": "claimmyland:block/good_top_right_personal_border",
+      "uvlock": true
+    },
+    "facing=east,intersects=bad,position=bottom": {
+      "model": "claimmyland:block/bad_bottom_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=bad,position=bottom_left": {
+      "model": "claimmyland:block/bad_bottom_left_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=bad,position=bottom_right": {
+      "model": "claimmyland:block/bad_bottom_right_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=bad,position=left": {
+      "model": "claimmyland:block/bad_left_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=bad,position=right": {
+      "model": "claimmyland:block/bad_right_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=bad,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=bad,position=top_left": {
+      "model": "claimmyland:block/bad_top_left_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=bad,position=top_right": {
+      "model": "claimmyland:block/bad_top_right_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=bottom": {
+      "model": "claimmyland:block/good_bottom_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=bottom_left": {
+      "model": "claimmyland:block/good_bottom_left_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=bottom_right": {
+      "model": "claimmyland:block/good_bottom_right_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=left": {
+      "model": "claimmyland:block/good_left_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=right": {
+      "model": "claimmyland:block/good_right_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=top_left": {
+      "model": "claimmyland:block/good_top_left_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=east,intersects=good,position=top_right": {
+      "model": "claimmyland:block/good_top_right_personal_border",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=north,intersects=bad,position=bottom": {
+      "model": "claimmyland:block/bad_bottom_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=bad,position=bottom_left": {
+      "model": "claimmyland:block/bad_bottom_left_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=bad,position=bottom_right": {
+      "model": "claimmyland:block/bad_bottom_right_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=bad,position=left": {
+      "model": "claimmyland:block/bad_left_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=bad,position=right": {
+      "model": "claimmyland:block/bad_right_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=bad,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=bad,position=top_left": {
+      "model": "claimmyland:block/bad_top_left_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=bad,position=top_right": {
+      "model": "claimmyland:block/bad_top_right_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=bottom": {
+      "model": "claimmyland:block/good_bottom_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=bottom_left": {
+      "model": "claimmyland:block/good_bottom_left_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=bottom_right": {
+      "model": "claimmyland:block/good_bottom_right_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=left": {
+      "model": "claimmyland:block/good_left_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=right": {
+      "model": "claimmyland:block/good_right_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=top_left": {
+      "model": "claimmyland:block/good_top_left_personal_border",
+      "uvlock": true
+    },
+    "facing=north,intersects=good,position=top_right": {
+      "model": "claimmyland:block/good_top_right_personal_border",
+      "uvlock": true
+    },
+    "facing=south,intersects=bad,position=bottom": {
+      "model": "claimmyland:block/bad_bottom_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=bad,position=bottom_left": {
+      "model": "claimmyland:block/bad_bottom_left_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=bad,position=bottom_right": {
+      "model": "claimmyland:block/bad_bottom_right_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=bad,position=left": {
+      "model": "claimmyland:block/bad_left_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=bad,position=right": {
+      "model": "claimmyland:block/bad_right_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=bad,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=bad,position=top_left": {
+      "model": "claimmyland:block/bad_top_left_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=bad,position=top_right": {
+      "model": "claimmyland:block/bad_top_right_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=bottom": {
+      "model": "claimmyland:block/good_bottom_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=bottom_left": {
+      "model": "claimmyland:block/good_bottom_left_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=bottom_right": {
+      "model": "claimmyland:block/good_bottom_right_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=left": {
+      "model": "claimmyland:block/good_left_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=right": {
+      "model": "claimmyland:block/good_right_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=top_left": {
+      "model": "claimmyland:block/good_top_left_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=south,intersects=good,position=top_right": {
+      "model": "claimmyland:block/good_top_right_personal_border",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=up,intersects=bad,position=bottom": {
+      "model": "claimmyland:block/bad_bottom_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=bad,position=bottom_left": {
+      "model": "claimmyland:block/bad_bottom_left_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=bad,position=bottom_right": {
+      "model": "claimmyland:block/bad_bottom_right_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=bad,position=left": {
+      "model": "claimmyland:block/bad_left_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=bad,position=right": {
+      "model": "claimmyland:block/bad_right_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=bad,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=bad,position=top_left": {
+      "model": "claimmyland:block/bad_top_left_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=bad,position=top_right": {
+      "model": "claimmyland:block/bad_top_right_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=bottom": {
+      "model": "claimmyland:block/good_bottom_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=bottom_left": {
+      "model": "claimmyland:block/good_bottom_left_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=bottom_right": {
+      "model": "claimmyland:block/good_bottom_right_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=left": {
+      "model": "claimmyland:block/good_left_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=right": {
+      "model": "claimmyland:block/good_right_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=top_left": {
+      "model": "claimmyland:block/good_top_left_personal_border",
+      "uvlock": true
+    },
+    "facing=up,intersects=good,position=top_right": {
+      "model": "claimmyland:block/good_top_right_personal_border",
+      "uvlock": true
+    },
+    "facing=west,intersects=bad,position=bottom": {
+      "model": "claimmyland:block/bad_bottom_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=bad,position=bottom_left": {
+      "model": "claimmyland:block/bad_bottom_left_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=bad,position=bottom_right": {
+      "model": "claimmyland:block/bad_bottom_right_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=bad,position=left": {
+      "model": "claimmyland:block/bad_left_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=bad,position=right": {
+      "model": "claimmyland:block/bad_right_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=bad,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=bad,position=top_left": {
+      "model": "claimmyland:block/bad_top_left_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=bad,position=top_right": {
+      "model": "claimmyland:block/bad_top_right_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=bottom": {
+      "model": "claimmyland:block/good_bottom_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=bottom_left": {
+      "model": "claimmyland:block/good_bottom_left_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=bottom_right": {
+      "model": "claimmyland:block/good_bottom_right_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=left": {
+      "model": "claimmyland:block/good_left_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=right": {
+      "model": "claimmyland:block/good_right_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=top": {
+      "model": "claimmyland:block/good_top_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=top_left": {
+      "model": "claimmyland:block/good_top_left_personal_border",
+      "uvlock": true,
+      "y": 270
+    },
+    "facing=west,intersects=good,position=top_right": {
+      "model": "claimmyland:block/good_top_right_personal_border",
+      "uvlock": true,
+      "y": 270
+    }
+  }
+}
