@@ -23,6 +23,7 @@ import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.UUID;
@@ -37,23 +38,24 @@ public class DeedFactory {
     private DeedFactory() {}
 
     public static ItemStack createDeed(Class clazz, Box size) {
-        if (ModItems.PERSONAL_DEED.get().getClass().equals(clazz)) {
-            return createPersonalDeed(size);
+        if (ModItems.PLAYER_DEED.get().getClass().equals(clazz)) {
+            return createPlayerDeed(size);
         }
         // TODO add other types
         else {
-            return createPersonalDeed(size);
+            return createPlayerDeed(size);
         }
     }
 
-    public static ItemStack createPersonalDeed(Box size) {
-        ItemStack deed = createItemStack(ParcelType.PERSONAL);
+    public static ItemStack createPlayerDeed(Box size) {
+        ItemStack deed = createItemStack(ParcelType.PLAYER);
         CompoundTag tag = deed.getOrCreateTag();
         // add the ids
+        // TODO this is probably going away in favor of deed id for the access checks
         tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
+        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
         // add the type
-        tag.putString(Deed.PARCEL_TYPE, ParcelType.PERSONAL.name());
+        tag.putString(Deed.PARCEL_TYPE, ParcelType.PLAYER.name());
         // add the size
         CompoundTag sizeTag = new CompoundTag();
         size.save(sizeTag);
@@ -62,8 +64,8 @@ public class DeedFactory {
         return deed;
     }
 
-    public static ItemStack createPersonalDeed(UUID ownerId, Box size) {
-        ItemStack deed = createPersonalDeed(size);
+    public static ItemStack createPlayerDeed(UUID ownerId, Box size) {
+        ItemStack deed = createPlayerDeed(size);
         CompoundTag tag = deed.getTag();
         if (ObjectUtils.isNotEmpty(ownerId) && tag != null) {
             tag.putUUID(Deed.OWNER_ID, ownerId);
@@ -71,20 +73,21 @@ public class DeedFactory {
         return deed;
     }
 
-    public static ItemStack createNationDeed(Box size) {
+    public static ItemStack createNationDeed(Level level, Box size) {
         ItemStack deed = createItemStack(ParcelType.NATION);
         CompoundTag tag = deed.getOrCreateTag();
         // add the ids
         tag.putUUID(NationDeed.NATION_ID, UUID.randomUUID());
-//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
+        // TODO this should be refactored out
+        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
         tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
         // add the type
         tag.putString(Deed.PARCEL_TYPE, ParcelType.NATION.name());
         // add the size
         CompoundTag sizeTag = new CompoundTag();
         // modify size to max y limits
-        size.setMinCoords(size.getMinCoords().withY(-64));
-        size.setMaxCoords(size.getMaxCoords().withY(320));
+        size.setMinCoords(size.getMinCoords().withY(level.getMinBuildHeight()));
+        size.setMaxCoords(size.getMaxCoords().withY(level.getMaxBuildHeight()-1));
         size.save(sizeTag);
         tag.put(Deed.SIZE, sizeTag);
 
@@ -108,12 +111,11 @@ public class DeedFactory {
     }
 
     private static ItemStack createItemStack(ParcelType type) {
-//        return switch(type) {
-//            case PERSONAL -> new ItemStack(ModItems.PERSONAL_DEED.get());
-//            case NATION -> new ItemStack(ModItems.NATION_DEED.get());
-//            case CITIZEN -> new ItemStack((ModItems.CITIZEN_DEED.get()));
-//        };
-        return new ItemStack(ModItems.PERSONAL_DEED.get());
+        return switch(type) {
+            case PLAYER -> new ItemStack(ModItems.PLAYER_DEED.get());
+            case NATION -> new ItemStack(ModItems.NATION_DEED.get());
+            case CITIZEN, CITIZEN_ZONE -> null; //new ItemStack((ModItems.CITIZEN_DEED.get()));
+        };
     }
 
 }

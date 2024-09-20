@@ -1,6 +1,0 @@
-{
-  "parent": "claimmyland:block/top_border_block",
-  "textures": {
-    "0": "claimmyland:block/green"
-  }
-}

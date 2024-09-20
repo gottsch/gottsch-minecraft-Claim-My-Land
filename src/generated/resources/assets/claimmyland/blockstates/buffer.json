@@ -21,7 +21,7 @@
       "uvlock": true
     },
     "facing=down,intersects=bad,position=top": {
-      "model": "claimmyland:block/good_top_buffer",
+      "model": "claimmyland:block/bad_top_buffer",
       "uvlock": true
     },
     "facing=down,intersects=bad,position=top_left": {
@@ -90,7 +90,7 @@
       "y": 90
     },
     "facing=east,intersects=bad,position=top": {
-      "model": "claimmyland:block/good_top_buffer",
+      "model": "claimmyland:block/bad_top_buffer",
       "uvlock": true,
       "y": 90
     },
@@ -165,7 +165,7 @@
       "uvlock": true
     },
     "facing=north,intersects=bad,position=top": {
-      "model": "claimmyland:block/good_top_buffer",
+      "model": "claimmyland:block/bad_top_buffer",
       "uvlock": true
     },
     "facing=north,intersects=bad,position=top_left": {
@@ -234,7 +234,7 @@
       "y": 180
     },
     "facing=south,intersects=bad,position=top": {
-      "model": "claimmyland:block/good_top_buffer",
+      "model": "claimmyland:block/bad_top_buffer",
       "uvlock": true,
       "y": 180
     },
@@ -309,7 +309,7 @@
       "uvlock": true
     },
     "facing=up,intersects=bad,position=top": {
-      "model": "claimmyland:block/good_top_buffer",
+      "model": "claimmyland:block/bad_top_buffer",
       "uvlock": true
     },
     "facing=up,intersects=bad,position=top_left": {
@@ -378,7 +378,7 @@
       "y": 270
     },
     "facing=west,intersects=bad,position=top": {
-      "model": "claimmyland:block/good_top_buffer",
+      "model": "claimmyland:block/bad_top_buffer",
       "uvlock": true,
       "y": 270
     },

@@ -30,10 +30,10 @@ import java.util.stream.Collectors;
  * Create by Mark Gottschling on Sep 14, 2024
  */
 public enum ParcelType implements StringRepresentable {
-    PERSONAL,
+    PLAYER,
     NATION,
     CITIZEN,
-    CITIZEN_CLAIM_ZONE;
+    CITIZEN_ZONE;
 
     public static List<String> getNames() {
         return EnumSet.allOf(ParcelType.class).stream().map(Enum::name).collect(Collectors.toList());

@@ -110,14 +110,14 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     // TODO will have to be overridden by concrete parcel
-    @Override
-    public void populateBlockEntity(FoundationStoneBlockEntity entity) {
-        entity.setParcelId(getId());
-        entity.setDeedId(getDeedId());
-        entity.setOwnerId(getOwnerId());
-        entity.setCoords(getCoords());
-        entity.setRelativeBox(getSize());
-    }
+//    @Override
+//    public void populateBlockEntity(FoundationStoneBlockEntity entity) {
+//        entity.setParcelId(getId());
+//        entity.setDeedId(getDeedId());
+//        entity.setOwnerId(getOwnerId());
+//        entity.setCoords(getCoords());
+//        entity.setRelativeBox(getSize());
+//    }
 
     @Override
     public void save(CompoundTag tag) {
@@ -137,6 +137,8 @@ public abstract class AbstractParcel implements Parcel {
         if (ObjectUtils.isNotEmpty(getDeedId())) {
             tag.putUUID(DEED_KEY, getDeedId());
         }
+
+        tag.putString(TYPE, getType().getSerializedName());
 
         CompoundTag coordsTag = new CompoundTag();
         getCoords().save(coordsTag);
@@ -172,6 +174,9 @@ public abstract class AbstractParcel implements Parcel {
         }
         if (tag.contains(DEED_KEY)) {
             setDeedId(tag.getUUID(DEED_KEY));
+        }
+        if (tag.contains(TYPE)) {
+            setType(ParcelType.valueOf(tag.getString(TYPE)));
         }
         if (tag.contains(COORDS_KEY)) {
             setCoords(Coords.EMPTY.load(tag.getCompound(COORDS_KEY)));
@@ -309,6 +314,7 @@ public abstract class AbstractParcel implements Parcel {
                 ", coords=" + coords +
                 ", size=" + size +
                 ", whitelist=" + whitelist +
+                ", type=" + type +
                 '}';
     }
 }

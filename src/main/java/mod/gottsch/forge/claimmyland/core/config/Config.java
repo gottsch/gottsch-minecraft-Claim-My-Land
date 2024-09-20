@@ -18,6 +18,7 @@
 package mod.gottsch.forge.claimmyland.core.config;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.gottschcore.config.AbstractConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
@@ -112,9 +113,12 @@ public class Config extends AbstractConfig {
 
 	public static class ServerConfig {
 		public General general;
+		public Borders borders;
 		public Protection protection;
+
 		public ServerConfig(ForgeConfigSpec.Builder builder) {
 			general = new General(builder);
+			borders = new Borders(builder);
 			protection = new Protection(builder);
 		}
 	}
@@ -192,7 +196,32 @@ public class Config extends AbstractConfig {
 			builder.pop();
 		}
 	}
-	
+
+	public static class Borders {
+		public ForgeConfigSpec.LongValue ticksPerBorderStoneRefresh;
+		public ForgeConfigSpec.IntValue borderStoneLifeSpan;
+		public ForgeConfigSpec.IntValue foundationStoneLifeSpan;
+
+		Borders(final ForgeConfigSpec.Builder builder) {
+			builder.comment(CATEGORY_DIV, " General properties for Protect It  mod.", CATEGORY_DIV).push(GENERAL_CATEGORY);
+
+			borderStoneLifeSpan = builder
+					.comment(" The life span of a border stone in ticks.")
+					.defineInRange("borderStoneLifeSpan", 6000, 1200, Integer.MAX_VALUE);
+
+			ticksPerBorderStoneRefresh = builder
+					.comment(" The number of ticks between border refreshes.")
+					.defineInRange("ticksPerBorderStoneRefresh", 400, 200, Long.MAX_VALUE);
+
+			foundationStoneLifeSpan = builder
+					.comment(" The life span of a foundation stone in ticks.")
+					.defineInRange("foundationStoneLifeSpan", 6000, 1200, Integer.MAX_VALUE);
+
+
+			builder.pop();
+		}
+	}
+
 	public static class Protection {
 		public BooleanValue enableBlockBreakEvent;
 		public BooleanValue enableEntityPlaceEvent;

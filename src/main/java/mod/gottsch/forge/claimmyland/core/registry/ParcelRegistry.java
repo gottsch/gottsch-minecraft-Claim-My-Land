@@ -142,6 +142,7 @@ public class ParcelRegistry {
             parcel.save(parcelTag);
             list.add(parcelTag);
         });
+        ClaimMyLand.LOGGER.debug("saving registry, size -> {}", list.size());
         tag.put(PARCELS_KEY, list);
 
         return tag;
@@ -158,7 +159,10 @@ public class ParcelRegistry {
 
         if (tag.contains(PARCELS_KEY)) {
             ListTag list = tag.getList(PARCELS_KEY, Tag.TAG_COMPOUND);
+            ClaimMyLand.LOGGER.debug("loading registry, size -> {}", list.size());
+
             list.forEach(element -> {
+                ClaimMyLand.LOGGER.debug("processing parcel element...");
                 Optional<Parcel> optionalParcel = ParcelFactory.create((CompoundTag)element);
                 optionalParcel.ifPresent(parcel -> {
                     // load the parcel
@@ -318,7 +322,7 @@ public class ParcelRegistry {
      */
     public static Box inflateParcelBox(final Parcel parcel) {
         return switch(parcel.getType()) {
-            case PERSONAL, CITIZEN, CITIZEN_CLAIM_ZONE -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.parcelBufferRadius.get());
+            case PLAYER, CITIZEN, CITIZEN_ZONE -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.parcelBufferRadius.get());
             case NATION -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.nationParcelBufferRadius.get());
           };
     }

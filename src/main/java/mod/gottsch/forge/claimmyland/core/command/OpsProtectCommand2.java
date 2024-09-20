@@ -1,3 +1,22 @@
+/*
+ * This file is part of  Claim My Land.
+ * Copyright (c) 2024 Mark Gottschling (gottsch)
+ *
+ * All rights reserved.
+ *
+ * Claim My Land is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Claim My Land is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Claim My Land.  If not, see <http://www.gnu.org/licenses/lgpl>.
+ */
 package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -5,6 +24,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
@@ -73,16 +93,16 @@ public class OpsProtectCommand2 {
     };
 
     /*
-     * protect [deed [generate | ] | parcel [generate | remove] ] //give | list | rename | whitelist [add | remove | clear | list]]
+     * cml-ops [deed [generate | ] | parcel [generate | remove] ] //give | list | rename | whitelist [add | remove | clear | list]]
      */
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher
                 .register(Commands.literal(CommandHelper.CML_OPS).requires(source -> {
-                                    return source.hasPermission(/*Config.SERVER.general.opsPermissionLevel.get()*/1); // only ops can use command
+                                    return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get()); // only ops can use command
                                 })
                                 ///// DEED TOP-LEVEL OPTION /////
                                 .then(Commands.literal(CommandHelper.DEED).requires(source -> {
-                                                    return source.hasPermission(1);
+                                                    return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
                                                 })
                                                 ///// GENERATE OPTION /////
                                                 .then(Commands.literal(CommandHelper.GENERATE)
@@ -174,7 +194,7 @@ public class OpsProtectCommand2 {
                                 )
                                 ///// PARCEL TOP-LEVEL OPTION /////
                                 .then(Commands.literal(CommandHelper.PARCEL).requires(source -> {
-                                                    return source.hasPermission(1);
+                                                    return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
                                                 })
                                                 ///// LIST OPTION /////
                                                 .then(Commands.literal(CommandHelper.LIST)
@@ -333,11 +353,11 @@ public class OpsProtectCommand2 {
 
         // create a deed item
         ItemStack deed = switch (ParcelType.valueOf(deedType)) {
-            case PERSONAL -> DeedFactory.createPersonalDeed(size);
-            case NATION -> DeedFactory.createNationDeed(size);
+            case PLAYER -> DeedFactory.createPlayerDeed(size);
+            case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
             // TODO requires the NATION_ID
             case CITIZEN -> DeedFactory.createCitizenDeed(size, null);
-            case CITIZEN_CLAIM_ZONE -> ItemStack.EMPTY;
+            case CITIZEN_ZONE -> ItemStack.EMPTY;
         };
 
         // attempt to add the deed item to the player inventory

@@ -32,19 +32,22 @@ import net.minecraftforge.registries.RegistryObject;
  * Created by Mark Gottschling on Sep 14, 2024
  */
 public class ModBlocks {
-    public static final RegistryObject<Block> PERSONAL_BORDER_STONE = Registration.BLOCKS.register("personal_border_stone",
+    public static final RegistryObject<Block> BORDER_STONE = Registration.BLOCKS.register("border_stone",
             () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
 
-    public static final RegistryObject<Block> NATION_BORDER_STONE = Registration.BLOCKS.register("nation_border_stone",
-            () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+//    public static final RegistryObject<Block> NATION_BORDER_STONE = Registration.BLOCKS.register("nation_border_stone",
+//            () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
 
 //    public static final RegistryObject<Block> FOUNDATION_STONE = Registration.BLOCKS.register("foundation_stone",
 //            () -> new FoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
 
-    public static final RegistryObject<Block> PERSONAL_FOUNDATION_STONE = Registration.BLOCKS.register("personal_foundation_stone",
-            () -> new PersonalFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+    public static final RegistryObject<Block> PLAYER_FOUNDATION_STONE = Registration.BLOCKS.register("player_foundation_stone",
+            () -> new PlayerFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
 
-    public static final RegistryObject<Block> PERSONAL_BORDER = Registration.BLOCKS.register("personal_border",
+    public static final RegistryObject<Block> NATION_FOUNDATION_STONE = Registration.BLOCKS.register("nation_foundation_stone",
+            () -> new NationFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+
+    public static final RegistryObject<Block> PLAYER_BORDER = Registration.BLOCKS.register("player_border",
             () -> new BorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
 
     public static final RegistryObject<Block> NATION_BORDER = Registration.BLOCKS.register("nation_border",

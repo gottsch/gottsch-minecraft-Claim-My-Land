@@ -1,6 +1,7 @@
 {
   "parent": "claimmyland:block/top_right_buffer_block",
+  "render_type": "minecraft:translucent",
   "textures": {
-    "0": "claimmyland:block/white"
+    "0": "claimmyland:block/buffer_block"
   }
 }

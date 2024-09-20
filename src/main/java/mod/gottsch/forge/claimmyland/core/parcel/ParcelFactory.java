@@ -35,13 +35,14 @@ public class ParcelFactory {
         if (tag.contains(AbstractParcel.TYPE)) {
             String type = tag.getString(AbstractParcel.TYPE);
 
-            if (type.equalsIgnoreCase("personal")) {
-                return Optional.of(new PersonalParcel());
+            if (type.equalsIgnoreCase(ParcelType.PLAYER.getSerializedName())) {
+                return Optional.of(new PlayerParcel());
             }
-            else if (type.equalsIgnoreCase("citizen")) {
+            else if (type.equalsIgnoreCase(ParcelType.CITIZEN.getSerializedName())) {
                 return Optional.of(new CitizenParcel());
             }
-            else if (type.equalsIgnoreCase("nation")) {
+            // TODO add citizen zone
+            else if (type.equalsIgnoreCase(ParcelType.NATION.getSerializedName())) {
                 return Optional.of(new NationParcel());
             }
         }
@@ -55,15 +56,15 @@ public class ParcelFactory {
      */
     public static Optional<Parcel> create(ParcelType type) {
         return switch (type) {
-            case PERSONAL -> Optional.of(createPersonalParcel());
-            case NATION -> null;
+            case PLAYER -> Optional.of(createPlayerParcel());
+            case NATION -> Optional.of(createNationParcel());
             case CITIZEN -> Optional.of(createCitizenParcel());
             default -> Optional.empty();
         };
     }
 
-    private static Parcel createPersonalParcel() {
-        Parcel parcel = new PersonalParcel();
+    private static Parcel createPlayerParcel() {
+        Parcel parcel = new PlayerParcel();
         parcel.setId(UUID.randomUUID());
         parcel.setName(parcel.randomName());
         return parcel;
@@ -72,6 +73,14 @@ public class ParcelFactory {
     private static Parcel createCitizenParcel() {
         Parcel parcel = new CitizenParcel();
         parcel.setId(UUID.randomUUID());
+        parcel.setName(parcel.randomName());
+        return parcel;
+    }
+
+    private static Parcel createNationParcel() {
+        NationParcel parcel = new NationParcel();
+        parcel.setId(UUID.randomUUID());
+        parcel.setNationId(UUID.randomUUID());
         parcel.setName(parcel.randomName());
         return parcel;
     }

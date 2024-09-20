@@ -1,3 +1,22 @@
+/*
+ * This file is part of  Claim My Land.
+ * Copyright (c) 2024 Mark Gottschling (gottsch)
+ *
+ * All rights reserved.
+ *
+ * Claim My Land is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Claim My Land is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Claim My Land.  If not, see <http://www.gnu.org/licenses/lgpl>.
+ */
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
@@ -25,6 +44,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -37,8 +57,14 @@ import java.util.UUID;
 public class BorderStoneBlockEntity extends BlockEntity {
     private static final String PARCEL_ID = "parcel_id";
     private static final String OWNER_ID = "owner_id";
+    private static final String PARCEL_TYPE = "parcel_type";
     private static final String COORDS = "coords";
     private static final String EXPIRE_TIME = "expire_time";
+
+    private static final int TICKS_PER_SECOND = 20;
+    private static final int FIVE_SECONDS = 5 * TICKS_PER_SECOND;
+    private static final int ONE_MINUTE = 60 * TICKS_PER_SECOND;
+    private static final int FIVE_MINUTES = 5 * ONE_MINUTE;
 
     // TODO rename RELATIVE_BOX
     private static final String SIZE = "size";
@@ -74,6 +100,32 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
     /**
      *
+     */
+    public void tickServer() {
+        // refresh the borders
+        if (getLevel().getGameTime() % Config.SERVER.borders.ticksPerBorderStoneRefresh.get() == 0) {
+            placeParcelBorder();
+        }
+
+        if (getLevel().getGameTime() > getExpireTime()) {
+            // remove border
+            removeParcelBorder(getCoords());
+            // self destruct
+            selfDestruct();
+        }
+    }
+
+    /**
+     *
+     */
+    private void selfDestruct() {
+        ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
+        this.getLevel().setBlock(this.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
+        this.getLevel().removeBlockEntity(this.getBlockPos());
+    }
+
+    /**
+     *
      * @return
      */
     public Block getBorderBlock() {
@@ -82,11 +134,11 @@ public class BorderStoneBlockEntity extends BlockEntity {
 //        return ((BorderStone)getBlockState().getBlock()).getBorderBlock();
 //        return ModBlocks.PERSONAL_BORDER.get();
 
-        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PERSONAL;
+        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
         return switch (parcelType) {
-            case PERSONAL -> ModBlocks.PERSONAL_BORDER.get();
+            case PLAYER -> ModBlocks.PLAYER_BORDER.get();
             case NATION -> ModBlocks.NATION_BORDER.get();
-            case CITIZEN, CITIZEN_CLAIM_ZONE -> ModBlocks.CITIZEN_BORDER.get();
+            case CITIZEN, CITIZEN_ZONE -> ModBlocks.CITIZEN_BORDER.get();
         };
     }
 
@@ -95,11 +147,11 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @return
      */
     public int getBufferSize() {
-        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PERSONAL;
+        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
         return switch (parcelType) {
-            case PERSONAL -> Config.SERVER.general.parcelBufferRadius.get();
+            case PLAYER -> Config.SERVER.general.parcelBufferRadius.get();
             case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
-            case CITIZEN, CITIZEN_CLAIM_ZONE -> 0;
+            case CITIZEN, CITIZEN_ZONE -> 0;
         };
     }
 
@@ -153,7 +205,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @return
      */
     public Box getBorderDisplayBox(ICoords coords) {
-        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PERSONAL;
+        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
 
         Box box;
         // check for nation block and make the box only +/-10 in height
@@ -437,6 +489,10 @@ public class BorderStoneBlockEntity extends BlockEntity {
             tag.putUUID(OWNER_ID, getOwnerId());
         }
 
+        if (StringUtils.isNotBlank(getParcelType())) {
+            tag.putString(PARCEL_TYPE, getParcelType());
+        }
+
         if (ObjectUtils.isNotEmpty(getCoords())) {
             CompoundTag coordsTag = new CompoundTag();
             getCoords().save(coordsTag);
@@ -448,6 +504,8 @@ public class BorderStoneBlockEntity extends BlockEntity {
             getRelativeBox().save(sizeTag);
             tag.put(SIZE, sizeTag); // TODO rename SIZE to RELATIVE_BOX
         }
+
+        tag.putLong(EXPIRE_TIME, getExpireTime());
     }
 
     @Override
@@ -460,6 +518,9 @@ public class BorderStoneBlockEntity extends BlockEntity {
         if (tag.contains(OWNER_ID)) {
             setOwnerId(tag.getUUID(OWNER_ID));
         }
+        if (tag.contains(PARCEL_TYPE)) {
+            setParcelType(tag.getString(PARCEL_TYPE));
+        }
         if (tag.contains(COORDS)) {
             setCoords(Coords.EMPTY.load((CompoundTag) tag.get(COORDS)));
         }
@@ -468,6 +529,9 @@ public class BorderStoneBlockEntity extends BlockEntity {
         } else {
             setRelativeBox(Deed.DEFAULT_SIZE);
             ClaimMyLand.LOGGER.warn("size of parcel was not found. using default size.");
+        }
+        if (tag.contains(EXPIRE_TIME)) {
+            setExpireTime(tag.getLong(EXPIRE_TIME));
         }
     }
 

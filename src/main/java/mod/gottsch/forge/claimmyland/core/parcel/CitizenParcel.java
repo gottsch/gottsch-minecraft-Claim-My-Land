@@ -13,7 +13,7 @@ public class CitizenParcel extends AbstractParcel {
     @Override
     public boolean grantsAccess(Parcel otherParcel) {
 
-        if (otherParcel.getType() == ParcelType.PERSONAL) {
+        if (otherParcel.getType() == ParcelType.PLAYER) {
             // TODO check parent Nation is open
             // TODO check if owner id is null/empty
             return true;

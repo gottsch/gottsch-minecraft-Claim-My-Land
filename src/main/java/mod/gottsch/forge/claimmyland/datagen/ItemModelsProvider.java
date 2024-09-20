@@ -24,8 +24,8 @@ public class ItemModelsProvider extends ItemModelProvider {
 
 		// deeds
 		singleTexture(
-				"personal_deed",
-				mcLoc("item/generated"), "layer0", modLoc("item/personal_deed"));
+				"player_deed",
+				mcLoc("item/generated"), "layer0", modLoc("item/player_deed"));
 		singleTexture(
 				"nation_deed",
 				mcLoc("item/generated"), "layer0", modLoc("item/nation_deed"));
@@ -33,6 +33,8 @@ public class ItemModelsProvider extends ItemModelProvider {
 				"citizen_deed",
 				mcLoc("item/generated"), "layer0", modLoc("item/citizen_deed"));
 
-		// blocks
+		// block items
+		withExistingParent(ModItems.BORDER_STONE.getId().getPath(), modLoc("block/border_stone"));
+
 	}
 }

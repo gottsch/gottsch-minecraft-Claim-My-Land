@@ -23,7 +23,7 @@ public class CitizenZoneParcel extends AbstractParcel {
     public boolean grantAccess(Parcel otherParcel) {
 
         // a personal deed cannot be used on an existing parcel
-        if (otherParcel.getType() == ParcelType.PERSONAL) {
+        if (otherParcel.getType() == ParcelType.PLAYER) {
             // TODO check parent Nation is open
             // TODO check if owner id is null/empty
             return true;

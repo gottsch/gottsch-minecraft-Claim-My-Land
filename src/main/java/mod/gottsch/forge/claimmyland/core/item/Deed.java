@@ -95,9 +95,9 @@ public abstract class Deed extends Item {
         } else {
             parcel.setId(UUID.randomUUID());
         }
-//        if (tag.contains(DEED_ID)) {
-//            parcel.setDeedId(tag.getUUID(DEED_ID));
-//        }
+        if (tag.contains(DEED_ID)) {
+            parcel.setDeedId(tag.getUUID(DEED_ID));
+        }
         if (tag.contains(OWNER_ID)) {
             parcel.setOwnerId(tag.getUUID(OWNER_ID));
         } else {
@@ -120,7 +120,9 @@ public abstract class Deed extends Item {
      * @return
      */
     protected boolean validateWorldPlacement(Level level, BlockPos pos, Box size, Player player) {
-        if (level.isOutsideBuildHeight(pos.offset(size.getMaxCoords().toPos()))) {
+        if (
+                level.isOutsideBuildHeight(pos.offset(size.getMinCoords().toPos()))
+                        || level.isOutsideBuildHeight(pos.offset(size.getMaxCoords().toPos()))) {
             player.sendSystemMessage((Component.translatable(LangUtil.chat("parcel.outside_world_boundaries"))
                     .withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.ITALIC})));
             return false;
@@ -181,7 +183,6 @@ public abstract class Deed extends Item {
             /*
              * validate location for acceptance as parcel
              */
-
             // validate
             BlockEntity blockEntity = context.getLevel().getBlockEntity(context.getClickedPos());
             if (blockEntity instanceof FoundationStoneBlockEntity foundationStoneBlockEntity) {
@@ -191,7 +192,7 @@ public abstract class Deed extends Item {
                     return InteractionResult.FAIL;
                 }
 
-                 /*
+                /*
                  * check if parcel is within another existing parcel
                  */
                 Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords);
@@ -444,6 +445,7 @@ public abstract class Deed extends Item {
         blockEntity.setParcelType(tag.contains(PARCEL_TYPE) ? tag.getString(PARCEL_TYPE) : null);
         blockEntity.setCoords(new Coords(pos));
         blockEntity.setRelativeBox(size);
+        blockEntity.setExpireTime(blockEntity.getLevel().getGameTime() + Config.SERVER.borders.foundationStoneLifeSpan.get());
     }
 
     protected void removePreviousLocation(Level level, ItemStack deed, ICoords previousCoords) {

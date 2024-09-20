@@ -91,7 +91,7 @@ public interface Parcel {
      */
     boolean grantsAccess(UUID entityId, ItemStack stack);
 
-    void populateBlockEntity(FoundationStoneBlockEntity entity);
+//    void populateBlockEntity(FoundationStoneBlockEntity entity);
 
     Box getBox();
 

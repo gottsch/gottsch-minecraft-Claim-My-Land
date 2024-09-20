@@ -34,12 +34,16 @@ public class ModBlockEntities {
 //            Registration.BLOCK_ENTITIES.register("foundation_stone_block_entity",
 //                    () -> BlockEntityType.Builder.of(FoundationStoneBlockEntity::new, ModBlocks.FOUNDATION_STONE.get()).build(null));
     public static final RegistryObject<BlockEntityType<BorderStoneBlockEntity>> BORDER_STONE_ENTITY_TYPE =
-            Registration.BLOCK_ENTITIES.register("personal_border_stone_block_entity",
-                    () -> BlockEntityType.Builder.of(BorderStoneBlockEntity::new, ModBlocks.PERSONAL_BORDER_STONE.get()).build(null));
+            Registration.BLOCK_ENTITIES.register("border_stone_block_entity",
+                    () -> BlockEntityType.Builder.of(BorderStoneBlockEntity::new, ModBlocks.BORDER_STONE.get()).build(null));
 
-    public static final RegistryObject<BlockEntityType<PersonalFoundationStoneBlockEntity>> PERSONAL_FOUNDATION_STONE_ENTITY_TYPE =
-            Registration.BLOCK_ENTITIES.register("personal_foundation_stone_block_entity",
-                    () -> BlockEntityType.Builder.of(PersonalFoundationStoneBlockEntity::new, ModBlocks.PERSONAL_FOUNDATION_STONE.get()).build(null));
+    public static final RegistryObject<BlockEntityType<PlayerFoundationStoneBlockEntity>> PLAYER_FOUNDATION_STONE_ENTITY_TYPE =
+            Registration.BLOCK_ENTITIES.register("player_foundation_stone_block_entity",
+                    () -> BlockEntityType.Builder.of(PlayerFoundationStoneBlockEntity::new, ModBlocks.PLAYER_FOUNDATION_STONE.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<NationFoundationStoneBlockEntity>> NATION_FOUNDATION_STONE_ENTITY_TYPE =
+            Registration.BLOCK_ENTITIES.register("nation_foundation_stone_block_entity",
+                    () -> BlockEntityType.Builder.of(NationFoundationStoneBlockEntity::new, ModBlocks.NATION_FOUNDATION_STONE.get()).build(null));
 
     public static void register(IEventBus bus) {
         Registration.registerBlockEntities(bus);

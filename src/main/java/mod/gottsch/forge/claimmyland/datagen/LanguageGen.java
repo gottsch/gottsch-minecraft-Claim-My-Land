@@ -22,11 +22,11 @@ public class LanguageGen extends LanguageProvider {
     @Override
     protected void addTranslations() {
         // deeds
-        add(ModItems.PERSONAL_DEED.get(), "Personal Deed");
-//        add(ModItems.NATION_DEED.get(), "Nation Deed");
+        add(ModItems.PLAYER_DEED.get(), "Player Deed");
+        add(ModItems.NATION_DEED.get(), "Nation Deed");
 //        add(ModItems.CITIZEN_DEED.get(), "Citizen Deed");
         // blocks
-        add(ModBlocks.PERSONAL_FOUNDATION_STONE.get(), "Foundation Stone");
+        add(ModBlocks.PLAYER_FOUNDATION_STONE.get(), "Foundation Stone");
 
 //        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
 //

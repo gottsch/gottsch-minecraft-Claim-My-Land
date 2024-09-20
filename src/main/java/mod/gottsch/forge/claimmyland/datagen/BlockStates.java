@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.client.model.generators.*;
 import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 /**
@@ -27,12 +28,14 @@ public class BlockStates extends BlockStateProvider {
 	protected void registerStatesAndModels() {
 
 //		simpleBlock(ModBlocks.FOUNDATION_STONE.get());
-//		simpleBlock(ModBlocks.PERSONAL_BORDER_STONE.get());
-		simpleBlock(ModBlocks.PERSONAL_FOUNDATION_STONE.get());
+		simpleBlock(ModBlocks.BORDER_STONE.get(), models().cubeAll(name(ModBlocks.BORDER_STONE.get()), blockTexture(ModBlocks.BORDER_STONE.get())).renderType("cutout"));
+		simpleBlock(ModBlocks.PLAYER_FOUNDATION_STONE.get());
+		simpleBlock(ModBlocks.NATION_FOUNDATION_STONE.get());
 
+		borderBlock(ModBlocks.PLAYER_BORDER, modLoc("block/green"), modLoc("block/red"));
+		borderBlock(ModBlocks.NATION_BORDER, modLoc("block/blue"), modLoc("block/red"));
 
-		borderBlock(ModBlocks.PERSONAL_BORDER, modLoc("block/green"), modLoc("block/red"));
-		bufferBlock(ModBlocks.BUFFER, modLoc("block/white"), modLoc("block/red"));
+		bufferBlock(ModBlocks.BUFFER, modLoc("block/buffer_block"), modLoc("block/bad_buffer_block"));
 //		sewerBlock(ModBlocks.WEATHERED_COPPER_SEWER, modLoc("block/weathered_copper_pipe"), mcLoc("block/weathered_copper"));
 //		sewerBlock(ModBlocks.TERRACOTTA_SEWER, mcLoc("block/terracotta"), mcLoc("block/terracotta"));
 
@@ -46,35 +49,33 @@ public class BlockStates extends BlockStateProvider {
 //		ModelFile bottom = models().withExistingParent("good_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_border_block"))
 //				.texture("0", goodTexture);
 
-		myBorderBlock(name, (BorderBlock)block.get(), "border", goodTexture, badTexture);
+		myBorderBlock(name, (BorderBlock)block.get(), "border", goodTexture, badTexture, "minecraft:cutout");
 	}
 
 	public void bufferBlock(RegistryObject<Block> block, ResourceLocation goodTexture, ResourceLocation badTexture) {
 		String name = block.getId().getPath();
 
-		myBorderBlock(name, (BufferBlock)block.get(), "buffer", goodTexture, badTexture);
+		myBorderBlock(name, (BufferBlock)block.get(), "buffer", goodTexture, badTexture, "minecraft:translucent");
 	}
 
-	private void myBorderBlock(String name, BorderBlock block, String blockKey, ResourceLocation goodTexture, ResourceLocation badTexture) {
-		// TODO merge borderBlock() with this method so we don't have to pass all the Model Files
+	private void myBorderBlock(String name, BorderBlock block, String blockKey, ResourceLocation goodTexture, ResourceLocation badTexture, String renderType) {
+		ModelFile goodTop = models().withExistingParent("good_top_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_"+ blockKey +"_block")).texture("0", goodTexture).renderType(renderType);
+		ModelFile goodBottom = models().withExistingParent("good_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_"+ blockKey +"_block")).texture("0", goodTexture).renderType(renderType);
+		ModelFile goodLeft = models().withExistingParent("good_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/left_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
+		ModelFile goodRight = models().withExistingParent("good_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/right_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
+		ModelFile goodTopLeft = models().withExistingParent("good_top_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_left_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
+		ModelFile goodTopRight = models().withExistingParent("good_top_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_right_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
+		ModelFile goodBottomLeft = models().withExistingParent("good_bottom_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_left_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
+		ModelFile goodBottomRight = models().withExistingParent("good_bottom_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_right_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
 
-		ModelFile goodTop = models().withExistingParent("good_top_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_"+ blockKey +"_block")).texture("0", goodTexture);
-		ModelFile goodBottom = models().withExistingParent("good_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_"+ blockKey +"_block")).texture("0", goodTexture);
-		ModelFile goodLeft = models().withExistingParent("good_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/left_" + blockKey + "_block")).texture("0", goodTexture);
-		ModelFile goodRight = models().withExistingParent("good_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/right_" + blockKey + "_block")).texture("0", goodTexture);
-		ModelFile goodTopLeft = models().withExistingParent("good_top_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_left_" + blockKey + "_block")).texture("0", goodTexture);
-		ModelFile goodTopRight = models().withExistingParent("good_top_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_right_" + blockKey + "_block")).texture("0", goodTexture);
-		ModelFile goodBottomLeft = models().withExistingParent("good_bottom_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_left_" + blockKey + "_block")).texture("0", goodTexture);
-		ModelFile goodBottomRight = models().withExistingParent("good_bottom_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_right_" + blockKey + "_block")).texture("0", goodTexture);
-
-		ModelFile badTop = models().withExistingParent("bad_top_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_" + blockKey + "_block")).texture("0", badTexture);
-		ModelFile badBottom = models().withExistingParent("bad_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_" + blockKey + "_block")).texture("0", badTexture);
-		ModelFile badLeft = models().withExistingParent("bad_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/left_" + blockKey + "_block")).texture("0", badTexture);
-		ModelFile badRight = models().withExistingParent("bad_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/right_" + blockKey + "_block")).texture("0", badTexture);
-		ModelFile badTopLeft = models().withExistingParent("bad_top_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_left_" + blockKey + "_block")).texture("0", badTexture);
-		ModelFile badTopRight = models().withExistingParent("bad_top_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_right_" + blockKey + "_block")).texture("0", badTexture);
-		ModelFile badBottomLeft = models().withExistingParent("bad_bottom_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_left_" + blockKey + "_block")).texture("0", badTexture);
-		ModelFile badBottomRight = models().withExistingParent("bad_bottom_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_right_" + blockKey + "_block")).texture("0", badTexture);
+		ModelFile badTop = models().withExistingParent("bad_top_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
+		ModelFile badBottom = models().withExistingParent("bad_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
+		ModelFile badLeft = models().withExistingParent("bad_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/left_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
+		ModelFile badRight = models().withExistingParent("bad_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/right_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
+		ModelFile badTopLeft = models().withExistingParent("bad_top_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_left_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
+		ModelFile badTopRight = models().withExistingParent("bad_top_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_right_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
+		ModelFile badBottomLeft = models().withExistingParent("bad_bottom_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_left_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
+		ModelFile badBottomRight = models().withExistingParent("bad_bottom_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_right_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
 
 		getVariantBuilder(block).forAllStatesExcept(state -> {
 			ModelFile model = goodTop;
@@ -100,7 +101,9 @@ public class BlockStates extends BlockStateProvider {
 				}
 			} else {
 				// bad models
-				if (position == BorderPosition.BOTTOM) {
+				if (position == BorderPosition.TOP) {
+					model = badTop;
+				} else if (position == BorderPosition.BOTTOM) {
 					model = badBottom;
 				} else if (position == BorderPosition.LEFT) {
 					model = badLeft;
@@ -173,4 +176,12 @@ public class BlockStates extends BlockStateProvider {
 //							.build();
 //				});
 //	}
+
+	private ResourceLocation key(Block block) {
+		return ForgeRegistries.BLOCKS.getKey(block);
+	}
+
+	private String name(Block block) {
+		return key(block).getPath();
+	}
 }
