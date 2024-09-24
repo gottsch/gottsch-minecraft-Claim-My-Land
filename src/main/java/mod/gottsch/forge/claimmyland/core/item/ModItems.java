@@ -13,7 +13,7 @@ import java.util.function.Supplier;
 public class ModItems {
     public static RegistryObject<Item> PLAYER_DEED = Registration.ITEMS.register("player_deed", () -> new PlayerDeed(new Item.Properties()));
     public static RegistryObject<Item> NATION_DEED = Registration.ITEMS.register("nation_deed", () -> new NationDeed(new Item.Properties()));
-//    public static RegistryObject<Item> CITIZEN_DEED = Registration.ITEMS.register("citizen_deed", () -> new CitizenDeed(new Item.Properties()));
+    public static RegistryObject<Item> CITIZEN_DEED = Registration.ITEMS.register("citizen_deed", () -> new CitizenDeed(new Item.Properties()));
 //
 
     public static RegistryObject<Item> BORDER_STONE = fromBorderStone(ModBlocks.BORDER_STONE, Item.Properties::new);

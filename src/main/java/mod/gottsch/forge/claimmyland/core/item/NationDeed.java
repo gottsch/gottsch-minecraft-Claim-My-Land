@@ -85,27 +85,27 @@ public class NationDeed extends Deed {
         blockEntity.setNationId(tag.contains(NATION_ID) ? tag.getUUID(NATION_ID) : null);
     }
 
-    /*
-     * cannot use deed to place foundation stone that is embedded in another parcel
-     */
-    @Override
-    public boolean handleEmbeddedPlacementRules(Parcel parcel, Parcel registryParcel) {
-        return false;
-    }
+//    /*
+//     * cannot use deed to place foundation stone that is embedded in another parcel
+//     */
+//    @Override
+//    public boolean handleEmbeddedPlacementRules(Parcel parcel, Parcel registryParcel) {
+//        return false;
+//    }
 
-    /**
-     * cannot use deed on foundation stone that is embedded in another parcel
-     * NOTE this should not happen as it should fail the placement rules.
-     * @param context
-     * @param parcel
-     * @param parentParcel
-     * @param blockEntity
-     * @return
-     */
-    @Override
-    protected InteractionResult handleEmbeddedClaim(UseOnContext context, Parcel parcel, Parcel parentParcel, FoundationStoneBlockEntity blockEntity) {
-        return InteractionResult.FAIL;
-    }
+//    /**
+//     * cannot use deed on foundation stone that is embedded in another parcel
+//     * NOTE this should not happen as it should fail the placement rules.
+//     * @param context
+//     * @param parcel
+//     * @param parentParcel
+//     * @param blockEntity
+//     * @return
+//     */
+//    @Override
+//    protected InteractionResult handleEmbeddedClaim(UseOnContext context, Parcel parcel, Parcel parentParcel, FoundationStoneBlockEntity blockEntity) {
+//        return InteractionResult.FAIL;
+//    }
 
     // TODO any unique data for appendHoverText
 

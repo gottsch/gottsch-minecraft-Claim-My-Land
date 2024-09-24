@@ -47,6 +47,10 @@ public class ModBlocks {
     public static final RegistryObject<Block> NATION_FOUNDATION_STONE = Registration.BLOCKS.register("nation_foundation_stone",
             () -> new NationFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
 
+    public static final RegistryObject<Block> CITIZEN_FOUNDATION_STONE = Registration.BLOCKS.register("citizen_foundation_stone",
+            () -> new CitizenFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+
+
     public static final RegistryObject<Block> PLAYER_BORDER = Registration.BLOCKS.register("player_border",
             () -> new BorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
 

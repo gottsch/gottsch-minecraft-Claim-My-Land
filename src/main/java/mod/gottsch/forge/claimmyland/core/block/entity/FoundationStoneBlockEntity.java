@@ -19,41 +19,18 @@
  */
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
-import com.google.common.collect.Maps;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.BorderBlock;
-import mod.gottsch.forge.claimmyland.core.block.BorderPosition;
-import mod.gottsch.forge.claimmyland.core.block.IBorderBlock;
-import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
-import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.item.Deed;
-import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
-import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.ModUtil;
-import mod.gottsch.forge.gottschcore.block.FacingBlock;
-import mod.gottsch.forge.gottschcore.spatial.Box;
-import mod.gottsch.forge.gottschcore.spatial.Coords;
-import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.UUID;
 
 /**
  * Create by Mark Gottschling on Sep 14, 2024
@@ -61,13 +38,6 @@ import java.util.*;
 public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity {
     private static final String DEED_ID = "deed_id";
     private static final String NATION_ID = "nation_id";
-//    private static final String OVERLAPS = "overlaps";
-//    private static final String HAS_PARCEL = "has_parcel";
-
-//    private static final int TICKS_PER_SECOND = 20;
-//    private static final int FIVE_SECONDS = 5 * TICKS_PER_SECOND;
-//    private static final int ONE_MINUTE = 60 * TICKS_PER_SECOND;
-//    private static final int FIVE_MINUTES = 5 * ONE_MINUTE;
 
     // unique id of of deed that created this block / block entity
     // TODO might not be necessary when adding TransferDeed

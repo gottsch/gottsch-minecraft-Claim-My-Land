@@ -59,6 +59,21 @@ public class ModUtil {
         return toAABB(box1).intersects(toAABB(box2));
     }
 
+    /**
+     * a variant of intersects where result is true is the borders are touching
+     * @param box1
+     * @param box2
+     * @return
+     */
+    public static boolean touching(Box box1, Box box2) {
+        return box1.getMinCoords().getX() <= box2.getMaxCoords().getX()
+                && box1.getMaxCoords().getX() >= box2.getMinCoords().getX()
+                && box1.getMinCoords().getY() <= box2.getMaxCoords().getY()
+                && box1.getMaxCoords().getY() >= box2.getMinCoords().getY()
+                && box1.getMinCoords().getZ() <= box2.getMaxCoords().getZ()
+                && box1.getMaxCoords().getZ() >= box2.getMinCoords().getZ();
+    }
+
     // TODO add to Box in GottschCore
     public static boolean contains(Box box1, Box box2) {
         AABB aabb = toAABB(box1);

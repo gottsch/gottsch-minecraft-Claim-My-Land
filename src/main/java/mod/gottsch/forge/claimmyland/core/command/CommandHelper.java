@@ -60,6 +60,9 @@ public class CommandHelper {
 	public static final String BY_OWNER = "by_owner";
 	public static final String BY_NATION = "by_nation";
 	public static final String NATION_NAME = "nation_name";
+	public static final String ABANDON = "abandon";
+	public static final String BY_ABANDONED = "by_abandoned";
+	public static final String FROM_PARCEL = "from_parcel";
 
 	/**
 	 * marks persistent data as dirty so that minecraft will auto save it.

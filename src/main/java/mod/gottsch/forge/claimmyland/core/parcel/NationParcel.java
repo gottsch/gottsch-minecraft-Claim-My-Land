@@ -33,11 +33,10 @@ import java.util.UUID;
  *
  */
 public class NationParcel extends AbstractParcel {
-    public static final String NATION_ID_KEY = "nation_id";
-    private static final String NATION_NAME_KEY = "nation_name";
 
-    private UUID nationId;
-    private String nationName;
+    private static final String BORDER_TYPE_KEY = "border_type";
+
+    private NationBorderType borderType;
 
     /**
      *
@@ -47,8 +46,13 @@ public class NationParcel extends AbstractParcel {
     }
 
     @Override
+    public String randomName() {
+        return super.randomName().replace("Parcel", "Nation");
+    }
+
+    @Override
     public boolean grantsAccess(Parcel parcel) {
-        // TODO grants access to Citizen and MultiCitizen deeds
+        // TODO grants access to Citizen and Citizen Zone parcel
         return false;
     }
 
@@ -74,25 +78,27 @@ public class NationParcel extends AbstractParcel {
                 && (ObjectUtils.isEmpty(getId()) || getId().equals(blockEntity.getParcelId()));
     }
 
-//    @Override
-//    public void populateBlockEntity(FoundationStoneBlockEntity entity) {
-//        super.populateBlockEntity(entity);
-//        entity.setNationId(getNationId());
-//    }
+    /*
+     * cannot use deed to place foundation stone that is embedded in another parcel
+     */
+    @Override
+    public boolean handleEmbeddedPlacementRules(Parcel registryParcel) {
+        return false;
+    }
 
     @Override
     public void save(CompoundTag tag) {
         super.save(tag);
-        tag.putUUID(NATION_ID_KEY, getNationId());
+//        tag.putUUID(NATION_ID_KEY, getNationId());
         ClaimMyLand.LOGGER.debug("saved parcel -> {}", this);
     }
 
     @Override
     public Parcel load(CompoundTag tag) {
         super.load(tag);
-        if (tag.contains(NATION_ID_KEY)) {
-            setNationId(tag.getUUID(NATION_ID_KEY));
-        }
+//        if (tag.contains(NATION_ID_KEY)) {
+//            setNationId(tag.getUUID(NATION_ID_KEY));
+//        }
         return this;
     }
 
@@ -101,27 +107,9 @@ public class NationParcel extends AbstractParcel {
         return Config.SERVER.general.nationParcelBufferRadius.get();
     }
 
-    public UUID getNationId() {
-        return nationId;
-    }
-
-    public void setNationId(UUID nationId) {
-        this.nationId = nationId;
-    }
-
-    public String getNationName() {
-        return nationName;
-    }
-
-    public void setNationName(String nationName) {
-        this.nationName = nationName;
-    }
-
     @Override
     public String toString() {
         return "NationParcel{" +
-                "nationId=" + nationId +
-                ", nationName='" + nationName + '\'' +
                 "} " + super.toString();
     }
 }

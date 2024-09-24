@@ -29,6 +29,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -44,6 +45,7 @@ import java.util.UUID;
 public abstract class AbstractParcel implements Parcel {
     public static final String NAME_KEY = "name";
     public static final String ID_KEY = "id";
+    public static final String NATION_ID_KEY = "nation_id";
     public static final String OWNER_KEY = "owner";
     public static final String DEED_KEY = "deed";
 
@@ -54,7 +56,15 @@ public abstract class AbstractParcel implements Parcel {
     // TODO this probably can be moved into Parcel (replace PARCEL_TYPE)
     public static final String TYPE = "type";
 
+    // the unique id of the parcel
     private UUID id;
+
+    // TODO will need to create a NationRegistry that associates a nation id
+    // to a name. that way instead of one parcel being a nation you can have
+    // muiltiple sharing the same name and id.
+    // the unique id of a nation
+    private UUID nationId;
+
     private UUID ownerId;
     private UUID deedId;
     private String name;
@@ -89,9 +99,15 @@ public abstract class AbstractParcel implements Parcel {
      */
     @Override
     public boolean grantsAccess(UUID entityId) {
-        if (getOwnerId().equals(entityId)) {
+        // if a parcel has no owner, anyone has access to modify
+        if (getOwnerId() == null) {
+            return true;
+        }
+        // if a parcel has a owner, only the owner has access
+        else if (getOwnerId().equals(entityId)) {
             return true;
         } else {
+            // or the owener's whitelist has access
             return getWhitelist().stream().anyMatch(uuid -> uuid.equals(entityId));
         }
     }
@@ -120,6 +136,11 @@ public abstract class AbstractParcel implements Parcel {
 //    }
 
     @Override
+    public boolean handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+        return false;
+    }
+
+    @Override
     public void save(CompoundTag tag) {
         ClaimMyLand.LOGGER.debug("saving parcel -> {}", this);
 
@@ -128,6 +149,10 @@ public abstract class AbstractParcel implements Parcel {
         } else {
             // TODO warn and skip save
         }
+        if (ObjectUtils.isNotEmpty(getNationId())) {
+            tag.putUUID(NATION_ID_KEY, getNationId());
+        }
+
         if (StringUtils.isNotBlank(getName())) {
             tag.putString(NAME_KEY, getName());
         }
@@ -166,6 +191,9 @@ public abstract class AbstractParcel implements Parcel {
         } else if (this.getId() == null) {
             setId(UUID.randomUUID());
         }
+        if (tag.contains(NATION_ID_KEY)) {
+            setNationId(tag.getUUID(NATION_ID_KEY));
+        }
         if (tag.contains(NAME_KEY)) {
             setName(tag.getString(NAME_KEY));
         }
@@ -194,6 +222,19 @@ public abstract class AbstractParcel implements Parcel {
             });
         }
         return this;
+    }
+
+    /**
+     * gets an absolute box at a coords using the block entity
+     * @return
+     */
+    @Deprecated
+    // getBox() already does this
+    @Override
+    public Box getAbsoluteBox() {
+        ICoords myCoords = getCoords();
+        return new Box(myCoords.add(getBox().getMinCoords()),
+                myCoords.add(getBox().getMaxCoords()));
     }
 
     @Override
@@ -228,6 +269,15 @@ public abstract class AbstractParcel implements Parcel {
     @Override
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    @Override
+    public UUID getNationId() {
+        return nationId;
+    }
+    @Override
+    public void setNationId(UUID nationId) {
+        this.nationId = nationId;
     }
 
     @Override

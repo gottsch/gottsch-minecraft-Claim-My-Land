@@ -99,6 +99,8 @@ public class DeedFactory {
         CompoundTag tag = deed.getOrCreateTag();
         // add the ids
         tag.putUUID(NationDeed.NATION_ID, nationId);
+        // TODO this should be refactored out
+        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
         tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
         // add the type
         tag.putString(Deed.PARCEL_TYPE, ParcelType.CITIZEN.name());
@@ -114,7 +116,8 @@ public class DeedFactory {
         return switch(type) {
             case PLAYER -> new ItemStack(ModItems.PLAYER_DEED.get());
             case NATION -> new ItemStack(ModItems.NATION_DEED.get());
-            case CITIZEN, CITIZEN_ZONE -> null; //new ItemStack((ModItems.CITIZEN_DEED.get()));
+            case CITIZEN -> new ItemStack(ModItems.CITIZEN_DEED.get());
+            case ZONE -> null; //new ItemStack((ModItems.CITIZEN_DEED.get()));
         };
     }
 

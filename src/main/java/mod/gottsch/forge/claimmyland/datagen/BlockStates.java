@@ -31,9 +31,11 @@ public class BlockStates extends BlockStateProvider {
 		simpleBlock(ModBlocks.BORDER_STONE.get(), models().cubeAll(name(ModBlocks.BORDER_STONE.get()), blockTexture(ModBlocks.BORDER_STONE.get())).renderType("cutout"));
 		simpleBlock(ModBlocks.PLAYER_FOUNDATION_STONE.get());
 		simpleBlock(ModBlocks.NATION_FOUNDATION_STONE.get());
+		simpleBlock(ModBlocks.CITIZEN_FOUNDATION_STONE.get());
 
 		borderBlock(ModBlocks.PLAYER_BORDER, modLoc("block/green"), modLoc("block/red"));
 		borderBlock(ModBlocks.NATION_BORDER, modLoc("block/blue"), modLoc("block/red"));
+		borderBlock(ModBlocks.CITIZEN_BORDER, modLoc("block/purple"), modLoc("block/red"));
 
 		bufferBlock(ModBlocks.BUFFER, modLoc("block/buffer_block"), modLoc("block/bad_buffer_block"));
 //		sewerBlock(ModBlocks.WEATHERED_COPPER_SEWER, modLoc("block/weathered_copper_pipe"), mcLoc("block/weathered_copper"));

@@ -19,6 +19,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.item;
 
+import mod.gottsch.forge.claimmyland.core.block.FoundationStone;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
@@ -120,8 +121,7 @@ public abstract class Deed extends Item {
      * @return
      */
     protected boolean validateWorldPlacement(Level level, BlockPos pos, Box size, Player player) {
-        if (
-                level.isOutsideBuildHeight(pos.offset(size.getMinCoords().toPos()))
+        if (level.isOutsideBuildHeight(pos.offset(size.getMinCoords().toPos()))
                         || level.isOutsideBuildHeight(pos.offset(size.getMaxCoords().toPos()))) {
             player.sendSystemMessage((Component.translatable(LangUtil.chat("parcel.outside_world_boundaries"))
                     .withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.ITALIC})));
@@ -197,9 +197,10 @@ public abstract class Deed extends Item {
                  */
                 Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords);
 
-                InteractionResult result = registryParcel.map(parentParcel -> handleEmbeddedClaim(context, parcel, parentParcel, foundationStoneBlockEntity)).orElseGet(() -> handleClaim(context, parcel, foundationStoneBlockEntity));
+                Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
+                boolean successfulClaim = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
 
-                if (result == InteractionResult.CONSUME) {
+                if (successfulClaim) {
                     PersistedData savedData = PersistedData.get(context.getLevel());
                     // mark data as dirty
                     if (savedData != null) {
@@ -222,14 +223,14 @@ public abstract class Deed extends Item {
                     // TODO add particle effects or place construction tap around border or border display blcok
 
                 }
-                return result;
+                return successfulClaim ? InteractionResult.CONSUME : InteractionResult.FAIL;
             }
-
         } else {
             /*
              * place foundation stone
              */
-            return canPlaceBlock(context.getLevel(), targetCoords, parcel)
+            // TODO need to handle fail -> getFoundationStone == null
+            return parcel.canPlaceAt(context.getLevel(), targetCoords)
                     && this.placeBlock(new BlockPlaceContext(context), getFoundationStone().defaultBlockState())
                     ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         }
@@ -241,101 +242,6 @@ public abstract class Deed extends Item {
      * @return
      */
     public abstract Block getFoundationStone();
-//    {
-//        return ModBlocks.FOUNDATION_STONE.get();
-//    }
-
-    /**
-     * default behaviour to claim parcel
-     * @param context
-     * @param parcel
-     * @param blockEntity
-     * @return
-     */
-    protected InteractionResult handleClaim(UseOnContext context, Parcel parcel, FoundationStoneBlockEntity blockEntity) {
-
-        Box parcelBox = blockEntity.getAbsoluteBox();
-
-        // find overlaps of the parcel with buffered registry parcels.
-        // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox);
-        if (!overlaps.isEmpty()) {
-            for (Parcel overlapParcel : overlaps) {
-                // if parcel in hand equals parcel in world then fail
-                /*
-                 * NOTE this should be moot as the deed shouldn't exist at this point anymore (survival)
-                 * as this can potentially only happen in creative.
-                 */
-                if (parcel.getId().equals(overlapParcel.getId())) {
-                    return InteractionResult.FAIL;
-                }
-
-                /*
-                 * if parcel in hand has same owner as parcel in world, ignore buffers,
-                 * but check border overlaps. parcels owned by the same player can be touching.
-                 */
-                if (parcel.getOwnerId().equals(overlapParcel.getOwnerId())) {
-                    // get the existing owned parcel
-                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-
-                    // test if the non-buffered parcels intersect
-                    if (optionalOwnedParcel.isPresent() && ModUtil.intersects(parcel.getBox(), optionalOwnedParcel.get().getBox())) {
-                        return InteractionResult.FAIL;
-                    }
-                } else {
-                    return InteractionResult.FAIL;
-                }
-            }
-        }
-
-        // add to the registry
-        ParcelRegistry.add(parcel);
-
-        return InteractionResult.CONSUME;
-    }
-
-    /**
-     *
-     * @param context
-     * @param parcel
-     * @param parentParcel
-     * @param blockEntity
-     * @return
-     */
-    abstract protected InteractionResult handleEmbeddedClaim(UseOnContext context, Parcel parcel, Parcel parentParcel, FoundationStoneBlockEntity blockEntity);
-
-    /**
-     * determines whether this deed can place a Foundation stone in the world.
-     * @param level
-     * @param coords
-     * @param parcel
-     * @return
-     */
-    protected boolean canPlaceBlock(Level level, ICoords coords, Parcel parcel) {
-        /*
-         * check if parcel is within another existing parcel
-         */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords);
-        return registryParcel.map(value -> handleEmbeddedPlacementRules(parcel, value)).orElseGet(this::handlePlacementRules);
-    }
-
-    /**
-     * handles situations where this deed DOES NOT overlap with any other parcels
-     * TODO should the deed-represented parcel be passed in?
-     * @return
-     */
-    public boolean handlePlacementRules() {
-        return true;
-    }
-
-    /**
-     * handles situations where this does DOES overlap with other parcels.
-     * ie check whitelist, nation permissions etc
-     * @return
-     */
-    public boolean handleEmbeddedPlacementRules(Parcel parcel, Parcel registryParcel) {
-        return parcel.hasAccessTo(registryParcel) && registryParcel.grantsAccess(parcel);
-    }
 
     /**
      *
@@ -410,6 +316,12 @@ public abstract class Deed extends Item {
         }
     }
 
+    /**
+     *
+     * @param level
+     * @param tag
+     * @return
+     */
     protected ICoords getPreviousCoords(Level level, CompoundTag tag) {
         // get the previous coords from tag if they exist
         ICoords coords = Coords.EMPTY;

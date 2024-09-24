@@ -6,8 +6,7 @@ import mod.gottsch.forge.claimmyland.core.config.Config;
 import java.util.UUID;
 
 // TODO placeholder
-public class CitizenZoneParcel extends AbstractParcel {
-    private UUID nationId;
+public class ZoneParcel extends AbstractParcel {
 
     @Override
     public boolean grantsAccess(Parcel parcel) {
@@ -40,13 +39,5 @@ public class CitizenZoneParcel extends AbstractParcel {
     @Override
     public int getBufferSize() {
         return Config.SERVER.general.parcelBufferRadius.get();
-    }
-
-    public UUID getNationId() {
-        return nationId;
-    }
-
-    public void setNationId(UUID nationId) {
-        this.nationId = nationId;
     }
 }

@@ -49,16 +49,20 @@ public class ParcelFactory {
         return Optional.empty();
     }
 
+    public static Optional<Parcel> create(ParcelType type) {
+        return create(type, null);
+    }
+
     /**
      *
      * @param type
      * @return
      */
-    public static Optional<Parcel> create(ParcelType type) {
+    public static Optional<Parcel> create(ParcelType type, UUID nationId) {
         return switch (type) {
             case PLAYER -> Optional.of(createPlayerParcel());
             case NATION -> Optional.of(createNationParcel());
-            case CITIZEN -> Optional.of(createCitizenParcel());
+            case CITIZEN -> Optional.of(createCitizenParcel(nationId));
             default -> Optional.empty();
         };
     }
@@ -70,9 +74,10 @@ public class ParcelFactory {
         return parcel;
     }
 
-    private static Parcel createCitizenParcel() {
-        Parcel parcel = new CitizenParcel();
+    private static Parcel createCitizenParcel(UUID nationId) {
+        CitizenParcel parcel = new CitizenParcel();
         parcel.setId(UUID.randomUUID());
+        parcel.setNationId(nationId);
         parcel.setName(parcel.randomName());
         return parcel;
     }

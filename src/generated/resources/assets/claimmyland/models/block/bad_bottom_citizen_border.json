@@ -1,0 +1,7 @@
+{
+  "parent": "claimmyland:block/bottom_border_block",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "0": "claimmyland:block/red"
+  }
+}

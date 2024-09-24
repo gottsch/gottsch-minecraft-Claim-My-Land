@@ -5,6 +5,7 @@ import mod.gottsch.forge.claimmyland.core.config.Config;
 
 import java.util.UUID;
 
+@Deprecated
 // TODO placeholder
 public class TransferParcel extends AbstractParcel {
     public static final String NATION_ID_KEY = "nation_id";

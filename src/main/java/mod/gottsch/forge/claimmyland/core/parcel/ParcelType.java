@@ -33,7 +33,8 @@ public enum ParcelType implements StringRepresentable {
     PLAYER,
     NATION,
     CITIZEN,
-    CITIZEN_ZONE;
+    ZONE;
+    // TODO add TRANSFER
 
     public static List<String> getNames() {
         return EnumSet.allOf(ParcelType.class).stream().map(Enum::name).collect(Collectors.toList());

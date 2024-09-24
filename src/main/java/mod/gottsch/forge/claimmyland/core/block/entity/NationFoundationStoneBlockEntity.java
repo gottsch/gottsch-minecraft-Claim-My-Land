@@ -25,10 +25,7 @@ import mod.gottsch.forge.claimmyland.core.block.BorderStatus;
 import mod.gottsch.forge.claimmyland.core.block.BufferBlock;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.parcel.CitizenZoneParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
@@ -91,7 +88,7 @@ public class NationFoundationStoneBlockEntity extends FoundationStoneBlockEntity
                         Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
 
                         // test if the non-buffered parcels intersect
-                        if (optionalOwnedParcel.isPresent() && ModUtil.intersects(box, optionalOwnedParcel.get().getBox())) {
+                        if (optionalOwnedParcel.isPresent() && ModUtil.touching(box, optionalOwnedParcel.get().getBox())) {
                             blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
                             break;
                         }
