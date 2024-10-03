@@ -65,10 +65,15 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.max_reached"), "You have already reached your max. number of parcels.");
 
         add(LangUtil.chat("parcel.list"), "%s's Parcels");
+        add(LangUtil.chat("parcel.list.abandoned"), "Abandoned Parcels");
         add(LangUtil.chat("parcel.list.empty"), "[Empty]");
+
+        add(LangUtil.chat("parcel.abandon.success"), "The parcel has been abandoned.");
+        add(LangUtil.chat("parcel.abandon.failure"), "Unable to abandon the parcel.");
 
         add(LangUtil.chat("parcel.add.success"), "The parcel has been added.");
         add(LangUtil.chat("parcel.add.failure"), "Unable to add the parcel.");
+        add(LangUtil.chat("parcel.add.failure_with_overlaps"), "Unable to add the parcel. It intersects with another parcel.");
 
         add(LangUtil.chat("parcel.remove.success"), "The parcel has been removed.");
         add(LangUtil.chat("parcel.remove.failure"), "Unable to remove the parcel.");
@@ -83,8 +88,21 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.whitelist.add.failure"), "Unable to player to the whitelist.");
         add(LangUtil.chat("parcel.whitelist.list"), "Whitelist for property ");
 
+        add(LangUtil.chat("parcel.citizen.nationId_required"), "A nation name is required to add a citizen parcel.");
+        add(LangUtil.chat("parcel.nation.nationName_already_exists"), "A nation with that name already exists.");
+
         // deeds
+        add(LangUtil.chat("deed.claim.success"), "You claimed a parcel at [%s] of size [%s].");
+        add(LangUtil.chat("deed.claim.intersects"), "You cannot claimed this parcel as it intersects with another.");
+        add(LangUtil.chat("deed.claim.insufficient_size"), "The deed's size [%s] is insufficient to claim parcel of size [%s].");
+        add(LangUtil.chat("deed.claim.unable_to_claim"), "You unable to claim parcel at [%s] of size [%s].");
+
         add(LangUtil.chat("deed.generate.failure"), "Unable to generate deed.");
+        add(LangUtil.chat("deed.not_owner"), "You are not the owner of this deed.");
+
+        // foundation stones
+        add(LangUtil.chat("foundation_stone.unable_to_location"), "Unable to locate foundation stone block entity.");
+        add(LangUtil.chat("foundation_stone.incorrect_deed"), "Only the deed used to place the foundation stone can be used here.");
 
         /*
          *  Util.tooltips
@@ -93,6 +111,8 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.tooltip("hold_shift"), "Hold [SHIFT] to expand");
 
         // parcel
+        // TODO this is for an admin stone or info stone - need a good name
+
         add(LangUtil.tooltip("parcel.howto.remove"), "Place cornerstone block inside parcel boundaries.\\nUse cornerstone block to open GUI.\nClick Remove button.");
 
 

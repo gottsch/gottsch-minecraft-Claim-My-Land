@@ -60,6 +60,10 @@ public class OpsProtectCommand2 {
         return SharedSuggestionProvider.suggest(Arrays.stream(ParcelType.values()).filter(p -> p != ParcelType.ZONE).map(ParcelType::getSerializedName), builder);
     };
 
+    private static final SuggestionProvider<CommandSourceStack> PARCEL_TYPES = (source, builder) -> {
+        return SharedSuggestionProvider.suggest(Arrays.stream(ParcelType.values()).map(ParcelType::getSerializedName), builder);
+    };
+
     private static final SuggestionProvider<CommandSourceStack> PARCEL_NAMES = (source, builder) -> {
         String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
         // get the UUID for the name
@@ -84,11 +88,6 @@ public class OpsProtectCommand2 {
     private static final SuggestionProvider<CommandSourceStack> NATION_NAMES = (source, builder) -> {
         List<String> names = ParcelRegistry.getNations().stream().map((Parcel::getName)).toList();
         return SharedSuggestionProvider.suggest(names, builder);
-    };
-
-    private static final SuggestionProvider<CommandSourceStack> PARCEL_TYPES = (source, builder) -> {
-//        return SharedSuggestionProvider.suggest(ParcelType.getNames().stream().filter(p -> !p.equalsIgnoreCase("citizen_zone")), builder);
-        return SharedSuggestionProvider.suggest(Arrays.stream(ParcelType.values()).filter(p -> p != ParcelType.ZONE).map(ParcelType::getSerializedName), builder);
     };
 
     /*
@@ -233,7 +232,7 @@ public class OpsProtectCommand2 {
                                                                                         .then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
                                                                                                 .then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
                                                                                                         .then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
-                                                                                                                .suggests(DEED_TYPES)
+                                                                                                                .suggests(PARCEL_TYPES)
                                                                                                                 .executes(source -> {
                                                                                                                     return ParcelCommandDelegate.addParcel(source.getSource(),
                                                                                                                             StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
@@ -282,6 +281,18 @@ public class OpsProtectCommand2 {
                                                         )
                                                 )
 
+                                                ///// DEMOLISH /////
+                                                .then(Commands.literal(CommandHelper.DEMOLISH)
+                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                .suggests(OWNER_NAMES)
+                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                        .suggests(PARCEL_NAMES)
+                                                                        .executes(source -> {
+                                                                            return ParcelCommandDelegate.demolishParcel(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+                                                                        })
+                                                                )
+                                                        )
+                                                )
                                                 ///// REMOVE PARCEL /////
                                                 .then(Commands.literal(CommandHelper.REMOVE)
                                                         .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
@@ -438,13 +449,14 @@ public class OpsProtectCommand2 {
         return 1;
     }
 
-    @Deprecated
+
     /**
      * @param source
      * @param ownerName
      * @param parcelName
      * @return
      */
+    @Deprecated
     private static int generateDeedFromParcel(CommandSourceStack source, String ownerName, String parcelName, String newOwnerName) {
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {

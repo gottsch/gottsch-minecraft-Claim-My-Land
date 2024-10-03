@@ -41,7 +41,22 @@ public class BorderBlock extends FacingBlock implements IBorderBlock, SimpleWate
 
     // TODO this will have to change either to almost full block or the shape of each block
     private static final VoxelShape SHAPE = Block.box(0.01D, 0.01D, 0.01D, 15.99D, 15.99D, 15.99D);
-//    private static final VoxelShape SHAPE = Block.box(6D, 6D, 6D, 10D, 10D, 10D);
+
+    private static final VoxelShape NORTH_LEFT = Block.box(0D, 0D, 0D, 2D, 16, 2);
+    private static final VoxelShape NORTH_RIGHT = Block.box(14, 0, 0, 16, 16, 2);
+    private static final VoxelShape SOUTH_LEFT = Block.box(14D, 0D, 15D, 16D, 16D, 16D);
+    private static final VoxelShape SOUTH_RIGHT = Block.box(0, 0, 14, 2, 16, 16);
+
+    private static final VoxelShape NORTH_TOP = Block.box(0, 14, 0, 16, 16, 2);
+    private static final VoxelShape NORTH_BOTTOM = Block.box(0, 0, 0, 16, 2, 2);
+    private static final VoxelShape SOUTH_TOP = Block.box(0, 14, 14, 16, 16, 16);
+    private static final VoxelShape SOUTH_BOTTOM = Block.box(0, 0, 14, 16, 2, 16);
+
+    private static final VoxelShape EAST_TOP = Block.box(14, 14, 0, 16, 16, 16);
+    private static final VoxelShape EAST_BOTTOM = Block.box(14, 0, 0, 16, 2, 16);
+    private static final VoxelShape WEST_TOP = Block.box(0, 14, 0, 2, 16, 16);
+    private static final VoxelShape WEST_BOTTOM = Block.box(0, 0, 0, 2, 2, 16);
+
 
     public BorderBlock(Properties properties) {
         super(properties);
@@ -72,7 +87,35 @@ public class BorderBlock extends FacingBlock implements IBorderBlock, SimpleWate
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter getter, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+
+        Direction direction = state.getValue(FACING);
+        BorderPosition position = state.getValue(POSITION);
+
+        VoxelShape shape = switch(position) {
+            case RIGHT-> switch(direction) {
+                case SOUTH -> SOUTH_RIGHT;
+                default -> NORTH_RIGHT;
+            };
+            case LEFT -> switch(direction) {
+                case SOUTH -> SOUTH_LEFT;
+                default -> NORTH_LEFT;
+            };
+            case TOP -> switch(direction) {
+                case SOUTH -> SOUTH_TOP;
+                case EAST -> EAST_TOP;
+                case WEST -> WEST_TOP;
+                default -> NORTH_TOP;
+            };
+            case BOTTOM -> switch(direction) {
+                case SOUTH -> SOUTH_BOTTOM;
+                case EAST -> EAST_BOTTOM;
+                case WEST -> WEST_BOTTOM;
+                default -> NORTH_BOTTOM;
+            };
+            default -> SHAPE;
+        };
+
+        return shape;
     }
 
     /**

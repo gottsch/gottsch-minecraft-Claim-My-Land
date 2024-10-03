@@ -41,9 +41,11 @@ public class ParcelFactory {
             else if (type.equalsIgnoreCase(ParcelType.CITIZEN.getSerializedName())) {
                 return Optional.of(new CitizenParcel());
             }
-            // TODO add citizen zone
             else if (type.equalsIgnoreCase(ParcelType.NATION.getSerializedName())) {
                 return Optional.of(new NationParcel());
+            }
+            else if (type.equalsIgnoreCase(ParcelType.ZONE.getSerializedName())) {
+                return Optional.of(new ZoneParcel());
             }
         }
         return Optional.empty();
@@ -63,6 +65,7 @@ public class ParcelFactory {
             case PLAYER -> Optional.of(createPlayerParcel());
             case NATION -> Optional.of(createNationParcel());
             case CITIZEN -> Optional.of(createCitizenParcel(nationId));
+            case ZONE -> Optional.of(createZoneParcel(nationId));
             default -> Optional.empty();
         };
     }
@@ -86,6 +89,14 @@ public class ParcelFactory {
         NationParcel parcel = new NationParcel();
         parcel.setId(UUID.randomUUID());
         parcel.setNationId(UUID.randomUUID());
+        parcel.setName(parcel.randomName());
+        return parcel;
+    }
+
+    private static Parcel createZoneParcel(UUID nationId) {
+        ZoneParcel parcel = new ZoneParcel();
+        parcel.setId(UUID.randomUUID());
+        parcel.setNationId(nationId);
         parcel.setName(parcel.randomName());
         return parcel;
     }

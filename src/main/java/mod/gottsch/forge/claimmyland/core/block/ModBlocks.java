@@ -60,6 +60,9 @@ public class ModBlocks {
     public static final RegistryObject<Block> CITIZEN_BORDER = Registration.BLOCKS.register("citizen_border",
             () -> new BorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
 
+    public static final RegistryObject<Block> ZONE_BORDER = Registration.BLOCKS.register("zone_border",
+            () -> new BorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
+
     public static final RegistryObject<Block> BUFFER = Registration.BLOCKS.register("buffer",
             () -> new BufferBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
 

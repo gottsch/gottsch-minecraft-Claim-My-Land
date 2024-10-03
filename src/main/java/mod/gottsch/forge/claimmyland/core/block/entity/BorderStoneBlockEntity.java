@@ -109,7 +109,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
         if (getLevel().getGameTime() > getExpireTime()) {
             // remove border
-            removeParcelBorder(getCoords());
+            removeParcelBorder(getLevel(), getCoords());
             // self destruct
             selfDestruct();
         }
@@ -142,12 +142,17 @@ public class BorderStoneBlockEntity extends BlockEntity {
         };
     }
 
+    public int getBufferSize(String type) {
+        ParcelType parcelType = StringUtils.isNotBlank(type) ? ParcelType.valueOf(type) : ParcelType.PLAYER;
+        return getBufferSize(parcelType);
+    }
+
     /**
      * get the size of the buffer radius for the parcel type
      * @return
      */
-    public int getBufferSize() {
-        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
+    public int getBufferSize(ParcelType parcelType) {
+//        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
         return switch (parcelType) {
             case PLAYER, CITIZEN -> Config.SERVER.general.parcelBufferRadius.get();
             case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
@@ -237,7 +242,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
             bufferRadius = parcel.get().getBufferSize();
         } else {
             coords = new Coords(this.getBlockPos());
-            bufferRadius = getBufferSize();
+            bufferRadius = getBufferSize(getParcelType());
         }
 //        ClaimMyLand.LOGGER.debug("using coords for outlines -> {}", coords);
         // add the border
@@ -361,12 +366,12 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param level
      * @param pos
      * @param removeBlock
-     * @param blockState
+     * @param newState
      */
-    private void replaceParcelBorderBlock(Level level, BlockPos pos, Block removeBlock, BlockState blockState) {
+    private static void replaceParcelBorderBlock(Level level, BlockPos pos, Block removeBlock, BlockState newState) {
         BlockState borderState = level.getBlockState(pos);
         if ((borderState instanceof IBorderBlock) || borderState.is(removeBlock) || borderState.canBeReplaced()) {
-            level.setBlockAndUpdate(pos, blockState);
+            level.setBlockAndUpdate(pos, newState);
         }
     }
 
@@ -377,7 +382,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param removeBlock
      * @param blockState
      */
-    private void replaceParcelBorder(Box box, Block removeBlock, BlockState blockState) {
+    private static void replaceParcelBorder(Level level, Box box, Block removeBlock, BlockState blockState) {
         // only iterate over the outline coords
         for (int x = 0; x < ModUtil.getSize(box).getX(); x++) {
             BlockPos pos = box.getMinCoords().toPos().offset(x, 0, 0);
@@ -437,14 +442,23 @@ public class BorderStoneBlockEntity extends BlockEntity {
                 coords = coords.withY(getBlockPos().getY());
             }
         }
-        removeParcelBorder(coords);
+        removeParcelBorder(getLevel(), coords);
     }
 
-    public void removeParcelBorder(ICoords coords) {
+    public void removeParcelBorder(Level level, ICoords coords) {
         Box box = getBorderDisplayBox(coords);
-        replaceParcelBorder(box, getBorderBlock(), Blocks.AIR.defaultBlockState());
-        box = ModUtil.inflate(box, getBufferSize());
-        replaceParcelBorder(box, ModBlocks.BUFFER.get(), Blocks.AIR.defaultBlockState());
+        replaceParcelBorder(level, box, getBorderBlock(), Blocks.AIR.defaultBlockState());
+        box = ModUtil.inflate(box, getBufferSize(getParcelType()));
+        replaceParcelBorder(level, box, ModBlocks.BUFFER.get(), Blocks.AIR.defaultBlockState());
+    }
+
+    /**
+     * static variant where all values are provided
+     */
+    public static void removeParcelBorder(Level level, Box box, Block borderBlock, int bufferSize) {
+        replaceParcelBorder(level, box, borderBlock, Blocks.AIR.defaultBlockState());
+        box = ModUtil.inflate(box, bufferSize);
+        replaceParcelBorder(level, box, ModBlocks.BUFFER.get(), Blocks.AIR.defaultBlockState());
     }
 
 //    // TODO move to Parcel

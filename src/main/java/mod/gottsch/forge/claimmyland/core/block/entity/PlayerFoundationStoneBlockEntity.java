@@ -36,7 +36,7 @@ public class PlayerFoundationStoneBlockEntity extends FoundationStoneBlockEntity
     }
 
     @Override
-    public int getBufferSize() {
+    public int getBufferSize(ParcelType type) {
       return Config.SERVER.general.parcelBufferRadius.get();
     }
 

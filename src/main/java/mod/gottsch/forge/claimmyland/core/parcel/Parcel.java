@@ -146,14 +146,14 @@ public interface Parcel {
     }
 
     // TODO have 2 variants of this, one that takes the parcelBox (static) and one that doesn't
-    public boolean handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox);
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox);
 
     /**
      * default behaviour to claim parcel
      * @param level
      * @return
      */
-    default public boolean handleClaim(Level level, Box parcelBox) {
+    default public ClaimResult handleClaim(Level level, Box parcelBox) {
 
 //        Box parcelBox = blockEntity.getAbsoluteBox();
 
@@ -169,7 +169,7 @@ public interface Parcel {
                  * as this can potentially only happen in creative.
                  */
                 if (getId().equals(overlapParcel.getId())) {
-                    return false; // ClaimResult.FAILURE
+                    return ClaimResult.FAILURE;
                 }
 
                 /*
@@ -182,10 +182,10 @@ public interface Parcel {
 
                     // test if the non-buffered parcels intersect
                     if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
-                        return false; // ClaimResult.INTERSECTS
+                        return ClaimResult.INTERSECTS;
                     }
                 } else {
-                    return false; // ClaimResult.INTERSECTS;
+                    return ClaimResult.INTERSECTS;
                 }
             }
         }
@@ -193,7 +193,7 @@ public interface Parcel {
         // add to the registry
         ParcelRegistry.add(this);
 
-        return true; // ClaimResult.SUCCESS;
+        return ClaimResult.SUCCESS;
     }
 
     default public boolean hasBufferedIntersections(Parcel parcel, List<Parcel> bufferedParcels) {
@@ -276,4 +276,15 @@ public interface Parcel {
 
     void setType(ParcelType type);
 
+    Long getFoundedTime();
+
+    void setFoundedTime(Long foundedTime);
+
+    Long getOnwerTime();
+
+    void setOwnerTime(Long occupiedTime);
+
+    Long getAbandonedTime();
+
+    void setAbandonedTime(Long abandonedTime);
 }

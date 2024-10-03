@@ -74,6 +74,10 @@ public abstract class AbstractParcel implements Parcel {
     private List<UUID> whitelist;
     private ParcelType type;
 
+    private long foundedTime;
+    private long ownerTime;
+    private long abandonedTime;
+
     public AbstractParcel() {
         setId(UUID.randomUUID());
     }
@@ -136,8 +140,8 @@ public abstract class AbstractParcel implements Parcel {
 //    }
 
     @Override
-    public boolean handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
-        return false;
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+        return ClaimResult.FAILURE;
     }
 
     @Override
@@ -182,6 +186,10 @@ public abstract class AbstractParcel implements Parcel {
             });
             tag.put(WHITELIST_KEY, list);
         }
+
+        tag.putLong("foundedTime", getFoundedTime());
+        tag.putLong("ownerTime", getOnwerTime());
+        tag.putLong("abandonedTime", getAbandonedTime());
     }
 
     @Override
@@ -221,6 +229,17 @@ public abstract class AbstractParcel implements Parcel {
                 }
             });
         }
+
+        if (tag.contains("foundedTime")) {
+            setFoundedTime(tag.getLong("foundedTime"));
+        }
+        if (tag.contains("ownerTime")) {
+            setOwnerTime(tag.getLong("ownerTime"));
+        }
+        if (tag.contains("abandonedTime")) {
+            setAbandonedTime(tag.getLong("abandonedTime"));
+        }
+
         return this;
     }
 
@@ -352,6 +371,36 @@ public abstract class AbstractParcel implements Parcel {
     @Override
     public void setType(ParcelType type) {
         this.type = type;
+    }
+
+    @Override
+    public Long getFoundedTime() {
+        return foundedTime;
+    }
+
+    @Override
+    public void setFoundedTime(Long foundedTime) {
+        this.foundedTime = foundedTime;
+    }
+
+    @Override
+    public Long getOnwerTime() {
+        return ownerTime;
+    }
+
+    @Override
+    public void setOwnerTime(Long ownerTime) {
+        this.ownerTime = ownerTime;
+    }
+
+    @Override
+    public Long getAbandonedTime() {
+        return abandonedTime;
+    }
+
+    @Override
+    public void setAbandonedTime(Long abandonedTime) {
+        this.abandonedTime = abandonedTime;
     }
 
     @Override

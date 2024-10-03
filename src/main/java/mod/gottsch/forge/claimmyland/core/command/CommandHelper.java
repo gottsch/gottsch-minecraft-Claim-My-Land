@@ -63,6 +63,7 @@ public class CommandHelper {
 	public static final String ABANDON = "abandon";
 	public static final String BY_ABANDONED = "by_abandoned";
 	public static final String FROM_PARCEL = "from_parcel";
+	public static final String DEMOLISH = "demolish";
 
 	/**
 	 * marks persistent data as dirty so that minecraft will auto save it.

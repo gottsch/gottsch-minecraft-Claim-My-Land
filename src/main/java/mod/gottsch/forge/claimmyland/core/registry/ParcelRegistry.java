@@ -159,15 +159,15 @@ public class ParcelRegistry {
 //            ClaimMyLand.LOGGER.debug("loading registry, size -> {}", list.size());
 
             list.forEach(element -> {
-//                ClaimMyLand.LOGGER.debug("processing parcel element...");
+                ClaimMyLand.LOGGER.debug("processing parcel element...");
                 Optional<Parcel> optionalParcel = ParcelFactory.create((CompoundTag)element);
                 optionalParcel.ifPresent(parcel -> {
                     // load the parcel
                     parcel.load((CompoundTag) element);
 
-//                    if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-//                        ClaimMyLand.LOGGER.debug("loaded parcel -> {}", parcel);
-//                    }
+                    if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+                        ClaimMyLand.LOGGER.debug("loaded parcel -> {}", parcel);
+                    }
 
                     // add to byCoords map
                     PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
@@ -269,6 +269,8 @@ public class ParcelRegistry {
      * @param parcel
      */
     public static void removeParcel(Parcel parcel) {
+        // remove from the TREE
+        TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
         // delete from PARCELS registries
         List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
         if (!parcels.isEmpty()) {
@@ -279,6 +281,10 @@ public class ParcelRegistry {
         // remove from buffer map
         Box inflatedBox = inflateParcelBox(parcel);
         BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
+        // TODO test if this only deletes the one, or everything in this area.
+        // remove from buffer tree
+        BUFFER_TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId())));
+
 
         // if nation remove from special map/registry
         removeFromNationsRegistry(parcel);
@@ -287,6 +293,18 @@ public class ParcelRegistry {
     private static void removeFromNationsRegistry(Parcel parcel) {
         if (parcel.getType() == ParcelType.NATION) {
             NATIONS_BY_ID.remove(((NationParcel)parcel).getNationId(), parcel);
+
+                    ParcelRegistry.findChildrenByNationId(parcel.getNationId())
+                    .forEach(p -> {
+                        if (p.getType() == ParcelType.ZONE) {
+                            ParcelRegistry.removeParcel(p);
+                        } else {
+                            p.setType(ParcelType.PLAYER);
+                            p.setNationId(null);
+                            // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
+                        }
+                    });
+
         }
     }
 
@@ -407,8 +425,7 @@ public class ParcelRegistry {
 
     public static List<Parcel> findChildrenByNationId(UUID nationId) {
         return PARCELS_BY_COORDS.values().stream()
-                .filter(p -> (p instanceof CitizenParcel || p instanceof ZoneParcel))
-                .filter(p -> (nationId.equals(p.getNationId())))
+                .filter(p -> ((p instanceof CitizenParcel || p instanceof ZoneParcel)) && nationId.equals(p.getNationId()))
                 .toList();
     }
 

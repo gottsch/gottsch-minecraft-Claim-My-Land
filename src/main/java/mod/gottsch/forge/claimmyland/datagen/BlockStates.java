@@ -27,20 +27,47 @@ public class BlockStates extends BlockStateProvider {
 	@Override
 	protected void registerStatesAndModels() {
 
-//		simpleBlock(ModBlocks.FOUNDATION_STONE.get());
-		simpleBlock(ModBlocks.BORDER_STONE.get(), models().cubeAll(name(ModBlocks.BORDER_STONE.get()), blockTexture(ModBlocks.BORDER_STONE.get())).renderType("cutout"));
-		simpleBlock(ModBlocks.PLAYER_FOUNDATION_STONE.get());
 		simpleBlock(ModBlocks.NATION_FOUNDATION_STONE.get());
 		simpleBlock(ModBlocks.CITIZEN_FOUNDATION_STONE.get());
+
+		foundationStone(ModBlocks.PLAYER_FOUNDATION_STONE, mcLoc("block/polished_andesite"), mcLoc("block/andesite"));
+//		borderStone(ModBlocks.BORDER_STONE, mcLoc("block/polished_andesite"));
 
 		borderBlock(ModBlocks.PLAYER_BORDER, modLoc("block/green"), modLoc("block/red"));
 		borderBlock(ModBlocks.NATION_BORDER, modLoc("block/blue"), modLoc("block/red"));
 		borderBlock(ModBlocks.CITIZEN_BORDER, modLoc("block/purple"), modLoc("block/red"));
+		borderBlock(ModBlocks.ZONE_BORDER, modLoc("block/purple"), modLoc("block/red"));
 
 		bufferBlock(ModBlocks.BUFFER, modLoc("block/buffer_block"), modLoc("block/bad_buffer_block"));
-//		sewerBlock(ModBlocks.WEATHERED_COPPER_SEWER, modLoc("block/weathered_copper_pipe"), mcLoc("block/weathered_copper"));
-//		sewerBlock(ModBlocks.TERRACOTTA_SEWER, mcLoc("block/terracotta"), mcLoc("block/terracotta"));
+	}
 
+	public void foundationStone(RegistryObject<Block> block, ResourceLocation polished, ResourceLocation stone) {
+		String name = block.getId().getPath();
+		myFoundationStone(name, (FoundationStone)block.get(), polished, stone, "minecraft:cutout");
+
+	}
+
+	public void borderStone(RegistryObject<Block> block, ResourceLocation polished) {
+		String name = block.getId().getPath();
+		BorderStone borderStone = (BorderStone)block.get();
+		ModelFile model = models().withExistingParent(name, modLoc(ModelProvider.BLOCK_FOLDER + "/border_stone")).texture("0", polished).renderType("minecraft:cutout");
+
+		getVariantBuilder(borderStone).forAllStatesExcept(state -> {
+			Direction facing = state.getValue(FoundationStone.FACING);
+			int yRot = 0;
+			Direction dir = state.getValue(BorderBlock.FACING);
+			if (dir == Direction.DOWN) {
+			}
+			else if (dir == Direction.UP) {
+			} else {
+				yRot = ((int) state.getValue(BorderBlock.FACING).toYRot() + 180) % 360;
+			}
+			return ConfiguredModel.builder()
+					.modelFile(model)
+					.rotationY(yRot)// (int) facing.getOpposite().toYRot())
+					.uvLock(true)
+					.build();
+		}, BorderBlock.WATERLOGGED);
 	}
 
 	public void borderBlock(RegistryObject<Block> block, ResourceLocation goodTexture, ResourceLocation badTexture) {
@@ -58,6 +85,30 @@ public class BlockStates extends BlockStateProvider {
 		String name = block.getId().getPath();
 
 		myBorderBlock(name, (BufferBlock)block.get(), "buffer", goodTexture, badTexture, "minecraft:translucent");
+	}
+
+	private void myFoundationStone(String name, FoundationStone block, ResourceLocation polished, ResourceLocation stone, String renderType) {
+		ModelFile model = models().withExistingParent(name, modLoc(ModelProvider.BLOCK_FOLDER + "/foundation_stone")).texture("2", polished).texture("9", stone).renderType(renderType);
+
+		getVariantBuilder(block).forAllStatesExcept(state -> {
+			Direction facing = state.getValue(FoundationStone.FACING);
+			int yRot = 0;
+			Direction dir = state.getValue(BorderBlock.FACING);
+			if (dir == Direction.DOWN) {
+//				model = ringOpen;
+//				xRot = 90;
+			}
+			else if (dir == Direction.UP) {
+//				xRot = -90;
+			} else {
+				yRot = ((int) state.getValue(BorderBlock.FACING).toYRot() + 180) % 360;
+			}
+			return ConfiguredModel.builder()
+					.modelFile(model)
+					.rotationY(yRot)// (int) facing.getOpposite().toYRot())
+					.uvLock(true)
+					.build();
+		}, BorderBlock.WATERLOGGED);
 	}
 
 	private void myBorderBlock(String name, BorderBlock block, String blockKey, ResourceLocation goodTexture, ResourceLocation badTexture, String renderType) {

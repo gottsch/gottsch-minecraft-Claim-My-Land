@@ -5,4 +5,8 @@ public enum ClaimResult {
     INTERSECTS,
     INSUFFICIENT_SIZE,
     FAILURE;
+
+    public boolean isSuccess() {
+        return this == SUCCESS;
+    }
 }

@@ -1,11 +1,13 @@
 package mod.gottsch.forge.claimmyland.core.command;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.block.BorderStone;
+import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelFactory;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.item.Deed;
+import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
+import mod.gottsch.forge.claimmyland.core.item.NationDeed;
+import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -15,8 +17,11 @@ import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.apache.commons.lang3.StringUtils;
 
@@ -35,9 +40,7 @@ public class ParcelCommandDelegate {
     public static int listParcelsByAbandoned(CommandSourceStack source) {
         try {
             List<Component> messages = new ArrayList<>();
-            messages.add(Component.literal(""));
-            messages.add(Component.translatable(LangUtil.chat("parcel.list.abandoned")).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
-            messages.add(Component.literal(""));
+            buildListTitle(messages, Component.translatable(LangUtil.chat("parcel.list.abandoned")));
 
             List<Component> components = formatList(messages, ParcelRegistry.findAbandoned());
             components.forEach(component -> {
@@ -63,9 +66,10 @@ public class ParcelCommandDelegate {
 
     public static int listParcelsByOwner(CommandSourceStack source, ServerPlayer player) {
         List<Component> messages = new ArrayList<>();
-        messages.add(Component.literal(""));
-        messages.add(Component.translatable(LangUtil.chat("parcel.list"), player.getName().getString()).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
-        messages.add(Component.literal(""));
+//        messages.add(Component.literal(""));
+//        messages.add(Component.translatable(LangUtil.chat("parcel.list"), player.getName().getString()).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
+//        messages.add(Component.literal(""));
+        buildListTitle(messages, Component.translatable(LangUtil.chat("parcel.list"), player.getName().getString()));
 
         List<Component> components = formatList(messages, ParcelRegistry.findByOwner(player.getUUID()));
         components.forEach(component -> {
@@ -98,6 +102,14 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
+    static List<Component> buildListTitle(List<Component> messages, Component title) {
+        messages.add(Component.literal(""));
+        messages.add(((MutableComponent)title).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
+        messages.add(Component.literal(""));
+
+        return messages;
+    }
+
     static List<Component> formatList(List<Component> messages, List<Parcel> list) {
 
         if (list.isEmpty()) {
@@ -128,7 +140,6 @@ public class ParcelCommandDelegate {
         return addParcel(source, ownerName, pos, xSize, ySizeUp, ySizeDown, zSize, parcelType, "");
     }
 
-    // TODO need a command to remove owner from citizen parcel ie make it claimable
     public static int addParcel(CommandSourceStack source, String ownerName, BlockPos pos, int xSize, int ySizeUp, int ySizeDown, int zSize, String parcelType, String nationName) {
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
 
@@ -142,12 +153,21 @@ public class ParcelCommandDelegate {
         // validation
         if ((type == ParcelType.CITIZEN || type == ParcelType.ZONE) && nationId == null) {
             source.sendFailure(Component.translatable(LangUtil.chat("parcel.citizen.nationId_required")).withStyle(ChatFormatting.RED));
-            return 1;
+            return 0;
+        }
+
+        // validate nation name is unique if adding a nation
+        if (type == ParcelType.NATION && StringUtils.isNotBlank(nationName)) {
+            // if the name was found then fail
+            if (nationId != null) {
+                source.sendFailure(Component.translatable(LangUtil.chat("parcel.nation.nationName_already_exists")).withStyle(ChatFormatting.RED));
+                return 0;
+            }
         }
 
         if (player != null) {
             // create a relative sized Box
-            Box size = new Box(Coords.of(0, -ySizeDown, 0), new Coords(xSize-1, ySizeUp-1, zSize-1));
+            Box size = new Box(Coords.of(0, -ySizeDown, 0), Coords.of(xSize-1, ySizeUp-1, zSize-1));
             ICoords coords = Coords.of(pos);
             Optional<Parcel> parcelOptional = ParcelFactory.create(type, nationId);
             if (parcelOptional.isPresent()) {
@@ -156,79 +176,30 @@ public class ParcelCommandDelegate {
                 parcel.setCoords(coords);
                 parcel.setSize(size);
 
-                // commands override the placement rules
-//                boolean canPlace = parcel.canPlaceAt(source.getLevel(), coords);
-//                if (canPlace) {
+                // parcel customizations
+                if (parcel.getType() == ParcelType.NATION && StringUtils.isNotBlank(nationName)) {
+                    ((NationParcel)parcel).setName(nationName);
+                }
+
+                // NOTE commands override the placement rules
+
                 /*
                  * check if parcel is within another existing parcel
                  */
                 Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords);
 
-                boolean successfulClaim = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(source.getLevel(), parentParcel, parcel.getBox())).orElseGet(() -> parcel.handleClaim(source.getLevel(), parcel.getBox()));
-                if (successfulClaim) {
+                ClaimResult successfulClaim = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(source.getLevel(), parentParcel, parcel.getBox())).orElseGet(() -> parcel.handleClaim(source.getLevel(), parcel.getBox()));
+                if (successfulClaim == ClaimResult.SUCCESS) {
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.add.success")).withStyle(ChatFormatting.GREEN), false);
                     CommandHelper.save(source.getLevel());
                 } else {
+                    // TODO examine the claim result to determine the correct message.
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.add.failure_with_overlaps")).withStyle(ChatFormatting.RED), false);
                 }
-//            }
-//            else {
-//                    source.sendFailure(Component.translatable(LangUtil.chat("parcel.add.failure")).withStyle(ChatFormatting.RED));
-//                }
             } else {
                 ClaimMyLand.LOGGER.error("unable to create parcel with provided nationid -> {}", nationId);
                 source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
             }
-//                // TODO need to refactory parcels/deeds so they can be called to create the parcel
-//                // properly. else all the logic has to be repeated here with lots of switch statements.
-//                ItemStack deed = switch (ParcelType.valueOf(parcelType)) {
-//                    case PLAYER -> DeedFactory.createPlayerDeed(size);
-//                    case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
-//                    case CITIZEN -> DeedFactory.createCitizenDeed(size);
-////                    {
-////                        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords);
-////                        if (registryParcel.isPresent() && (registryParcel.get().getType() == ParcelType.NATION || registryParcel.get().getType() == ParcelType.CITIZEN_ZONE)) {
-////                            yield DeedFactory.createCitizenDeed(size, ((NationParcel) registryParcel.get()).getNationId());
-////                        } else {
-////                            yield ItemStack.EMPTY;
-////                        }
-////                    }
-//                    case CITIZEN_ZONE, default -> ItemStack.EMPTY;
-//                };
-//
-//                if (deed == ItemStack.EMPTY) {
-//                    // TODO display error
-//                    return 1;
-//                }
-//                // TODO need to run the placement rules.
-//                // TODO if player parcel and in citizen zone, convert to citizen.
-//                // TODO need to add the nation id if citizen or citizen zone
-            // TODO run claim rules
-//                Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords);
-//                boolean canPlaceParcel = registryParcel.map(value -> deed.handleEmbeddedClaim(parcel, value)).orElseGet(this::handlePlacementRules);
-
-
-//
-//                // ensure that it still meets overlap criteria
-//                Box parcelBox = parcel.getBox();
-//                Box inflatedBox = ModUtil.inflate(parcelBox, parcel.getBufferSize());
-//                // TODO need to change when Nation and Citizen parcels are implemented
-//                // TODO need a method that checks if placement is valid
-//                // ie Parcel.isPlacementValid(parcel) which checks all overlaps if any are person or citizen, or if nation, then check
-//                // 1) does this parcel belong to the nation
-//                // 2) is totally within bounds of nation
-//                if (ParcelRegistry.findBoxes(inflatedBox).isEmpty()) {
-//                    ParcelRegistry.add(parcel);
-//                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.add.success")).withStyle(ChatFormatting.GREEN), false);
-//                    CommandHelper.save(source.getLevel());
-//                } else {
-//                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.add.failure_with_overlaps")).withStyle(ChatFormatting.GREEN), false);
-//                }
-//
-//            } else {
-//                source.sendFailure(Component.translatable(LangUtil.chat("parcel.add.failure")).withStyle(ChatFormatting.GREEN));
-//            }
-
         }
         else {
             CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
@@ -260,6 +231,75 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
+    /**
+     *
+     * @param source
+     * @param ownerName
+     * @param parcelName
+     * @return
+     */
+    public static int demolishParcel(CommandSourceStack source, String ownerName, String parcelName) {
+        try {
+            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+            if (player != null) {
+                List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
+                // get the parcel
+                Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
+                if (parcel.isPresent()) {
+                    // get the type
+                    ParcelType type = parcel.get().getType();
+
+                    ItemStack deed = switch (type) {
+                        case PLAYER -> DeedFactory.createPlayerDeed(parcel.get().getSize());
+                        case NATION -> DeedFactory.createNationDeed(source.getLevel(), parcel.get().getSize());
+                        // requires the NATION_ID
+                        case CITIZEN ->
+                                DeedFactory.createCitizenDeed(parcel.get().getSize(), parcel.get().getNationId());
+                        case ZONE -> ItemStack.EMPTY;
+                    };
+
+                    // copy props over
+                    CompoundTag tag = deed.getOrCreateTag();
+                    tag.putUUID(Deed.PARCEL_ID, parcel.get().getId());
+                    if (parcel.get().getNationId() != null) {
+                        tag.putUUID(NationDeed.NATION_ID, parcel.get().getNationId());
+                    }
+
+                    // give parcel to player
+                    if (deed != ItemStack.EMPTY) {
+                        player.getInventory().add(deed);
+                        // remove the parcel
+                        ParcelRegistry.removeParcel(parcel.get());
+
+                        // TODO this will only work if the border stone is at coords
+                        // remove any borders
+                        ICoords coords = parcel.get().getCoords();
+                        // check if there is a border stone
+                        BlockEntity be = source.getLevel().getBlockEntity(coords.toPos());
+                        if (be instanceof BorderStoneBlockEntity) {
+                            ((BorderStoneBlockEntity)be).removeParcelBorder(source.getLevel(), coords);
+                        }
+                    }
+                } else {
+                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.abandon.failure")).withStyle(ChatFormatting.RED), false);
+                }
+            } else {
+                CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            }
+        } catch(Exception e) {
+            ClaimMyLand.LOGGER.error("an error occurred demolishing a parcels:", e);
+            source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
+        }
+        return 1;
+    }
+
+    /**
+     *
+     * @param source
+     * @param ownerName
+     * @param parcelName
+     * @return
+     */
     public static int removeParcel(CommandSourceStack source, String ownerName, String parcelName) {
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {
@@ -267,9 +307,10 @@ public class ParcelCommandDelegate {
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
                 // remove the border
+                //
                 BlockEntity blockEntity = source.getLevel().getBlockEntity(parcel.get().getCoords().toPos());
                 if (blockEntity instanceof FoundationStoneBlockEntity) {
-                    ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(parcel.get().getCoords());
+                    ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(source.getLevel(), parcel.get().getCoords());
                 }
                 // unregister the parcel
                 ParcelRegistry.removeParcel(parcel.get());

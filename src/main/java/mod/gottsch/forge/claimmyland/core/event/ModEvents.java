@@ -67,7 +67,7 @@ public class ModEvents {
     @SubscribeEvent
     public static void onBlockBreak(final BlockEvent.BreakEvent event) {
         if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-            ClaimMyLand.LOGGER.debug("attempt to break block by player -> {} @ {}", event.getPlayer().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
+//            ClaimMyLand.LOGGER.debug("attempt to break block by player -> {} @ {}", event.getPlayer().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
         }
 
         // execute if event is enabled
@@ -79,7 +79,7 @@ public class ModEvents {
         if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID())) {
             event.setCanceled(true);
             if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-                ClaimMyLand.LOGGER.debug("denied block break -> {} @ {}", event.getPlayer().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
+//                ClaimMyLand.LOGGER.debug("denied block break -> {} @ {}", event.getPlayer().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
             }
             if (!event.getLevel().isClientSide()) {
                 sendProtectedMessage(event.getLevel(), event.getPlayer());
@@ -90,7 +90,7 @@ public class ModEvents {
     @SubscribeEvent
     public void onBlockPlace(final BlockEvent.EntityPlaceEvent event) {
         if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-            ClaimMyLand.LOGGER.debug("attempt to place block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
+//            ClaimMyLand.LOGGER.debug("attempt to place block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
         }
 
         if (!Config.SERVER.protection.enableEntityPlaceEvent.get()
@@ -104,7 +104,7 @@ public class ModEvents {
             if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND))) {
                 event.setCanceled(true);
                 if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-                    ClaimMyLand.LOGGER.debug("denied block place -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
+//                    ClaimMyLand.LOGGER.debug("denied block place -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
                 }
                 if (!event.getLevel().isClientSide()) {
                     sendProtectedMessage(event.getLevel(), (Player) event.getEntity());

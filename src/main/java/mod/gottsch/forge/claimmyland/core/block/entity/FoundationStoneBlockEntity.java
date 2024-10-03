@@ -46,12 +46,6 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     // unique id of the nation this parcel belong to
     private UUID nationId;
 
-    // transient list of overlapping parcel boxes
-//    private List<Box> overlaps;
-
-    // flag if this block entity has an existing parcel ie this was placed to display borders of a parcel
-//    private boolean hasParcel;
-
     /**
      *
      * @param type
@@ -68,7 +62,7 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     public void tickServer() {
         if (getLevel().getGameTime() > getExpireTime()) {
             // remove border
-            removeParcelBorder(getCoords());
+            removeParcelBorder(getLevel(), getCoords());
             // self destruct
             selfDestruct();
         }
@@ -94,17 +88,6 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         if (ObjectUtils.isNotEmpty(getNationId())) {
             tag.putUUID(NATION_ID, getNationId());
         }
-
-        // TODO why are we saving this if it is transient
-//        ListTag list = new ListTag();
-//        getOverlaps().forEach(box -> {
-//            CompoundTag element = new CompoundTag();
-//            box.save(element);
-//            list.add(element);
-//        });
-//        tag.put(OVERLAPS, list);
-//
-//        tag.putBoolean(HAS_PARCEL, hasParcel());
     }
 
     @Override
@@ -117,22 +100,6 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         if (tag.contains(NATION_ID)) {
             setNationId(tag.getUUID(NATION_ID));
         }
-
-        // TODO why are we loading this if it is transient?
-//        getOverlaps().clear();
-//        if (tag.contains(OVERLAPS)) {
-//            ListTag list = tag.getList(OVERLAPS, Tag.TAG_COMPOUND);
-//            list.forEach(element -> {
-//                Box box = Box.load((CompoundTag)element);
-//                if (box != null) {
-//                    getOverlaps().add(box);
-//                }
-//            });
-//        }
-
-//        if (tag.contains(HAS_PARCEL)) {
-//            setHasParcel(tag.getBoolean(HAS_PARCEL));
-//        }
     }
 
     /**
@@ -177,26 +144,4 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     public void setNationId(UUID nationId) {
         this.nationId = nationId;
     }
-
-//    // TODO needed
-//    //    @Override
-//    public List<Box> getOverlaps() {
-//        if (overlaps == null) {
-//            overlaps = new ArrayList<>();
-//        }
-//        return overlaps;
-//    }
-//    // TODO needed?
-//    public void setOverlaps(List<Box> overlaps) {
-//        this.overlaps = overlaps;
-//    }
-
-//    // TODO needed?
-//    public boolean hasParcel() {
-//        return hasParcel;
-//    }
-//    // TODO needed?
-//    public void setHasParcel(boolean hasParcel) {
-//        this.hasParcel = hasParcel;
-//    }
 }

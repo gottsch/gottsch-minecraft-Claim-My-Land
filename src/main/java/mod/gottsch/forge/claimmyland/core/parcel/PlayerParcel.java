@@ -75,18 +75,17 @@ public class PlayerParcel extends AbstractParcel {
     }
 
     @Override
-    public boolean handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
-        boolean result = false; //ClaimResult.FAILURE;
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+        ClaimResult result = ClaimResult.FAILURE; //false; //
 
         if (parentParcel.getType() == ParcelType.CITIZEN
                 && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
 
             if (ModUtil.getArea(parcelBox) >= parentParcel.getArea()) {
                 ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
-//                parentParcel.setOwnerId(getOwnerId());
-                result = true; // ClaimResult.SUCCESS;
+                result = ClaimResult.SUCCESS;
             } else {
-                result = false; // ClaimResult.INSUFFICIENT_SIZE;
+                result = ClaimResult.INSUFFICIENT_SIZE;
             }
         }
         else if (parentParcel.getType() == ParcelType.ZONE) {
@@ -108,7 +107,7 @@ public class PlayerParcel extends AbstractParcel {
                      * as this can potentially only happen in creative.
                      */
                     if (getId().equals(overlapParcel.getId())) {
-                        return false;
+                        return ClaimResult.FAILURE;
                     }
 
                     /*
@@ -121,10 +120,10 @@ public class PlayerParcel extends AbstractParcel {
 
                         // test if the non-buffered parcels intersect
                         if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
-                            return false; // ClaimResult.INTERSECTS
+                            return ClaimResult.INTERSECTS;
                         }
                     } else {
-                        return false; // ClaimResult.INTERSECTS
+                        return ClaimResult.INTERSECTS;
                     }
                 }
             }
@@ -143,7 +142,7 @@ public class PlayerParcel extends AbstractParcel {
                 ParcelRegistry.add(citizenParcel);
                 // register the player
                 PlayerRegistry.register(level, getOwnerId());
-                result = true; // ClaimResult.SUCCESS;
+                result = ClaimResult.SUCCESS;
             }
         }
         return result;

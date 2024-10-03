@@ -19,9 +19,12 @@
  */
 package mod.gottsch.forge.claimmyland.core.item;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.FoundationStone;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.gui.chat.ChatMessages;
+import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -139,9 +142,8 @@ public abstract class Deed extends Item {
         // gather the number of parcels the player has
         List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
         if (parcels.size() >= Config.SERVER.general.parcelsPerPlayer.get() && !player.hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) {
-            // TODO colorize
             // TODO create a class ChatHelper that has premade color formatters
-            player.sendSystemMessage(Component.translatable(LangUtil.chat("parcel.max_reached")));
+            player.sendSystemMessage(Component.translatable(LangUtil.chat("parcel.max_reached")).withStyle(ChatFormatting.RED));
             return false;
         }
         return true;
@@ -175,6 +177,8 @@ public abstract class Deed extends Item {
 
         // validate that the parcel's owner id == player id
         if (!parcel.isOwner(context.getPlayer().getUUID())) {
+            // send not owner of deed message
+            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.not_owner")).withStyle(ChatFormatting.RED));
             return InteractionResult.FAIL;
         }
 
@@ -189,6 +193,7 @@ public abstract class Deed extends Item {
 
                 // ensure deed/parcel has access to the block entity
                 if (!parcel.hasAccessTo(foundationStoneBlockEntity)) {
+                    context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("foundation_stone.incorrect_deed")).withStyle(ChatFormatting.RED));
                     return InteractionResult.FAIL;
                 }
 
@@ -198,9 +203,9 @@ public abstract class Deed extends Item {
                 Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords);
 
                 Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
-                boolean successfulClaim = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
+                ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
 
-                if (successfulClaim) {
+                if (claimResult.isSuccess()) {
                     PersistedData savedData = PersistedData.get(context.getLevel());
                     // mark data as dirty
                     if (savedData != null) {
@@ -222,16 +227,43 @@ public abstract class Deed extends Item {
 
                     // TODO add particle effects or place construction tap around border or border display blcok
 
+                    // send success message
+                    context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.claim.success"),
+                            parcel.getMinCoords().toShortString(),
+                            ModUtil.getSize(parcel.getBox()).toShortString()).withStyle(ChatFormatting.GREEN));
+
+                } else {
+                    // send the respective failure message.
+                    switch (claimResult) {
+                        case INTERSECTS -> {
+                            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.claim.intersects")).withStyle(ChatFormatting.RED));
+                        }
+                        case INSUFFICIENT_SIZE -> {
+                            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.claim.insufficient_size"),
+                                    parcel.getSize(),
+                                    ModUtil.getSize(((FoundationStoneBlockEntity) blockEntity).getRelativeBox()).toShortString()).withStyle(ChatFormatting.RED));
+                        }
+                        default -> {
+                            ChatMessages.unableToClaim(context.getPlayer(), parcel.getMinCoords(),
+                                    ModUtil.getSize(parcel.getBox()));
+                        }
+                    }
                 }
-                return successfulClaim ? InteractionResult.CONSUME : InteractionResult.FAIL;
+                return claimResult.isSuccess()  ? InteractionResult.CONSUME : InteractionResult.FAIL;
             }
         } else {
             /*
              * place foundation stone
              */
-            // TODO need to handle fail -> getFoundationStone == null
+            Block foundationStone = getFoundationStone();
+            if (foundationStone == null) {
+               context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("foundation_stone.unable_to_locate")).withStyle(ChatFormatting.RED));
+               ClaimMyLand.LOGGER.warn("unable to location foundation stone for deed -> {}", parcel.getDeedId());
+               return InteractionResult.FAIL;
+            }
+
             return parcel.canPlaceAt(context.getLevel(), targetCoords)
-                    && this.placeBlock(new BlockPlaceContext(context), getFoundationStone().defaultBlockState())
+                    && this.placeBlock(new BlockPlaceContext(context), foundationStone.defaultBlockState())
                     ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         }
         return super.useOn(context);
