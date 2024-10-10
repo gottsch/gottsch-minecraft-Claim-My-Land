@@ -1,3 +1,22 @@
+/*
+ * This file is part of  Claim My Land.
+ * Copyright (c) 2024 Mark Gottschling (gottsch)
+ *
+ * All rights reserved.
+ *
+ * Claim My Land is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Claim My Land is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Claim My Land.  If not, see <http://www.gnu.org/licenses/lgpl>.
+ */
 package mod.gottsch.forge.claimmyland.core.item;
 
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
@@ -18,9 +37,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+
+import java.util.List;
 
 /**
  *
@@ -85,28 +107,23 @@ public class NationDeed extends Deed {
         blockEntity.setNationId(tag.contains(NATION_ID) ? tag.getUUID(NATION_ID) : null);
     }
 
-//    /*
-//     * cannot use deed to place foundation stone that is embedded in another parcel
-//     */
-//    @Override
-//    public boolean handleEmbeddedPlacementRules(Parcel parcel, Parcel registryParcel) {
-//        return false;
-//    }
+    @Override
+    public void appendUsageHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable(LangUtil.tooltip("nation_deed.usage")).withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.literal(LangUtil.NEWLINE));
+    }
 
-//    /**
-//     * cannot use deed on foundation stone that is embedded in another parcel
-//     * NOTE this should not happen as it should fail the placement rules.
-//     * @param context
-//     * @param parcel
-//     * @param parentParcel
-//     * @param blockEntity
-//     * @return
-//     */
-//    @Override
-//    protected InteractionResult handleEmbeddedClaim(UseOnContext context, Parcel parcel, Parcel parentParcel, FoundationStoneBlockEntity blockEntity) {
-//        return InteractionResult.FAIL;
-//    }
+    @Override
+    public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
+        }
+        if (stack.getTag() != null && stack.getTag().contains(NATION_ID)) {
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + stack.getTag().getString(NATION_ID)));
+        }
 
-    // TODO any unique data for appendHoverText
-
+        if (stack.getTag() != null && stack.getTag().contains(Deed.SIZE)) {
+            appendSizeHoverText(stack, level, tooltip, flag);
+        }
+    }
 }

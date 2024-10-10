@@ -156,6 +156,9 @@ public class ParcelCommandDelegate {
             return 0;
         }
 
+        // TODO this is for current version where there is a 1-1 relationship of nation parcel and nationId.
+        // in the future there will be a NationRegistry and you can have multiple nation parcel using the same nationId
+
         // validate nation name is unique if adding a nation
         if (type == ParcelType.NATION && StringUtils.isNotBlank(nationName)) {
             // if the name was found then fail
@@ -174,11 +177,18 @@ public class ParcelCommandDelegate {
                 Parcel parcel = parcelOptional.get();
                 parcel.setOwnerId(player.getUUID());
                 parcel.setCoords(coords);
+                // TODO size should be supplied to the factory
                 parcel.setSize(size);
 
+                // TODO this should be moved to the factory
                 // parcel customizations
-                if (parcel.getType() == ParcelType.NATION && StringUtils.isNotBlank(nationName)) {
-                    ((NationParcel)parcel).setName(nationName);
+                if (parcel.getType() == ParcelType.NATION) {
+                    if (StringUtils.isNotBlank(nationName)) {
+                        ((NationParcel) parcel).setName(nationName);
+                    }
+                    // modify the size
+                    size.setMinCoords(size.getMinCoords().withY(source.getLevel().getMinBuildHeight()));
+                    size.setMaxCoords(size.getMaxCoords().withY(source.getLevel().getMaxBuildHeight()-1));
                 }
 
                 // NOTE commands override the placement rules
@@ -213,9 +223,10 @@ public class ParcelCommandDelegate {
             List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
-                // remove the owner from parcel
-//                parcel.get().setOwnerId(null);
+                // abandon the parcel in the register
                 if (ParcelRegistry.abandonParcel(parcel.get().getId())) {
+                    // set the abandon time
+                    parcel.get().setAbandonedTime(source.getLevel().getGameTime());
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.abandon.success")).withStyle(ChatFormatting.GREEN), false);
                     CommandHelper.save(source.getLevel());
                 }
@@ -307,7 +318,6 @@ public class ParcelCommandDelegate {
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
                 // remove the border
-                //
                 BlockEntity blockEntity = source.getLevel().getBlockEntity(parcel.get().getCoords().toPos());
                 if (blockEntity instanceof FoundationStoneBlockEntity) {
                     ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(source.getLevel(), parcel.get().getCoords());
@@ -363,8 +373,8 @@ public class ParcelCommandDelegate {
                 if(StringUtils.isNotBlank(newOwnerName)) {
                     ServerPlayer newOwner = source.getServer().getPlayerList().getPlayerByName(newOwnerName);
                     if (newOwner != null) {
-//                        parcel.get().setOwnerId(newOwner.getUUID());
                         ParcelRegistry.updateOwner(parcel.get().getId(), newOwner.getUUID());
+                        parcel.get().setOwnerTime(source.getLevel().getGameTime());
                     } else {
                         CommandHelper.sendUnableToLocatePlayerMessage(source, newOwnerName);
                         return -1;
@@ -385,7 +395,7 @@ public class ParcelCommandDelegate {
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {
             // remove all properties from player
-            ParcelRegistry.removeParcel(player.getUUID());
+            ParcelRegistry.removeParcel(source.getLevel(), player.getUUID());
             source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.remove.success")).withStyle(ChatFormatting.GREEN), false);
             CommandHelper.save(source.getLevel());
         } else {

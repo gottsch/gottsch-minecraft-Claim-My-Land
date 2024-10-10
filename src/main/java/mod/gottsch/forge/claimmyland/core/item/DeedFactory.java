@@ -49,6 +49,14 @@ public class DeedFactory {
 
     public static ItemStack createPlayerDeed(Box size) {
         ItemStack deed = createItemStack(ParcelType.PLAYER);
+        return createPlayerDeed(deed, size);
+    }
+
+    public static ItemStack createPlayerDeed(ItemStack deed, Box size) {
+        if (deed == ItemStack.EMPTY || deed == null) {
+            return deed;
+        }
+
         CompoundTag tag = deed.getOrCreateTag();
         // add the ids
         // TODO this is probably going away in favor of deed id for the access checks
@@ -75,15 +83,20 @@ public class DeedFactory {
 
     public static ItemStack createNationDeed(Level level, Box size) {
         ItemStack deed = createItemStack(ParcelType.NATION);
+        return createNationDeed(level, deed, size);
+    }
+
+    public static ItemStack createNationDeed(Level level, ItemStack deed, Box size) {
+        if (deed == ItemStack.EMPTY || deed == null) {
+            return deed;
+        }
+
         CompoundTag tag = deed.getOrCreateTag();
-        // add the ids
         tag.putUUID(NationDeed.NATION_ID, UUID.randomUUID());
         // TODO this should be refactored out
         tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
         tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
-        // add the type
         tag.putString(Deed.PARCEL_TYPE, ParcelType.NATION.name());
-        // add the size
         CompoundTag sizeTag = new CompoundTag();
         // modify size to max y limits
         size.setMinCoords(size.getMinCoords().withY(level.getMinBuildHeight()));

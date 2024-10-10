@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.persistence;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -35,6 +36,7 @@ import net.minecraft.world.level.storage.DimensionDataStorage;
 public class PersistedData extends SavedData {
 
 	private static final String PARCEL_REGISTRY = "parcel_registry";
+	private static final String PLAYER_REGISTRY = "player_registry";
 	
 	/**
 	 * 
@@ -49,6 +51,9 @@ public class PersistedData extends SavedData {
 		if (tag.contains(PARCEL_REGISTRY)) {
 			ParcelRegistry.load(tag.getCompound(PARCEL_REGISTRY));
 		}
+		if (tag.contains(PLAYER_REGISTRY)) {
+			PlayerRegistry.load(tag.getCompound(PLAYER_REGISTRY));
+		}
 		return create();
 	}
 
@@ -56,6 +61,7 @@ public class PersistedData extends SavedData {
 	public CompoundTag save(CompoundTag tag) {
 		ClaimMyLand.LOGGER.debug("saving world data...");
 		tag.put(PARCEL_REGISTRY, ParcelRegistry.save(new CompoundTag()));
+		tag.put(PLAYER_REGISTRY, PlayerRegistry.save(new CompoundTag()));
 		return tag;
 	}
 	

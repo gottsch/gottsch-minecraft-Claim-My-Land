@@ -28,6 +28,7 @@ import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.block.BlockContext;
@@ -40,6 +41,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -51,7 +53,10 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
+import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -161,6 +166,10 @@ public abstract class Deed extends Item {
             return InteractionResult.SUCCESS;
         }
 
+        if (context.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+            return InteractionResult.SUCCESS;
+        }
+
         /*
          * check if the player has reached their max parcels already
          */
@@ -206,6 +215,16 @@ public abstract class Deed extends Item {
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
 
                 if (claimResult.isSuccess()) {
+                    if (parcel.getFoundedTime() == 0) {
+                        parcel.setFoundedTime(context.getLevel().getGameTime());
+                    }
+                    parcel.setOwnerTime(context.getLevel().getGameTime());
+                    // clear abandonedTime (if any)
+                    parcel.setAbandonedTime(0L);
+
+                    // register user name
+                    PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());
+
                     PersistedData savedData = PersistedData.get(context.getLevel());
                     // mark data as dirty
                     if (savedData != null) {
@@ -425,8 +444,50 @@ public abstract class Deed extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, world, tooltip, flag);
-        tooltip.add(Component.translatable(LangUtil.tooltip("parcel.howto")).withStyle(ChatFormatting.GREEN));
+    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
+
+        appendUsageHoverText(stack, level, tooltip, flag);
+        appendDetailsHoverText(stack, level, tooltip, flag);
+
+        // how to use
+        LangUtil.appendAdvancedHoverText(tooltip, tt -> {
+            appendHowToHoverText(stack, level, tooltip, flag);
+        });
     }
+
+    public void appendUsageHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
+
+    }
+
+    public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
+        }
+
+        if (stack.getTag() != null && stack.getTag().contains(Deed.SIZE)) {
+            appendSizeHoverText(stack, level, tooltip, flag);
+        }
+    }
+
+    public void appendSizeHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
+        Box size = getSize(stack.getTag());
+        tooltip.add(Component.translatable(LangUtil.tooltip("deed.size"), ChatFormatting.BLUE + ModUtil.getSize(size).toShortString()));
+        tooltip.add(Component.literal(LangUtil.INDENT2).append(Component.literal("X: ").append(Component.literal(String.valueOf(size.getMaxCoords().getX() - size.getMinCoords().getX() + 1)).withStyle(ChatFormatting.AQUA))));
+        tooltip.add(Component.literal(LangUtil.INDENT2).append(Component.literal("Up: ").append(Component.literal(String.valueOf(size.getMaxCoords().getY()+1)).withStyle(ChatFormatting.AQUA))));
+        tooltip.add(Component.literal(LangUtil.INDENT2).append(Component.literal("Down: ").append(Component.literal(String.valueOf(Math.abs(size.getMinCoords().getY()))).withStyle(ChatFormatting.AQUA))));
+        tooltip.add(Component.literal(LangUtil.INDENT2).append(Component.literal("Z: ").append(Component.literal(String.valueOf(size.getMaxCoords().getZ() - size.getMinCoords().getZ() + 1)).withStyle(ChatFormatting.AQUA))));
+    }
+
+    public void appendHowToHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.literal(LangUtil.NEWLINE));
+        // howto may be multiple lines, so separate on ~ and add to tooltip
+        Component lore = Component.translatable(LangUtil.tooltip("deed.howto"));
+        for (String s : lore.getString().split("~")) {
+            tooltip.add(Component.literal(LangUtil.INDENT2)
+                    .append(Component.translatable(s)).withStyle(ChatFormatting.DARK_PURPLE).withStyle(ChatFormatting.ITALIC));
+        }
+        tooltip.add(Component.literal(LangUtil.NEWLINE));
+    }
+
 }

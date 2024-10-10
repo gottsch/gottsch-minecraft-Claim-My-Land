@@ -32,6 +32,12 @@ public class CommonSetup {
     public static void registemItemsToTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(ModItems.BORDER_STONE.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            event.accept(ModItems.PLAYER_DEED_10.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            event.accept(ModItems.PLAYER_DEED_16.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            event.accept(ModItems.PLAYER_DEED_32.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            event.accept(ModItems.NATION_DEED_100.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            event.accept(ModItems.ZONING_TOOL.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+
         }
     }
 }

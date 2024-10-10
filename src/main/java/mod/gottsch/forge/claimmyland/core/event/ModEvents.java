@@ -29,12 +29,16 @@ import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.world.WorldInfo;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraftforge.event.entity.living.LivingDestroyBlockEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
@@ -75,6 +79,11 @@ public class ModEvents {
             return;
         }
 
+        // check dimension
+        if (((Level)event.getLevel()).dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+            return;
+        }
+
         // prevent protected blocks from breaking
         if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID())) {
             event.setCanceled(true);
@@ -96,6 +105,11 @@ public class ModEvents {
         if (!Config.SERVER.protection.enableEntityPlaceEvent.get()
 //				|| event.getEntity().hasPermissions(Config.GENERAL.opsPermissionLevel.get())
         ) {
+            return;
+        }
+
+        // check dimension
+        if (((Level)event.getLevel()).dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
             return;
         }
 
@@ -125,6 +139,11 @@ public class ModEvents {
             return;
         }
 
+        // check dimension
+        if (((Level)event.getLevel()).dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+            return;
+        }
+
         // prevent parcel blocks from breaking
         if (event.getEntity() instanceof Player) {
             if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getEntity().getUUID())) {
@@ -149,6 +168,11 @@ public class ModEvents {
             return;
         }
 
+        // check dimension
+        if (((Level)event.getLevel()).dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+            return;
+        }
+
         ItemStack heldItemStack = event.getHeldItemStack();
         if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID(), heldItemStack)) {
             event.setCanceled(true);
@@ -165,6 +189,11 @@ public class ModEvents {
     public void onPlayerInteract(final PlayerInteractEvent.RightClickBlock event) {
         if (!Config.SERVER.protection.enableRightClickBlockEvent.get()
                 || event.getEntity().hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) {
+            return;
+        }
+
+        // check dimension
+        if (((Level)event.getLevel()).dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
             return;
         }
 
@@ -194,13 +223,21 @@ public class ModEvents {
         // prevent protected blocks from breaking by mob action
         if (Config.SERVER.protection.enableLivingDestroyBlockEvent.get()
                 && ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
-            event.setCanceled(true);
+            // check dimension
+            if (event.getEntity().level().dimensionTypeId() == BuiltinDimensionTypes.OVERWORLD) {
+                event.setCanceled(true);
+            }
         }
     }
 
     @SubscribeEvent
     public void onPiston(final PistonEvent.Pre event) {
         if (!Config.SERVER.protection.enablePistionEvent.get()) {
+            return;
+        }
+
+        // check dimension
+        if (((Level)event.getLevel()).dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
             return;
         }
 
@@ -260,6 +297,7 @@ public class ModEvents {
         event.getAffectedBlocks().removeIf(block -> {
             // prevent protected blocks from breaking
             return Config.SERVER.protection.enableExplosionDetonateEvent.get()
+                    && event.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD
                     && ParcelRegistry.intersectsParcel(Coords.of(block.getX(), block.getY(), block.getZ()));
         });
     }

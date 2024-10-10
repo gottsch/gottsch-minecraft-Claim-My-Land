@@ -129,16 +129,12 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @return
      */
     public Block getBorderBlock() {
-        // default return personal border.
-        // override method to return specific borders
-//        return ((BorderStone)getBlockState().getBlock()).getBorderBlock();
-//        return ModBlocks.PERSONAL_BORDER.get();
-
         ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
         return switch (parcelType) {
             case PLAYER -> ModBlocks.PLAYER_BORDER.get();
             case NATION -> ModBlocks.NATION_BORDER.get();
-            case CITIZEN, ZONE -> ModBlocks.CITIZEN_BORDER.get();
+            case CITIZEN -> ModBlocks.CITIZEN_BORDER.get();
+            case ZONE -> ModBlocks.ZONE_BORDER.get();
         };
     }
 
@@ -156,7 +152,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
         return switch (parcelType) {
             case PLAYER, CITIZEN -> Config.SERVER.general.parcelBufferRadius.get();
             case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
-            case ZONE -> 0;
+            case ZONE -> 1;
         };
     }
 
@@ -460,37 +456,6 @@ public class BorderStoneBlockEntity extends BlockEntity {
         box = ModUtil.inflate(box, bufferSize);
         replaceParcelBorder(level, box, ModBlocks.BUFFER.get(), Blocks.AIR.defaultBlockState());
     }
-
-//    // TODO move to Parcel
-//    // TODO this is a dangerous call.
-//    // the intent to to take a non-buffered parcel box and test against the buffered list
-//    // if overlaps with a buffered parcel and not owner by the same owner, then fail
-//    // HOWEVER one could pass in an non-buffered list and if owned by the same person,
-//    // you could have overlapping parcels, essentially reducing the size of one parcel.
-//    // TODO SOLUTION to make this work, the list should not be passed in, but performed with the method.
-//    // however then you would not be able to perform any filters or anything.
-//    // TODO 9-18-2024 SOLUTION use as intended with a proper method name
-//    // and add method comments to indicate what is expected
-//    public boolean hasBoxToBufferedIntersections(Box box, List<Parcel> parcels) {
-//        for (Parcel overlapParcel : parcels) {
-//            /*
-//             * if parcel of foundation stone has same owner as parcel in world, ignore buffers,
-//             * but check border overlaps. parcels owned by the same player can be touching.
-//             */
-//            if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-//                // get the existing owned parcel
-//                Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-//
-//                // test if the parcels intersect
-//                if (optionalOwnedParcel.isPresent() && ModUtil.touching(box, optionalOwnedParcel.get().getBox())) {
-//                    return true;
-//                }
-//            } else {
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
 
     @Override
     public void saveAdditional(CompoundTag tag) {

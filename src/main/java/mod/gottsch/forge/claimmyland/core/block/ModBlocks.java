@@ -66,6 +66,9 @@ public class ModBlocks {
     public static final RegistryObject<Block> BUFFER = Registration.BLOCKS.register("buffer",
             () -> new BufferBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
 
+    public static final RegistryObject<Block> ZONE_PLACEMENT_BLOCK = Registration.BLOCKS.register("zone_placement",
+            () -> new ZonePlacementBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
+
     public static void register(IEventBus bus) {
         // cycle through all block and create items
         Registration.registerBlocks(bus);

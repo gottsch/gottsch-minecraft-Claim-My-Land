@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
@@ -137,6 +138,17 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         }
 
         return this;
+    }
+
+    // TODO these need to use the level min and max build heights
+    @Override
+    public ICoords getMinCoords() {
+        return getSize().getMinCoords().add(getCoords().getX(), 0, getCoords().getZ());
+    }
+
+    @Override
+    public ICoords getMaxCoords() {
+        return getSize().getMaxCoords().add(getCoords().getX(), 0, getCoords().getZ());
     }
 
     @Override

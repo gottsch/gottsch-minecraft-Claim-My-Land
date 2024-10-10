@@ -25,6 +25,7 @@ import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.mojang.authlib.minecraft.client.ObjectMapper;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -37,6 +38,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.*;
@@ -285,7 +288,6 @@ public class ParcelRegistry {
         // remove from buffer tree
         BUFFER_TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId())));
 
-
         // if nation remove from special map/registry
         removeFromNationsRegistry(parcel);
     }
@@ -294,16 +296,17 @@ public class ParcelRegistry {
         if (parcel.getType() == ParcelType.NATION) {
             NATIONS_BY_ID.remove(((NationParcel)parcel).getNationId(), parcel);
 
-                    ParcelRegistry.findChildrenByNationId(parcel.getNationId())
-                    .forEach(p -> {
-                        if (p.getType() == ParcelType.ZONE) {
-                            ParcelRegistry.removeParcel(p);
-                        } else {
-                            p.setType(ParcelType.PLAYER);
-                            p.setNationId(null);
-                            // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
-                        }
-                    });
+                ParcelRegistry.findChildrenByNationId(parcel.getNationId())
+                .forEach(p -> {
+                    // TODO calling this may cause Concurrent operation exceptions.
+                    if (p.getType() == ParcelType.ZONE) {
+                        ParcelRegistry.removeParcel(p);
+                    } else {
+                        p.setType(ParcelType.PLAYER);
+                        p.setNationId(null);
+                        // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
+                    }
+                });
 
         }
     }
@@ -312,20 +315,29 @@ public class ParcelRegistry {
      * removes all parcels by player
      * @param ownerId
      */
-    public static void removeParcel(UUID ownerId) {
-        //delete from PARCELS registries
-        List<Parcel> parcels = PARCELS_BY_OWNER.get(ownerId);
+    public static void removeParcel(Level level, UUID ownerId) {
+
+        // get all parcels excluding zones as they will be handled when handling nations
+        List<Parcel> parcels = Optional.ofNullable(PARCELS_BY_OWNER.get(ownerId))
+                .orElseGet(Collections::emptyList)
+                .stream()
+                .filter(p -> p.getType() != ParcelType.ZONE).toList();
+
         if (!parcels.isEmpty()) {
             for (Parcel p : parcels) {
+                // remove the border
+                BlockEntity blockEntity = level.getBlockEntity(p.getCoords().toPos());
+                if (blockEntity instanceof FoundationStoneBlockEntity) {
+                    ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(level, p.getCoords());
+                }
+
+                // remove nations parcels (and zones)
+                removeFromNationsRegistry(p);
+
                 PARCELS_BY_COORDS.remove(p.getMinCoords());
                 // remove from buffer map
                 Box inflatedBox = inflateParcelBox(p);
                 BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
-
-                removeFromNationsRegistry(p);
-//                if (p.getType() == ParcelType.NATION) {
-//                    NATIONS_BY_ID.remove(((NationParcel)p).getNationId(), p);
-//                }
             }
         }
         PARCELS_BY_OWNER.remove(ownerId);

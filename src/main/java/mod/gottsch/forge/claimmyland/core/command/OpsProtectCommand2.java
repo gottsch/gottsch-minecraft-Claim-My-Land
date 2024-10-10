@@ -430,10 +430,13 @@ public class OpsProtectCommand2 {
         try {
             // create a deed item
 
+
             ItemStack deed = switch (type) {
                 case PLAYER -> DeedFactory.createPlayerDeed(size);
+                // NOTE nation DEED does NOT take in a nationId nor nationName as
+                // a deed is a net new parcel to be used by anyone. the name would not be known
+                // and also this avoids duplicate names floating around in the deeds.
                 case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
-                // TODO requires the NATION_ID
                 case CITIZEN -> DeedFactory.createCitizenDeed(size, nationId);
                 case ZONE -> ItemStack.EMPTY;
             };

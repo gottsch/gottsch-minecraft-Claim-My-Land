@@ -63,7 +63,7 @@ public class ParcelFactory {
     public static Optional<Parcel> create(ParcelType type, UUID nationId) {
         return switch (type) {
             case PLAYER -> Optional.of(createPlayerParcel());
-            case NATION -> Optional.of(createNationParcel());
+            case NATION -> Optional.of(createNationParcel(nationId));
             case CITIZEN -> Optional.of(createCitizenParcel(nationId));
             case ZONE -> Optional.of(createZoneParcel(nationId));
             default -> Optional.empty();
@@ -85,10 +85,10 @@ public class ParcelFactory {
         return parcel;
     }
 
-    private static Parcel createNationParcel() {
+    private static Parcel createNationParcel(UUID nationId) {
         NationParcel parcel = new NationParcel();
         parcel.setId(UUID.randomUUID());
-        parcel.setNationId(UUID.randomUUID());
+        parcel.setNationId(nationId != null ? nationId : UUID.randomUUID());
         parcel.setName(parcel.randomName());
         return parcel;
     }

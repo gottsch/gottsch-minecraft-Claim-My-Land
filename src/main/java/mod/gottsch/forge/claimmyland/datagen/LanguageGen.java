@@ -24,7 +24,13 @@ public class LanguageGen extends LanguageProvider {
         // deeds
         add(ModItems.PLAYER_DEED.get(), "Player Deed");
         add(ModItems.NATION_DEED.get(), "Nation Deed");
-//        add(ModItems.CITIZEN_DEED.get(), "Citizen Deed");
+        add(ModItems.CITIZEN_DEED.get(), "Citizen Deed");
+
+        add(ModItems.PLAYER_DEED_10.get(), "Player Deed 10x20x10");
+        add(ModItems.PLAYER_DEED_16.get(), "Player Deed 16x32x16");
+        add(ModItems.PLAYER_DEED_32.get(), "Player Deed 32x64x32");
+        add(ModItems.NATION_DEED_100.get(), "Nation Deed 100x100");
+
         // blocks
         add(ModBlocks.PLAYER_FOUNDATION_STONE.get(), "Foundation Stone");
 
@@ -104,11 +110,27 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("foundation_stone.unable_to_location"), "Unable to locate foundation stone block entity.");
         add(LangUtil.chat("foundation_stone.incorrect_deed"), "Only the deed used to place the foundation stone can be used here.");
 
+        // zone placement
+        add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or is claimed.");
+        add(LangUtil.chat("zone_placement.not_owner"), "You are not the owner of this nation.");
+
+
         /*
          *  Util.tooltips
          */
         // general
         add(LangUtil.tooltip("hold_shift"), "Hold [SHIFT] to expand");
+
+        // deed
+        add(LangUtil.tooltip("deed.howto"), "Use the deed to place a foundation stone at desired location. Then, use the deed again on the foundation stone to accept location.");
+        add(LangUtil.tooltip("deed.type"), "Type: %s");
+        add(LangUtil.tooltip("deed.size"), "Size: (%s)");
+        add(LangUtil.tooltip("deed.id"), "ID: %s");
+        add(LangUtil.tooltip("deed.nation_id"), "Nation ID: %s");
+
+        add(LangUtil.tooltip("player_deed.usage"), "Can be used on any unclaimed land and within nations with OPEN borders.");
+        add(LangUtil.tooltip("citizen_deed.usage"), "Can be used on any unclaimed land within parent nation and within nations with OPEN borders.");
+        add(LangUtil.tooltip("nation_deed.usage"), "Can be used on any unclaimed land.");
 
         // parcel
         // TODO this is for an admin stone or info stone - need a good name

@@ -4,15 +4,20 @@ import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -61,5 +66,10 @@ public class PlayerDeed extends Deed {
         return ModBlocks.PLAYER_FOUNDATION_STONE.get();
     }
 
-// TODO any unique data for appendHoverText
+
+    @Override
+    public void appendUsageHoverText(ItemStack stack, Level world, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable(LangUtil.tooltip("player_deed.usage")).withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.literal(LangUtil.NEWLINE));
+    }
 }
