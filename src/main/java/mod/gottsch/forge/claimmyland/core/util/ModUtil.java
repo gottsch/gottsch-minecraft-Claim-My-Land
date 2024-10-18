@@ -4,6 +4,7 @@ import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
 
@@ -77,9 +78,27 @@ public class ModUtil {
     // TODO add to Box in GottschCore
     public static boolean contains(Box box1, Box box2) {
         AABB aabb = toAABB(box1);
-        return aabb.contains(box2.getMinCoords().toVec3())
-                && aabb.contains(box2.getMaxCoords().toVec3());
+        return contains(box1, box2.getMinCoords())
+                && contains(box1, box2.getMaxCoords());
+//        return aabb.contains(box2.getMinCoords().toVec3())
+//                && aabb.contains(box2.getMaxCoords().toVec3());
     }
+
+    // TODO move to GottschCore
+    public static boolean contains(Box box, ICoords coords) {
+        return coords.getX() >= box.getMinCoords().getX() && coords.getX() <= box.getMaxCoords().getX()
+                && coords.getY() >= box.getMinCoords().getY() && coords.getY() <= box.getMaxCoords().getY()
+                && coords.getZ() >= box.getMinCoords().getZ() && coords.getZ() <= box.getMaxCoords().getZ();
+    }
+    ///////////// from AABB - why >= min, BUT only < max ???
+//    public boolean contains(Vec3 p_82391_) {
+//        return this.contains(p_82391_.x, p_82391_.y, p_82391_.z);
+//    }
+//
+//    public boolean contains(double p_82394_, double p_82395_, double p_82396_) {
+//        return p_82394_ >= this.minX && p_82394_ < this.maxX && p_82395_ >= this.minY && p_82395_ < this.maxY && p_82396_ >= this.minZ && p_82396_ < this.maxZ;
+//    }
+    /////////////////////
 
     // TODO add to Box in GottschCore
     public static AABB toAABB(Box box) {

@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.item;
 
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.block.entity.CitizenPlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.ZonePlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
@@ -38,7 +39,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
@@ -51,11 +51,11 @@ import java.util.Optional;
 /**
  * Created by Mark Gottschling on Oct 7, 2024
  */
-public class ZoningTool extends BlockItem {
+public class CitizenTool extends BlockItem {
     private static final String COORDS1 = "coords1";
     private static final String COORDS2 = "coords2";
 
-    public ZoningTool(Block block, Properties properties) {
+    public CitizenTool(Block block, Properties properties) {
         super(block, properties);
     }
 
@@ -75,9 +75,11 @@ public class ZoningTool extends BlockItem {
             return InteractionResult.FAIL;
         }
 
-        Optional<Parcel> nationParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
-        if (nationParcel.isEmpty() || nationParcel.get().getType() != ParcelType.NATION) {
-            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("zone_placement.not_nation")).withStyle(ChatFormatting.RED));
+        Optional<Parcel> parentParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
+        if (parentParcel.isEmpty()
+                || (parentParcel.get().getType() != ParcelType.NATION
+                && parentParcel.get().getType() != ParcelType.ZONE)) {
+            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("citizen_placement.not_valid_parent")).withStyle(ChatFormatting.RED));
             return InteractionResult.FAIL;
         }
 
@@ -91,11 +93,11 @@ public class ZoningTool extends BlockItem {
         // convert UseOnContext to BlockPlaceContext
         BlockPlaceContext placeContext = new BlockPlaceContext(context);
 
-        // if using the tool on zoning block
-        if (context.getLevel().getBlockState(context.getClickedPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+        // if using the tool on citizen block
+        if (context.getLevel().getBlockState(context.getClickedPos()).is(ModBlocks.CITIZEN_PLACEMENT_BLOCK.get())) {
             // test if there are two blocks on record
             if (!tag.contains(COORDS1) || !tag.contains(COORDS2)) {
-                context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("zone_placement.begin_end_required")).withStyle(ChatFormatting.RED));
+                context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("citizen_placement.begin_end_required")).withStyle(ChatFormatting.RED));
                 return InteractionResult.SUCCESS;
             }
 
@@ -110,13 +112,13 @@ public class ZoningTool extends BlockItem {
                 context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.failure_too_small")).withStyle(ChatFormatting.RED));
             }
 
-            ParcelFactory.create(ParcelType.ZONE, nationParcel.get().getNationId())
+            ParcelFactory.create(ParcelType.CITIZEN, parentParcel.get().getNationId())
                     .ifPresentOrElse(p -> {
-                            p.setOwnerId(nationParcel.get().getOwnerId());
+                            p.setOwnerId(parentParcel.get().getOwnerId());
                             p.setCoords(coords1);
                             p.setSize(new Box(Coords.of(0, 0, 0), ModUtil.getSize(box)));
 
-                            ClaimResult claimResult = p.handleEmbeddedClaim(context.getLevel(), nationParcel.get(), p.getBox());
+                            ClaimResult claimResult = p.handleEmbeddedClaim(context.getLevel(), parentParcel.get(), p.getBox());
                             if (claimResult == ClaimResult.SUCCESS) {
                                 context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.success")).withStyle(ChatFormatting.GREEN));
                                 CommandHelper.save(context.getLevel());
@@ -141,10 +143,10 @@ public class ZoningTool extends BlockItem {
             /*
              * placing a zone placement block
              */
-            context.getLevel().setBlock(placeContext.getClickedPos(), ModBlocks.ZONE_PLACEMENT_BLOCK.get().defaultBlockState(), 3);
+            context.getLevel().setBlock(placeContext.getClickedPos(), ModBlocks.CITIZEN_PLACEMENT_BLOCK.get().defaultBlockState(), 3);
 
-            if (tag.contains(COORDS1) && context.getLevel().getBlockEntity(Coords.EMPTY.load(tag.getCompound(COORDS1)).toPos()) instanceof ZonePlacementBlockEntity) {
-                if (tag.contains(COORDS2) && context.getLevel().getBlockEntity(Coords.EMPTY.load(tag.getCompound(COORDS2)).toPos()) instanceof ZonePlacementBlockEntity) {
+            if (tag.contains(COORDS1) && context.getLevel().getBlockEntity(Coords.EMPTY.load(tag.getCompound(COORDS1)).toPos()) instanceof CitizenPlacementBlockEntity) {
+                if (tag.contains(COORDS2) && context.getLevel().getBlockEntity(Coords.EMPTY.load(tag.getCompound(COORDS2)).toPos()) instanceof CitizenPlacementBlockEntity) {
                     // clear zone placement blocks and borders
                     clear(placeContext, tag);
 
@@ -161,24 +163,22 @@ public class ZoningTool extends BlockItem {
                     tag.put(COORDS2, coords2.save(new CompoundTag()));
                     // place borders
 
-                    ZonePlacementBlockEntity blockEntity = (ZonePlacementBlockEntity) context.getLevel().getBlockEntity(placeContext.getClickedPos());
+                    CitizenPlacementBlockEntity blockEntity = (CitizenPlacementBlockEntity) context.getLevel().getBlockEntity(placeContext.getClickedPos());
                     blockEntity.setCoords1(coords1);
                     blockEntity.setCoords2(coords2);
                     blockEntity.setOwnerId(context.getPlayer().getUUID());
 
                     // update the first block with both coords as well
-                    ZonePlacementBlockEntity blockEntity1 = (ZonePlacementBlockEntity) context.getLevel().getBlockEntity(coords1.toPos());
+                    CitizenPlacementBlockEntity blockEntity1 = (CitizenPlacementBlockEntity) context.getLevel().getBlockEntity(coords1.toPos());
                     blockEntity1.setCoords1(coords1);
                     blockEntity1.setCoords2(coords2);
                     blockEntity1.setOwnerId(context.getPlayer().getUUID());
 
                     // display the border
-                    blockEntity.placeParcelBorder();
-                }
+                    blockEntity.placeParcelBorder();                }
             } else {
                 tag.put(COORDS1, Coords.of(placeContext.getClickedPos()).save(new CompoundTag()));
             }
-
             return InteractionResult.SUCCESS;
         }
     }
@@ -193,14 +193,14 @@ public class ZoningTool extends BlockItem {
     private void clear(BlockPlaceContext context, ICoords coords1, ICoords coords2) {
 
         // clear blocks at 1 & 2
-        if (context.getLevel().getBlockState(coords1.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+        if (context.getLevel().getBlockState(coords1.toPos()).is(ModBlocks.CITIZEN_PLACEMENT_BLOCK.get())) {
             context.getLevel().setBlock(coords1.toPos(), Blocks.AIR.defaultBlockState(), 3);
         }
-        if (context.getLevel().getBlockState(coords2.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+        if (context.getLevel().getBlockState(coords2.toPos()).is(ModBlocks.CITIZEN_PLACEMENT_BLOCK.get())) {
             context.getLevel().setBlock(coords2.toPos(), Blocks.AIR.defaultBlockState(), 3);
         }
 
         // clear the borders
-       ZonePlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.ZONE_BORDER.get(), 0);
+        CitizenPlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.CITIZEN_BORDER.get(), 0);
     }
 }

@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -125,7 +126,7 @@ public class CitizenParcel extends AbstractParcel {
         else if (parentParcel.getType() == ParcelType.ZONE
                 || parentParcel.getType() == ParcelType.NATION) {
 
-            // ensure the citizen parcel is completed contained within the zone
+            // ensure the citizen parcel is completed contained within the nation/zone
             if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
                 return result;
             }
@@ -135,7 +136,12 @@ public class CitizenParcel extends AbstractParcel {
             // NOTE filter out the zone and nation parcels
             List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
                     .filter(p -> !p.getId().equals(parentParcel.getId()))
-                    .filter(p -> parentParcel.getType() != ParcelType.ZONE && parentParcel.getType() != ParcelType.NATION)
+                    // NOTE if made it to this point, parcel should be completely within
+                    // the parent boundaries whether that be zone or nation.
+                    // IF parent = Nation, then any other overlaps is invalid.
+                    // IF parent = Zone, filter out nations as the zone should be
+                    // completely contained in the nation.
+                    .filter(p -> !(parentParcel.getType() == ParcelType.ZONE && p.getType() == ParcelType.NATION))
                     .toList();
 
             if(Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
@@ -144,6 +150,7 @@ public class CitizenParcel extends AbstractParcel {
 
             // add to the registry
             ParcelRegistry.add(this);
+            CommandHelper.save(level);
 
         }
         return ClaimResult.SUCCESS;

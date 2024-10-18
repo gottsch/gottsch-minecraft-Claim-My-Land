@@ -118,7 +118,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
     /**
      *
      */
-    private void selfDestruct() {
+    public void selfDestruct() {
         ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
         this.getLevel().setBlock(this.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
         this.getLevel().removeBlockEntity(this.getBlockPos());
@@ -152,7 +152,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
         return switch (parcelType) {
             case PLAYER, CITIZEN -> Config.SERVER.general.parcelBufferRadius.get();
             case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
-            case ZONE -> 1;
+            case ZONE -> 0;
         };
     }
 
@@ -247,14 +247,20 @@ public class BorderStoneBlockEntity extends BlockEntity {
         placeParcelBorder(box, borderState);
 
         // inflate the box
-        Box bufferedBox = ModUtil.inflate(box, bufferRadius);
-        BlockState bufferState = getBufferBlockState(box, bufferedBox);
-        placeParcelBorder(bufferedBox, bufferState);
+        if (bufferRadius > 0) {
+            Box bufferedBox = ModUtil.inflate(box, bufferRadius);
+            BlockState bufferState = getBufferBlockState(box, bufferedBox);
+            placeParcelBorder(bufferedBox, bufferState);
+        }
     }
 
     public void placeParcelBorder(Box box, BlockState state) {
         // TODO AIR should be a tag and can replace air, water, and BorderBlocks
         addParcelBorder(box, Blocks.AIR, state);
+    }
+
+    public void addParcelBorder(Box box, Block removeBlock, BlockState intersectsBlockState) {
+        addParcelBorder(getLevel(), box, removeBlock, intersectsBlockState);
     }
 
     /**
@@ -268,7 +274,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param removeBlock
      * @param intersectsBlockState
      */
-    private void addParcelBorder(Box box, Block removeBlock, BlockState intersectsBlockState) {
+    public static void addParcelBorder(Level level, Box box, Block removeBlock, BlockState intersectsBlockState) {
         /* NOTE the for loops.
          * for x is "<=" because the Box was reduced by 1 during creation to ensure
          * it is the right size when including the origin.
@@ -364,7 +370,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param removeBlock
      * @param newState
      */
-    private static void replaceParcelBorderBlock(Level level, BlockPos pos, Block removeBlock, BlockState newState) {
+    public static void replaceParcelBorderBlock(Level level, BlockPos pos, Block removeBlock, BlockState newState) {
         BlockState borderState = level.getBlockState(pos);
         if ((borderState instanceof IBorderBlock) || borderState.is(removeBlock) || borderState.canBeReplaced()) {
             level.setBlockAndUpdate(pos, newState);
@@ -378,7 +384,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param removeBlock
      * @param blockState
      */
-    private static void replaceParcelBorder(Level level, Box box, Block removeBlock, BlockState blockState) {
+    public static void replaceParcelBorder(Level level, Box box, Block removeBlock, BlockState blockState) {
         // only iterate over the outline coords
         for (int x = 0; x < ModUtil.getSize(box).getX(); x++) {
             BlockPos pos = box.getMinCoords().toPos().offset(x, 0, 0);
@@ -431,9 +437,9 @@ public class BorderStoneBlockEntity extends BlockEntity {
     public void removeParcelBorder() {
         Level level = getLevel();
         Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
-        ICoords coords = new Coords(this.getBlockPos());
+        ICoords coords = Coords.of(this.getBlockPos());
         if (parcel.isPresent()) {
-            coords = new Coords(parcel.get().getCoords());
+            coords = Coords.of(parcel.get().getCoords());
             if (parcel.get() instanceof NationParcel) {
                 coords = coords.withY(getBlockPos().getY());
             }

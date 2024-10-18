@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.block;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.block.entity.CitizenPlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.ZonePlacementBlockEntity;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
@@ -41,21 +42,22 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Created by Mark Gottschling on Oct 15, 2024
+ * Created by Mark Gottschling on Oct 11, 2024
  */
-public class ZonePlacementBlock extends BaseEntityBlock {
+public class CitizenPlacementBlock extends BaseEntityBlock {
     private static final VoxelShape SHAPE = Block.box(5, 0, 5, 11D, 16D, 11D);
 
-    public ZonePlacementBlock(Properties properties) {
+
+    public CitizenPlacementBlock(Properties properties) {
         super(properties);
     }
 
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        ZonePlacementBlockEntity blockEntity = null;
+        CitizenPlacementBlockEntity blockEntity = null;
         try {
-            blockEntity = new ZonePlacementBlockEntity(pos, state);
+            blockEntity = new CitizenPlacementBlockEntity(pos, state);
         }
         catch(Exception e) {
             ClaimMyLand.LOGGER.error("error", e);
@@ -83,19 +85,19 @@ public class ZonePlacementBlock extends BaseEntityBlock {
         }
 
         BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof ZonePlacementBlockEntity zbe) {
-            if (zbe.getCoords1() != null && zbe.getCoords1() != Coords.EMPTY
-                && zbe.getCoords2() != null && zbe.getCoords2() != Coords.EMPTY) {
-                ICoords coords1 = zbe.getCoords1();
-                ICoords coords2 = zbe.getCoords2();
+        if (be instanceof CitizenPlacementBlockEntity cbe) {
+            if (cbe.getCoords1() != null && cbe.getCoords1() != Coords.EMPTY
+                    && cbe.getCoords2() != null && cbe.getCoords2() != Coords.EMPTY) {
+                ICoords coords1 = cbe.getCoords1();
+                ICoords coords2 = cbe.getCoords2();
 
-                ZonePlacementBlockEntity.removeParcelBorder(level, new Box(coords1, coords2), ModBlocks.ZONE_BORDER.get());
+                CitizenPlacementBlockEntity.removeParcelBorder(level, new Box(coords1, coords2), ModBlocks.CITIZEN_BORDER.get());
 
                 // clear blocks at 1 & 2
-                if (!coords1.toPos().equals(pos) && level.getBlockState(coords1.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+                if (!coords1.toPos().equals(pos) && level.getBlockState(coords1.toPos()).is(ModBlocks.CITIZEN_PLACEMENT_BLOCK.get())) {
                     level.setBlock(coords1.toPos(), Blocks.AIR.defaultBlockState(), 3);
                 }
-                if (!coords2.toPos().equals(pos) && level.getBlockState(coords2.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+                if (!coords2.toPos().equals(pos) && level.getBlockState(coords2.toPos()).is(ModBlocks.CITIZEN_PLACEMENT_BLOCK.get())) {
                     level.setBlock(coords2.toPos(), Blocks.AIR.defaultBlockState(), 3);
                 }
             }

@@ -113,22 +113,22 @@ public class PlayerRegistry {
     public static synchronized void load(CompoundTag tag) {
         if (tag.contains("playerRegistry")) {
             ListTag list = tag.getList("playerRegistry", Tag.TAG_COMPOUND);
-            list.forEach(t -> {
-                CompoundTag c = (CompoundTag) t;
-                UUID id = null;
-                String name = null;
-                if (c.contains("id")) {
-                    id = tag.getUUID("id");
-                }
-                if (c.contains("name")) {
-                    name = tag.getString("name");
-                }
-                if (id != null || name != null) {
-                    register(id, name);
-                }
-            });
+            if (list != null) {
+                list.forEach(t -> {
+                    CompoundTag c = (CompoundTag) t;
+                    UUID id = null;
+                    String name = null;
+                    if (c.contains("id")) {
+                        id = c.getUUID("id");
+                    }
+                    if (c.contains("name")) {
+                        name = c.getString("name");
+                    }
+                    if (id != null || name != null) {
+                        register(id, name);
+                    }
+                });
+            }
         }
-
-
     }
 }

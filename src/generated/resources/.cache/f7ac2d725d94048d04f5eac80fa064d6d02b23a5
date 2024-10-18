@@ -1,10 +1,11 @@
-// 1.20.1	2024-10-07T16:49:37.918093	Item Models: claimmyland
+// 1.20.1	2024-10-11T22:38:59.336345	Item Models: claimmyland
 074dfe0ccadae784c0f16359e491b01374cef82b assets/claimmyland/models/item/border_stone.json
 f1ccdf638a85491f9267c5527d2d13234dfb3e4e assets/claimmyland/models/item/citizen_deed.json
+22fb5698b5159531063f19ea65347e1941411b46 assets/claimmyland/models/item/citizen_placement.json
 29fc3f9dcd43f53680fbb82ba40978e8237016eb assets/claimmyland/models/item/nation_deed.json
 6a0681c7135f6359fbdb69c91dee291ddbfb449d assets/claimmyland/models/item/nation_deed_100.json
 f5a38b8e1984a4879e864aa659a475fd1186a3d0 assets/claimmyland/models/item/player_deed.json
 fd231d8b3dd247cd909bd9de4b7a42c3f88ab87e assets/claimmyland/models/item/player_deed_10.json
 6ac8fe928285f0243b9269a8e3c5b992b600b22e assets/claimmyland/models/item/player_deed_16.json
 8a59e33f32443ce33d59630377a437f41c6b1d57 assets/claimmyland/models/item/player_deed_32.json
-6d3c773b70d50f4a281e73a257fed2172990625e assets/claimmyland/models/item/zoning_tool.json
+7fd016a63a6a5a1cafdd6d6e5e6049286e9dc15f assets/claimmyland/models/item/zone_placement.json

@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
@@ -192,6 +193,7 @@ public interface Parcel {
 
         // add to the registry
         ParcelRegistry.add(this);
+        CommandHelper.save(level);
 
         return ClaimResult.SUCCESS;
     }
@@ -212,7 +214,7 @@ public interface Parcel {
              * if parcel of foundation stone has same owner as parcel in world, ignore buffers,
              * but check border overlaps. parcels owned by the same player can be touching.
              */
-            if (ownerId.equals(overlapParcel.getOwnerId())) {
+            if (ownerId != null && ownerId.equals(overlapParcel.getOwnerId())) {
                 // get the existing owned parcel
                 Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
 

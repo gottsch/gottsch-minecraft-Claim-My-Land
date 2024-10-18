@@ -88,25 +88,6 @@ public class CitizenFoundationStoneBlockEntity extends FoundationStoneBlockEntit
                 if (hasIntersections) {
                     blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
                 }
-//                for (Parcel overlapParcel : overlaps) {
-//                    /*
-//                     * if parcel of foundation stone has same owner as parcel in world, ignore buffers,
-//                     * but check border overlaps. parcels owned by the same player can be touching.
-//                     */
-//                    if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-//                        // get the existing owned parcel
-//                        Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-//
-//                        // test if the non-buffered parcels intersect
-//                        if (optionalOwnedParcel.isPresent() && ModUtil.touching(box, optionalOwnedParcel.get().getBox())) {
-//                            blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-//                            break;
-//                        }
-//                    } else {
-//                        blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-//                        break;
-//                    }
-//                }
             }
         } else {
             // determine what parcel type is the foundation stone in

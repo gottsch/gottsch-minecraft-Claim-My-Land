@@ -1,3 +1,22 @@
+/*
+ * This file is part of  Claim My Land.
+ * Copyright (c) 2024 Mark Gottschling (gottsch)
+ *
+ * All rights reserved.
+ *
+ * Claim My Land is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Claim My Land is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Claim My Land.  If not, see <http://www.gnu.org/licenses/lgpl>.
+ */
 package mod.gottsch.forge.claimmyland.core.command;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
@@ -53,6 +72,7 @@ public class ParcelCommandDelegate {
         }
         return 1;
     }
+
     /**
      *
      * @param source
@@ -64,6 +84,7 @@ public class ParcelCommandDelegate {
         return listParcelsByOwner(source, player);
     }
 
+    // TODO mve to common class
     public static int listParcelsByOwner(CommandSourceStack source, ServerPlayer player) {
         List<Component> messages = new ArrayList<>();
 //        messages.add(Component.literal(""));
@@ -117,12 +138,14 @@ public class ParcelCommandDelegate {
         }
         else {
             list.forEach(parcel -> {
-                messages.add(Component.translatable(parcel.getName().toUpperCase() + ": ").withStyle(ChatFormatting.AQUA)
-                        .append(Component.translatable(String.format("(%s) to (%s)",
-                                formatCoords(parcel.getMinCoords()),
-                                formatCoords(parcel.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
-                        )
-                        .append(Component.translatable(", size: (" + formatCoords(ModUtil.getSize( parcel.getSize()) ) + ")").withStyle(ChatFormatting.WHITE))
+                messages.add(
+                        Component.literal(parcel.getName().toUpperCase()).withStyle(ChatFormatting.AQUA)
+                                .append(Component.literal(String.format(" [ %s ]: ", parcel.getType().getSerializedName())).withStyle(ChatFormatting.WHITE))
+                                .append(Component.translatable(String.format("(%s) to (%s)",
+                                        formatCoords(parcel.getMinCoords()),
+                                        formatCoords(parcel.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
+                                )
+                                .append(Component.translatable(", [" + formatCoords(ModUtil.getSize( parcel.getSize()) ) + "]").withStyle(ChatFormatting.WHITE))
                 );
 
 //				[STYLE].withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/tp @s " + blockpos.getX() + " " + s1 + " " + blockpos.getZ())).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("chat.coordinates.tooltip"))
@@ -132,7 +155,7 @@ public class ParcelCommandDelegate {
     }
 
     private static String formatCoords(ICoords coords) {
-        return String.format("%s, %s, %s", coords.getX(), coords.getY(), coords.getZ());
+        return String.format("%s %s %s", coords.getX(), coords.getY(), coords.getZ());
     }
 
 
@@ -150,7 +173,13 @@ public class ParcelCommandDelegate {
                 .map(n -> ((NationParcel)n).getNationId()).orElse(null);
 
         ParcelType type = ParcelType.valueOf(parcelType);
-        // validation
+
+        // validate size
+        if (xSize < 2 || ySizeUp + ySizeDown < 2 || zSize < 2) {
+            CommandHelper.failure(source, "parcel.add.failure_too_small");
+        }
+
+        // validate type
         if ((type == ParcelType.CITIZEN || type == ParcelType.ZONE) && nationId == null) {
             source.sendFailure(Component.translatable(LangUtil.chat("parcel.citizen.nationId_required")).withStyle(ChatFormatting.RED));
             return 0;
@@ -231,7 +260,8 @@ public class ParcelCommandDelegate {
                     CommandHelper.save(source.getLevel());
                 }
                 else {
-                    // TODO failure
+                    ClaimMyLand.LOGGER.error("unable to locate parcel by owner -> {}", ownerName);
+                    failure(source, "parcel.unable_to_locate");
                 }
             } else {
                 source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.abandon.failure")).withStyle(ChatFormatting.RED), false);
@@ -240,6 +270,48 @@ public class ParcelCommandDelegate {
             CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return 1;
+    }
+
+    /**
+     * Ops version
+     * @param source
+     * @param nationName
+     * @param borderType
+     * @return
+     */
+    public static int borderType(CommandSourceStack source, String nationName, String borderType) {
+        try {
+            // get the border type
+            NationBorderType type = NationBorderType.valueOf(borderType.toUpperCase());
+
+            // find the nation by name
+            ParcelRegistry.getNations().stream()
+                    .filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getName()))
+                    .findFirst()
+                    .ifPresentOrElse(nation -> {
+                        ((NationParcel)nation).setBorderType(type);
+                        CommandHelper.save(source.getLevel());
+                    }, () -> {
+                        failure(source,"parcel.nation.unable_to_locate");
+                    });
+
+        } catch(Exception e) {
+            ClaimMyLand.LOGGER.error("an error occurred changing nation border type:", e);
+            unexceptedError(source);
+        }
+        return 1;
+    }
+
+    /**
+     * convenience chat method
+     * @param source
+     */
+    private static void unexceptedError(CommandSourceStack source) {
+        failure(source, "unexpected_error");
+    }
+
+    private static void failure(CommandSourceStack source, String key) {
+        source.sendFailure(Component.translatable(LangUtil.chat(key)).withStyle(ChatFormatting.RED));
     }
 
     /**

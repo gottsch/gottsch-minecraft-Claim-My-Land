@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -94,18 +95,33 @@ public class ZoneParcel extends AbstractParcel {
             && getOwnerId().equals(parentParcel.getOwnerId())) {
 
             // ensure zone is completely contained within the nation
-            if (ModUtil.contains(parentParcel.getBox(), parcelBox)) {
-                // add to the registry
-                ParcelRegistry.add(this);
-                result = ClaimResult.SUCCESS;
+            if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
+                return result;
             }
+
+            // find overlaps of the parcel with buffered registry parcels.
+            // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
+            // NOTE filter out the zone and nation parcels
+            List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
+                    .filter(p -> !p.getId().equals(parentParcel.getId())
+                            && p.getType() != ParcelType.NATION)
+                    .toList();
+
+            if(Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
+                return result;
+            }
+
+            // add to the registry
+            ParcelRegistry.add(this);
+            CommandHelper.save(level);
+            result = ClaimResult.SUCCESS;
         }
         return result;
     }
 
     @Override
     public int getBufferSize() {
-        return 1;
+        return 0;
     }
 
     @Override

@@ -1,4 +1,22 @@
-
+/*
+ * This file is part of  Claim My Land.
+ * Copyright (c) 2024 Mark Gottschling (gottsch)
+ *
+ * All rights reserved.
+ *
+ * Claim My Land is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Claim My Land is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Claim My Land.  If not, see <http://www.gnu.org/licenses/lgpl>.
+ */
 package mod.gottsch.forge.claimmyland.datagen;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
@@ -33,6 +51,9 @@ public class LanguageGen extends LanguageProvider {
 
         // blocks
         add(ModBlocks.PLAYER_FOUNDATION_STONE.get(), "Foundation Stone");
+//        add(ModBlocks.ZONE_PLACEMENT_BLOCK.get(), "Zoning Tool");
+        add(ModItems.CITIZEN_PLACEMENT_TOOL.get(), "Citizen Parcel Tool");
+        add(ModItems.ZONING_PLACEMENT_TOOL.get(), "Zoning Tool");
 
 //        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
 //
@@ -69,6 +90,8 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");
         add(LangUtil.chat("parcel.max_reached"), "You have already reached your max. number of parcels.");
+        add(LangUtil.chat("parcel.unable_to_locate"), "Unable to find the parcel.");
+
 
         add(LangUtil.chat("parcel.list"), "%s's Parcels");
         add(LangUtil.chat("parcel.list.abandoned"), "Abandoned Parcels");
@@ -80,6 +103,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.add.success"), "The parcel has been added.");
         add(LangUtil.chat("parcel.add.failure"), "Unable to add the parcel.");
         add(LangUtil.chat("parcel.add.failure_with_overlaps"), "Unable to add the parcel. It intersects with another parcel.");
+        add(LangUtil.chat("parcel.add.failure_too_smal"), "Unable to add the parcel. The dimension(s) are too small (< 2).");
 
         add(LangUtil.chat("parcel.remove.success"), "The parcel has been removed.");
         add(LangUtil.chat("parcel.remove.failure"), "Unable to remove the parcel.");
@@ -96,6 +120,8 @@ public class LanguageGen extends LanguageProvider {
 
         add(LangUtil.chat("parcel.citizen.nationId_required"), "A nation name is required to add a citizen parcel.");
         add(LangUtil.chat("parcel.nation.nationName_already_exists"), "A nation with that name already exists.");
+        add(LangUtil.chat("parcel.nation.unable_to_locate"), "A nation with that name does not exist.");
+        add(LangUtil.chat("parcel.nation.not_owner"), "You are not the owner of the nation.");
 
         // deeds
         add(LangUtil.chat("deed.claim.success"), "You claimed a parcel at [%s] of size [%s].");
@@ -110,8 +136,11 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("foundation_stone.unable_to_location"), "Unable to locate foundation stone block entity.");
         add(LangUtil.chat("foundation_stone.incorrect_deed"), "Only the deed used to place the foundation stone can be used here.");
 
+        // citizen placement
+        add(LangUtil.chat("citizen_placement.not_valid_parent"), "That block is not within a valid parent parcel (nation | zone) or it is claimed.");
+
         // zone placement
-        add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or is claimed.");
+        add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or it is claimed.");
         add(LangUtil.chat("zone_placement.not_owner"), "You are not the owner of this nation.");
 
 

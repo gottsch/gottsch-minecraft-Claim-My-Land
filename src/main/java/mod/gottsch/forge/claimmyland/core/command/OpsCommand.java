@@ -27,6 +27,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
+import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
 import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
@@ -53,7 +54,7 @@ import java.util.*;
  * @author Mark Gottschling on Mar 19, 2024
  *
  */
-public class OpsProtectCommand2 {
+public class OpsCommand {
 
 
     private static final SuggestionProvider<CommandSourceStack> DEED_TYPES = (source, builder) -> {
@@ -63,6 +64,11 @@ public class OpsProtectCommand2 {
     private static final SuggestionProvider<CommandSourceStack> PARCEL_TYPES = (source, builder) -> {
         return SharedSuggestionProvider.suggest(Arrays.stream(ParcelType.values()).map(ParcelType::getSerializedName), builder);
     };
+
+    private static final SuggestionProvider<CommandSourceStack> BORDER_TYPES = (source, builder) -> {
+        return SharedSuggestionProvider.suggest(Arrays.stream(NationBorderType.values()).map(NationBorderType::getSerializedName), builder);
+    };
+
 
     private static final SuggestionProvider<CommandSourceStack> PARCEL_NAMES = (source, builder) -> {
         String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
@@ -103,7 +109,7 @@ public class OpsProtectCommand2 {
                                                     return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
                                                 })
                                                 ///// GENERATE OPTION /////
-                                                .then(Commands.literal(CommandHelper.GENERATE)
+//                                                .then(Commands.literal(CommandHelper.GENERATE)
                                                         ///// NEW DEED /////
                                                         .then(Commands.literal(CommandHelper.NEW)
                                                                 .then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
@@ -142,14 +148,15 @@ public class OpsProtectCommand2 {
                                                                         )
                                                                 )
                                                         )
-                                                        ///// FROM PARCEL /////
-                                                        .then(Commands.literal(CommandHelper.FROM_PARCEL)
-                                                                .then(Commands.literal(CommandHelper.BY_OWNER)
+                                                        ///// TRANSFER /////
+                                                        .then(Commands.literal(CommandHelper.TRANSFER)
+//                                                                .then(Commands.literal(CommandHelper.BY_OWNER)
                                                                         .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
                                                                                 .suggests(OWNER_NAMES)
                                                                                 .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
                                                                                         .suggests(PARCEL_NAMES)
                                                                                         .executes(source -> {
+                                                                                            // TODO make new method
                                                                                             return generateDeedFromParcel(source.getSource(),
                                                                                                     StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
                                                                                                     StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
@@ -166,7 +173,7 @@ public class OpsProtectCommand2 {
                                                                                         )
                                                                                 )
                                                                         )
-                                                                )
+//                                                                )
                                                         )
                                                         // TODO deprecated
 //                                                        .then(Commands.literal("citizen_of_nation")
@@ -191,7 +198,7 @@ public class OpsProtectCommand2 {
 //                                                                        )
 //                                                                )
 //                                                        )
-                                                )
+//                                                )
                                 )
                                 ///// PARCEL TOP-LEVEL OPTION /////
                                 .then(Commands.literal(CommandHelper.PARCEL).requires(source -> {
@@ -281,6 +288,19 @@ public class OpsProtectCommand2 {
                                                         )
                                                 )
 
+                                                ///// BORDER TYPE /////
+                                                .then(Commands.literal(CommandHelper.BORDER_TYPE)
+                                                        .then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
+                                                                .suggests(NATION_NAMES)
+                                                                        .then(Commands.argument(CommandHelper.BORDER_TYPE, StringArgumentType.string())
+                                                                                .suggests(BORDER_TYPES)
+                                                                                .executes(source -> {
+                                                                                    return ParcelCommandDelegate.borderType(source.getSource(), StringArgumentType.getString(source, CommandHelper.NATION_NAME), StringArgumentType.getString(source, CommandHelper.BORDER_TYPE));
+                                                                                })
+                                                                       )
+
+                                                        )
+                                                )
                                                 ///// DEMOLISH /////
                                                 .then(Commands.literal(CommandHelper.DEMOLISH)
                                                         .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())

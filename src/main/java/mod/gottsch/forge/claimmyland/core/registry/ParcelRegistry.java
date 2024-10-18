@@ -258,7 +258,9 @@ public class ParcelRegistry {
 //        Box inflatedBox = inflateParcelBox(parcel);
 //        BUFFER_TREE.insert(new CoordsInterval<>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId()));
 //        BUFFER_PARCELS_BY_COORDS.put(inflatedBox.getMinCoords(), parcel);
-        addParcelToBufferTree(parcel);
+        if (parcel.getBufferSize() > 0) {
+            addParcelToBufferTree(parcel);
+        }
 
         if (parcel.getType() == ParcelType.NATION) {
             NATIONS_BY_ID.put(((NationParcel)parcel).getNationId(), parcel);

@@ -29,7 +29,7 @@ public class BlockStates extends BlockStateProvider {
 
 		simpleBlock(ModBlocks.NATION_FOUNDATION_STONE.get());
 		simpleBlock(ModBlocks.CITIZEN_FOUNDATION_STONE.get());
-		simpleBlock(ModBlocks.ZONE_PLACEMENT_BLOCK.get());
+//		simpleBlock(ModBlocks.ZONE_PLACEMENT_BLOCK.get());
 
 		foundationStone(ModBlocks.PLAYER_FOUNDATION_STONE, mcLoc("block/polished_andesite"), mcLoc("block/andesite"));
 //		borderStone(ModBlocks.BORDER_STONE, mcLoc("block/polished_andesite"));

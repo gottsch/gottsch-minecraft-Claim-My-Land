@@ -44,7 +44,7 @@ public class BorderBlock extends FacingBlock implements IBorderBlock, SimpleWate
 
     private static final VoxelShape NORTH_LEFT = Block.box(0D, 0D, 0D, 2D, 16, 2);
     private static final VoxelShape NORTH_RIGHT = Block.box(14, 0, 0, 16, 16, 2);
-    private static final VoxelShape SOUTH_LEFT = Block.box(14D, 0D, 15D, 16D, 16D, 16D);
+    private static final VoxelShape SOUTH_LEFT = Block.box(14D, 0D, 14D, 16D, 16D, 16D);
     private static final VoxelShape SOUTH_RIGHT = Block.box(0, 0, 14, 2, 16, 16);
 
     private static final VoxelShape NORTH_TOP = Block.box(0, 14, 0, 16, 16, 2);

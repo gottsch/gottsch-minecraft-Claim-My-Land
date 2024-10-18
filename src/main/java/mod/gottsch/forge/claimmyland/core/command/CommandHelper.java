@@ -19,12 +19,17 @@
  */
 package mod.gottsch.forge.claimmyland.core.command;
 
+import com.mojang.brigadier.suggestion.SuggestionProvider;
+import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
+
+import java.util.Arrays;
 
 /**
  * 
@@ -64,6 +69,13 @@ public class CommandHelper {
 	public static final String BY_ABANDONED = "by_abandoned";
 	public static final String FROM_PARCEL = "from_parcel";
 	public static final String DEMOLISH = "demolish";
+    public static final String BORDER_TYPE ="border_type" ;
+
+	public static final SuggestionProvider<CommandSourceStack> BORDER_TYPES = (source, builder) -> {
+		return SharedSuggestionProvider.suggest(Arrays.stream(NationBorderType.values()).map(NationBorderType::getSerializedName), builder);
+	};
+	public static final String GIVE = "give";
+	public static final String GIVE_ITEM = "give_item";
 
 	/**
 	 * marks persistent data as dirty so that minecraft will auto save it.
@@ -87,6 +99,18 @@ public class CommandHelper {
 
 	public static void sendUnableToGenerateDeedMessage(CommandSourceStack source, String nationName) {
 		source.sendSuccess(() -> Component.translatable(LangUtil.chat(" deed.generate.failure")).withStyle(ChatFormatting.RED), false);
+	}
+
+	/**
+	 * convenience chat method
+	 * @param source
+	 */
+	public static void unexceptedError(CommandSourceStack source) {
+		failure(source, "unexpected_error");
+	}
+
+	public static void failure(CommandSourceStack source, String key) {
+		source.sendFailure(Component.translatable(LangUtil.chat(key)).withStyle(ChatFormatting.RED));
 	}
 
 	///// SUGGESTIONS /////

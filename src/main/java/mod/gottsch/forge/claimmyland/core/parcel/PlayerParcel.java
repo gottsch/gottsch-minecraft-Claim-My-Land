@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
@@ -140,6 +141,7 @@ public class PlayerParcel extends AbstractParcel {
 
                 // add to the registry
                 ParcelRegistry.add(citizenParcel);
+                CommandHelper.save(level);
                 // register the player
                 PlayerRegistry.register(level, getOwnerId());
                 result = ClaimResult.SUCCESS;

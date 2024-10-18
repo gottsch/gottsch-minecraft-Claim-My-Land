@@ -65,15 +65,10 @@ public class ItemModelsProvider extends ItemModelProvider {
 		withExistingParent(ModItems.BORDER_STONE.getId().getPath(), modLoc("block/border_stone"));
 
 		// tools
-		singleTexture("zoning_tool",
-				mcLoc("item/handheld"), "layer0", modLoc("item/zoning_tool"));
+//		singleTexture("zoning_tool",
+//				mcLoc("item/handheld"), "layer0", modLoc("item/zoning_tool"));
+		withExistingParent(ModItems.ZONING_PLACEMENT_TOOL.getId().getPath(), modLoc("block/zone_placement"));
+		withExistingParent(ModItems.CITIZEN_PLACEMENT_TOOL.getId().getPath(), modLoc("block/citizen_placement"));
 
-
-//		{
-//			"parent": "minecraft:item/handheld",
-//				"textures": {
-//			"layer0": "minecraft:item/iron_sword"
-//		}
-//		}
 	}
 }

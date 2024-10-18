@@ -71,11 +71,11 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     /**
      *
      */
-    private void selfDestruct() {
-        ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
-        this.getLevel().setBlock(this.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
-        this.getLevel().removeBlockEntity(this.getBlockPos());
-    }
+//    private void selfDestruct() {
+//        ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
+//        this.getLevel().setBlock(this.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
+//        this.getLevel().removeBlockEntity(this.getBlockPos());
+//    }
 
     @Override
     public void saveAdditional(CompoundTag tag) {

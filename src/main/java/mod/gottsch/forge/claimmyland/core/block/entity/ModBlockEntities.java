@@ -49,6 +49,16 @@ public class ModBlockEntities {
             Registration.BLOCK_ENTITIES.register("citizen_foundation_stone_block_entity",
                     () -> BlockEntityType.Builder.of(CitizenFoundationStoneBlockEntity::new, ModBlocks.CITIZEN_FOUNDATION_STONE.get()).build(null));
 
+
+    public static final RegistryObject<BlockEntityType<CitizenPlacementBlockEntity>> CITIZEN_PLACEMENT_ENTITY_TYPE =
+            Registration.BLOCK_ENTITIES.register("citizen_placement_block_entity",
+                    () -> BlockEntityType.Builder.of(CitizenPlacementBlockEntity::new, ModBlocks.CITIZEN_PLACEMENT_BLOCK.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<ZonePlacementBlockEntity>> ZONE_PLACEMENT_ENTITY_TYPE =
+            Registration.BLOCK_ENTITIES.register("zone_placement_block_entity",
+                    () -> BlockEntityType.Builder.of(ZonePlacementBlockEntity::new, ModBlocks.ZONE_PLACEMENT_BLOCK.get()).build(null));
+
+
     public static void register(IEventBus bus) {
         Registration.registerBlockEntities(bus);
     }

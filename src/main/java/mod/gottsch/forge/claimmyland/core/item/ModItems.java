@@ -92,10 +92,12 @@ public class ModItems {
     });
 
     public static RegistryObject<Item> BORDER_STONE = fromBorderStone(ModBlocks.BORDER_STONE, Item.Properties::new);
+    public static RegistryObject<Item> CITIZEN_PLACEMENT_TOOL = fromCitizenPlacement(ModBlocks.CITIZEN_PLACEMENT_BLOCK, Item.Properties::new);
+    public static RegistryObject<Item> ZONING_PLACEMENT_TOOL = fromZonePlacement(ModBlocks.ZONE_PLACEMENT_BLOCK, Item.Properties::new);
 
 
     // tools
-    public static RegistryObject<Item> ZONING_TOOL = Registration.ITEMS.register("zoning_tool", () -> new ZoningTool(new Item.Properties()));
+//    public static RegistryObject<Item> ZONING_TOOL = Registration.ITEMS.register("zoning_tool", () -> new ZoningTool(new Item.Properties()));
 
     /**
      *
@@ -124,5 +126,12 @@ public class ModItems {
 
     public static <B extends Block> RegistryObject<Item> fromBorderStone(RegistryObject<B> block, Supplier<Item.Properties> itemProperties) {
         return Registration.ITEMS.register(block.getId().getPath(), () -> new BorderStoneBlockItem(block.get(), itemProperties.get()));
+    }
+
+    public static <B extends Block> RegistryObject<Item> fromCitizenPlacement(RegistryObject<B> block, Supplier<Item.Properties> itemProperties) {
+        return Registration.ITEMS.register(block.getId().getPath(), () -> new CitizenTool(block.get(), itemProperties.get()));
+    }
+    public static <B extends Block> RegistryObject<Item> fromZonePlacement(RegistryObject<B> block, Supplier<Item.Properties> itemProperties) {
+        return Registration.ITEMS.register(block.getId().getPath(), () -> new ZoningTool(block.get(), itemProperties.get()));
     }
 }
