@@ -114,23 +114,27 @@ public class CitizenTool extends BlockItem {
 
             ParcelFactory.create(ParcelType.CITIZEN, parentParcel.get().getNationId())
                     .ifPresentOrElse(p -> {
-                            p.setOwnerId(parentParcel.get().getOwnerId());
-                            p.setCoords(coords1);
-                            p.setSize(new Box(Coords.of(0, 0, 0), ModUtil.getSize(box)));
+                                p.setOwnerId(parentParcel.get().getOwnerId());
+                                // ensure to have to use the min coords of the box
+                                p.setCoords(box.getMinCoords());
+                                // build a relative 0-based size of the box.
+                                // NOTE since it is a 0-based new box, use box.getSize() instead of ModUtil.getSize(),
+                                // because we are introducing a bigger size by starting at 0 0 0.
+                                p.setSize(new Box(Coords.of(0, 0, 0), box.getSize()));
 
-                            ClaimResult claimResult = p.handleEmbeddedClaim(context.getLevel(), parentParcel.get(), p.getBox());
-                            if (claimResult == ClaimResult.SUCCESS) {
-                                context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.success")).withStyle(ChatFormatting.GREEN));
-                                CommandHelper.save(context.getLevel());
-                            } else {
-                                // TODO examine the claim result to determine the correct message.
-                                // handleError(context.getLevel(), context.getPlayer(), successfulClaim);
-                                context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.failure_with_overlaps")).withStyle(ChatFormatting.RED));
-                            }
-                        },
-                    () -> {
-                        context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
-                    });
+                                ClaimResult claimResult = p.handleEmbeddedClaim(context.getLevel(), parentParcel.get(), p.getBox());
+                                if (claimResult == ClaimResult.SUCCESS) {
+                                    context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.success")).withStyle(ChatFormatting.GREEN));
+                                    CommandHelper.save(context.getLevel());
+                                } else {
+                                    // TODO examine the claim result to determine the correct message.
+                                    // handleError(context.getLevel(), context.getPlayer(), successfulClaim);
+                                    context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.failure_with_overlaps")).withStyle(ChatFormatting.RED));
+                                }
+                            },
+                            () -> {
+                                context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
+                            });
 
             // clear the zone placement blocks and border
             clear(placeContext, coords1, coords2);

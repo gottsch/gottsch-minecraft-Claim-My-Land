@@ -128,57 +128,7 @@ public class ZonePlacementBlockEntity extends BorderStoneBlockEntity {
     @Override
     // determines what state the buffer block is
     protected BlockState getBufferBlockState(Box box, Box bufferedBox) {
-        // TODO return null - a zone shouldn't have a buffer
         return Blocks.AIR.defaultBlockState();
-//        // get the default block state of the border block
-//        BlockState blockState = ModBlocks.BUFFER.get().defaultBlockState();
-//
-//        /*
-//         * check if box/parcel is within another existing parcel
-//         */
-//        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
-//
-//        // not within another parcel
-//        if (registryParcel.isEmpty()) {
-//
-//            // find overlaps of the buffered box with unbuffered parcels
-//            // this ensure that the buffered boundaries are not overlapping the area of another parcel - too close!
-//            // filter out the parcel that the buffer belongs to
-//            List<Parcel> overlaps = ParcelRegistry.find(bufferedBox).stream()
-//                    .filter(p -> !p.getId().equals(getParcelId())).toList();
-//
-//            if (!overlaps.isEmpty()) {
-//                for (Parcel overlapParcel : overlaps) {
-//                    // the parcels are owned by the same person. they can be closer or touching,
-//                    // ie. ignore buffers, only the parcels themselves can't overlap
-//                    if (!getOwnerId().equals(overlapParcel.getOwnerId())) {
-//                        blockState = blockState.setValue(BufferBlock.INTERSECTS, BorderStatus.BAD);
-//                        break;
-//                    }
-//                }
-//            }
-//        } else {
-//            // determine what parcel type is the foundation stone in
-//            if (registryParcel.get().getType() == ParcelType.CITIZEN) {
-//                // do nothing - uses good state
-//            } else if (registryParcel.get().getType() == ParcelType.NATION) {
-//                // NOTE this shouldn't be allowed in the first place due to placement rules.
-//                blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-//            } else if (registryParcel.get().getType() == ParcelType.ZONE) {
-//
-//                // TODO replace with Parcel.hasBoxToBufferedIntersections()...
-//                // preform a normal overlaps check, filtering out nation and claim zone parcels
-//                List<Parcel> overlaps = ParcelRegistry.find(bufferedBox).stream()
-//                        .filter(p -> !p.getId().equals(getParcelId()))
-//                        .filter(p -> !(p instanceof NationParcel || p instanceof ZoneParcel))
-//                        .toList();
-//
-//                if(Parcel.hasBoxToBufferedIntersections(box, getOwnerId(), overlaps)) {
-//                    blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-//                }
-//            }
-//        }
-//        return blockState;
     }
 
     /**

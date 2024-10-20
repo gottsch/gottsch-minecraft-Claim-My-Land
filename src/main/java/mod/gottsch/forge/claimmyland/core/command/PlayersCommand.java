@@ -231,6 +231,7 @@ public class PlayersCommand {
 										) // end of ITEM
 								// TODO add ownership
 						)
+
 				); // end of register
 
 	}

@@ -77,7 +77,7 @@ public class ModUtil {
 
     // TODO add to Box in GottschCore
     public static boolean contains(Box box1, Box box2) {
-        AABB aabb = toAABB(box1);
+//        AABB aabb = toAABB(box1);
         return contains(box1, box2.getMinCoords())
                 && contains(box1, box2.getMaxCoords());
 //        return aabb.contains(box2.getMinCoords().toVec3())

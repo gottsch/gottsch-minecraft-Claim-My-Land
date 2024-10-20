@@ -207,10 +207,18 @@ public class ParcelRegistry {
      * inflates the parcel and adds to the buffer tree, which is a duplicate of the main tree,
      * but uses the inflated coords. the buffer tree is used when determining if 2 parcels
      * meet the buffer criteria.
+     * NOTE even if buffer size == 0, the parcel must be added to teh buffer tree.
      * @param parcel
      */
     public static synchronized void addParcelToBufferTree(Parcel parcel) {
-        Box inflatedBox = inflateParcelBox(parcel);
+        Box inflatedBox;
+        // inflate if buffer size is > 0
+        if (parcel.getBufferSize() > 0) {
+            inflatedBox = inflateParcelBox(parcel);
+        } else {
+            inflatedBox = parcel.getBox();
+        }
+
         BUFFER_TREE.insert(new CoordsInterval<>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId()));
         // add buffered parcel to byCoords map
         BUFFER_PARCELS_BY_COORDS.put(inflatedBox.getMinCoords(), parcel);
@@ -258,9 +266,7 @@ public class ParcelRegistry {
 //        Box inflatedBox = inflateParcelBox(parcel);
 //        BUFFER_TREE.insert(new CoordsInterval<>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId()));
 //        BUFFER_PARCELS_BY_COORDS.put(inflatedBox.getMinCoords(), parcel);
-        if (parcel.getBufferSize() > 0) {
-            addParcelToBufferTree(parcel);
-        }
+           addParcelToBufferTree(parcel);
 
         if (parcel.getType() == ParcelType.NATION) {
             NATIONS_BY_ID.put(((NationParcel)parcel).getNationId(), parcel);
@@ -367,8 +373,9 @@ public class ParcelRegistry {
      */
     public static Box inflateParcelBox(final Parcel parcel) {
         return switch(parcel.getType()) {
-            case PLAYER, CITIZEN, ZONE -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.parcelBufferRadius.get());
+            case PLAYER, CITIZEN -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.parcelBufferRadius.get());
             case NATION -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.nationParcelBufferRadius.get());
+            case ZONE -> parcel.getBox();
           };
     }
 

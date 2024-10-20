@@ -94,6 +94,7 @@ public class ZoneParcel extends AbstractParcel {
         if (parentParcel.getType() == ParcelType.NATION
             && getOwnerId().equals(parentParcel.getOwnerId())) {
 
+            // TODO somehow parcelBox is being 1 bigger on the x-axis and probably on the y-axis as well.
             // ensure zone is completely contained within the nation
             if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
                 return result;

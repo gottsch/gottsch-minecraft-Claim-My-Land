@@ -103,7 +103,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.add.success"), "The parcel has been added.");
         add(LangUtil.chat("parcel.add.failure"), "Unable to add the parcel.");
         add(LangUtil.chat("parcel.add.failure_with_overlaps"), "Unable to add the parcel. It intersects with another parcel.");
-        add(LangUtil.chat("parcel.add.failure_too_smal"), "Unable to add the parcel. The dimension(s) are too small (< 2).");
+        add(LangUtil.chat("parcel.add.failure_too_small"), "Unable to add the parcel. The dimension(s) are too small (< 2).");
 
         add(LangUtil.chat("parcel.remove.success"), "The parcel has been removed.");
         add(LangUtil.chat("parcel.remove.failure"), "Unable to remove the parcel.");

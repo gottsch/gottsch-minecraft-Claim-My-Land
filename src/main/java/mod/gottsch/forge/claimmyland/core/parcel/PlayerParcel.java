@@ -56,17 +56,16 @@ public class PlayerParcel extends AbstractParcel {
             case ZONE -> {yield true;}
             default -> false;
         };
-
-        // check against another personal parcel
-//        if (parcel.getId().equals(getId())) {
-//            return parcel.getOwnerId() == null || parcel.getOwnerId().equals(getOwnerId());
-//        }
     }
 
     @Override
     public boolean grantsAccess(Parcel otherParcel) {
-        // TODO only a transfer deed/parcel has access to me
-        return false;
+        // if the other parcel/deed is type player and its area is bigger than this
+        // and this parcel is abandoned.
+        return otherParcel.getType() == ParcelType.PLAYER
+                && this.getOwnerId() == null
+                && ModUtil.getArea(otherParcel.getBox()) >= ModUtil.getArea(this.getBox());
+        // TODO transfer parcel
     }
 
     @Override
@@ -79,7 +78,8 @@ public class PlayerParcel extends AbstractParcel {
     public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
         ClaimResult result = ClaimResult.FAILURE; //false; //
 
-        if (parentParcel.getType() == ParcelType.CITIZEN
+        if ((parentParcel.getType() == ParcelType.CITIZEN
+                || parentParcel.getType() == ParcelType.PLAYER)
                 && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
 
             if (ModUtil.getArea(parcelBox) >= parentParcel.getArea()) {

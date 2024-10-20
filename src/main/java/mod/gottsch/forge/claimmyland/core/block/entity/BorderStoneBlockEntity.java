@@ -104,7 +104,13 @@ public class BorderStoneBlockEntity extends BlockEntity {
     public void tickServer() {
         // refresh the borders
         if (getLevel().getGameTime() % Config.SERVER.borders.ticksPerBorderStoneRefresh.get() == 0) {
-            placeParcelBorder();
+            // determine if a parcel still exits at this location
+            if (getParcelId() != null && ParcelRegistry.findByParcelId(getParcelId()).isPresent()) {
+                placeParcelBorder();
+            } else {
+                setParcelId(null);
+                setExpireTime(0L);
+            }
         }
 
         if (getLevel().getGameTime() > getExpireTime()) {

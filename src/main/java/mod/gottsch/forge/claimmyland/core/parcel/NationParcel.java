@@ -22,11 +22,15 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.ArrayList;
@@ -62,9 +66,10 @@ public class NationParcel extends AbstractParcel implements INationParcel {
     }
 
     @Override
-    public boolean grantsAccess(Parcel parcel) {
-        // TODO grants access to Citizen and Citizen Zone parcel
-        return false;
+    public boolean grantsAccess(Parcel virtualParcel) {
+        return virtualParcel.getType() == ParcelType.NATION
+                && this.getOwnerId() == null
+                && ModUtil.getArea(virtualParcel.getBox()) >= ModUtil.getArea(this.getBox());
     }
 
     /**
@@ -74,7 +79,8 @@ public class NationParcel extends AbstractParcel implements INationParcel {
      */
     @Override
     public boolean hasAccessTo(Parcel parcel) {
-        return false;
+        return parcel.getType() == ParcelType.NATION;
+//        return false;
     }
 
     /**
@@ -84,17 +90,40 @@ public class NationParcel extends AbstractParcel implements INationParcel {
      */
     @Override
     public boolean hasAccessTo(FoundationStoneBlockEntity blockEntity) {
-        return getDeedId().equals(blockEntity.getDeedId())
-                && (ObjectUtils.isEmpty(getNationId())) || getNationId().equals(blockEntity.getNationId())
-                && (ObjectUtils.isEmpty(getId()) || getId().equals(blockEntity.getParcelId()));
+        return getDeedId().equals(blockEntity.getDeedId());
     }
 
     /*
      * cannot use deed to place foundation stone that is embedded in another parcel
      */
+    // Not true. if the nation is abandoned can place a nation foundation stone
+//    @Override
+//    public boolean handleEmbeddedPlacementRules(Parcel registryParcel) {
+//        // TODO have to override to allow
+//        return false;
+//    }
+
     @Override
-    public boolean handleEmbeddedPlacementRules(Parcel registryParcel) {
-        return false;
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+        ClaimResult result = ClaimResult.FAILURE; //false; //
+
+        if ((parentParcel.getType() == ParcelType.NATION)
+                && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
+
+            if (ModUtil.getArea(parcelBox) >= parentParcel.getArea()) {
+                ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
+                // update owner of any zones
+                List<Parcel> zones = ParcelRegistry.findChildrenByNationId(getNationId()).stream()
+                        .filter(p -> p.getType() == ParcelType.ZONE).toList();
+                zones.forEach(z -> {
+                    ParcelRegistry.updateOwner(z.getId(), getOwnerId());
+                });
+                result = ClaimResult.SUCCESS;
+            } else {
+                result = ClaimResult.INSUFFICIENT_SIZE;
+            }
+        }
+        return result;
     }
 
     @Override

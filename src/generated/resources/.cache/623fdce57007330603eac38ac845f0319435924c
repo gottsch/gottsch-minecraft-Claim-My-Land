@@ -1,9 +1,9 @@
-// 1.20.1	2024-10-11T22:38:59.333347	Block States: claimmyland
+// 1.20.1	2024-10-19T18:41:22.1802238	Block States: claimmyland
 d1c7ccb6a72da306fa94a5c99fb895af1ac4a20d assets/claimmyland/blockstates/buffer.json
 c9e73910813d089d9e8a7bbe76704878a7430557 assets/claimmyland/blockstates/citizen_border.json
 4a597e5317c135a97997b7e28b658796c31e848e assets/claimmyland/blockstates/citizen_foundation_stone.json
 f212cb2ece512fe5f5323aa89391c537703e5f82 assets/claimmyland/blockstates/nation_border.json
-a41fb02adbc877f8393d353c9c58179cdccd72b0 assets/claimmyland/blockstates/nation_foundation_stone.json
+39368fe51cfce6532dc1e623ec203d9a5143f6d8 assets/claimmyland/blockstates/nation_foundation_stone.json
 d07d2bc14767d189b07d8d5f1c9eaa65c392bfa8 assets/claimmyland/blockstates/player_border.json
 5b35370baf1365c981571503712fe2f3c230fd38 assets/claimmyland/blockstates/player_foundation_stone.json
 66ad05e2ff9cff9743381d475f65bf07c051dec7 assets/claimmyland/blockstates/zone_border.json
@@ -88,5 +88,5 @@ ef3ee9024607ddcbcf38b3982e91a9030a43eded assets/claimmyland/models/block/good_to
 a8a1ceab344fb0ea879bedb571a364974efab761 assets/claimmyland/models/block/good_top_right_player_border.json
 eba2012bcc0950d7cd5e3eb4b6609fefc49e4da5 assets/claimmyland/models/block/good_top_right_zone_border.json
 31417803d78a83c6b6f3de0e6c5bbd7184c6ee85 assets/claimmyland/models/block/good_top_zone_border.json
-b10392c9725740d846265e0dbefbdf7490e17b47 assets/claimmyland/models/block/nation_foundation_stone.json
+9d09c5c72743d2934ba1e167c912cb9f53ffc8bd assets/claimmyland/models/block/nation_foundation_stone.json
 205b456ce07d3f38ed9c2582cef33b90753afbd8 assets/claimmyland/models/block/player_foundation_stone.json

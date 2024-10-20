@@ -44,6 +44,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
@@ -113,8 +114,13 @@ public class ZoningTool extends BlockItem {
             ParcelFactory.create(ParcelType.ZONE, nationParcel.get().getNationId())
                     .ifPresentOrElse(p -> {
                             p.setOwnerId(nationParcel.get().getOwnerId());
-                            p.setCoords(coords1);
-                            p.setSize(new Box(Coords.of(0, 0, 0), ModUtil.getSize(box)));
+                            // ensure to have to use the min coords of the box
+                            p.setCoords(box.getMinCoords());
+
+                            // build a relative 0-based size of the box.
+                            // NOTE since it is a 0-based new box, use box.getSize() instead of ModUtil.getSize(),
+                            // because we are introducing a bigger size by starting at 0 0 0.
+                            p.setSize(new Box(Coords.of(0, 0, 0), box.getSize()));
 
                             ClaimResult claimResult = p.handleEmbeddedClaim(context.getLevel(), nationParcel.get(), p.getBox());
                             if (claimResult == ClaimResult.SUCCESS) {

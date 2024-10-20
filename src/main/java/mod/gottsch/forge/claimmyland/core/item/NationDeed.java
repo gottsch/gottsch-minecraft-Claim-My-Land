@@ -22,10 +22,8 @@ package mod.gottsch.forge.claimmyland.core.item;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelFactory;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.parcel.*;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
@@ -43,6 +41,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  *
@@ -105,6 +104,21 @@ public class NationDeed extends Deed {
         Box size = getSize(tag);
 
         blockEntity.setNationId(tag.contains(NATION_ID) ? tag.getUUID(NATION_ID) : null);
+
+        // check if parcel is within another nation parcel ie it was abandoned
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos));
+
+        // override some properties if within another parcel
+        if (registryParcel.isPresent()) {
+            if (registryParcel.get().getType() == ParcelType.NATION) {
+                // update block entity with properties of that of the existing citizen parcel
+                blockEntity.setParcelId(registryParcel.get().getId());
+//                blockEntity.setDeedId(registryParcel.get().getDeedId());
+                blockEntity.setNationId(((NationParcel) registryParcel.get()).getNationId());
+                blockEntity.setRelativeBox(registryParcel.get().getSize());
+                blockEntity.setCoords(registryParcel.get().getCoords());
+            }
+        }
     }
 
     @Override

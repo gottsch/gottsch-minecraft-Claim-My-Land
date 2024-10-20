@@ -281,8 +281,10 @@ public abstract class Deed extends Item {
                return InteractionResult.FAIL;
             }
 
-            return parcel.canPlaceAt(context.getLevel(), targetCoords)
-                    && this.placeBlock(new BlockPlaceContext(context), foundationStone.defaultBlockState())
+            BlockPlaceContext placeContext = new BlockPlaceContext(context);
+            ICoords placeTargetCoords = Coords.of(placeContext.getClickedPos());
+            return parcel.canPlaceAt(context.getLevel(), placeTargetCoords)
+                    && this.placeBlock(placeContext, foundationStone.defaultBlockState())
                     ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         }
         return super.useOn(context);

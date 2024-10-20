@@ -27,11 +27,14 @@ public class BlockStates extends BlockStateProvider {
 	@Override
 	protected void registerStatesAndModels() {
 
-		simpleBlock(ModBlocks.NATION_FOUNDATION_STONE.get());
-		simpleBlock(ModBlocks.CITIZEN_FOUNDATION_STONE.get());
+//		simpleBlock(ModBlocks.NATION_FOUNDATION_STONE.get());
+//		simpleBlock(ModBlocks.CITIZEN_FOUNDATION_STONE.get());
 //		simpleBlock(ModBlocks.ZONE_PLACEMENT_BLOCK.get());
 
 		foundationStone(ModBlocks.PLAYER_FOUNDATION_STONE, mcLoc("block/polished_andesite"), mcLoc("block/andesite"));
+		foundationStone(ModBlocks.CITIZEN_FOUNDATION_STONE, mcLoc("block/polished_diorite"), mcLoc("block/diroite"));
+		foundationStone(ModBlocks.NATION_FOUNDATION_STONE, mcLoc("block/polished_granite"), mcLoc("block/granite"));
+////
 //		borderStone(ModBlocks.BORDER_STONE, mcLoc("block/polished_andesite"));
 
 		borderBlock(ModBlocks.PLAYER_BORDER, modLoc("block/green"), modLoc("block/red"));

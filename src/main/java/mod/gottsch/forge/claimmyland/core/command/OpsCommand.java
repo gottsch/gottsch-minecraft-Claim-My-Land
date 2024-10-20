@@ -97,7 +97,7 @@ public class OpsCommand {
     };
 
     /*
-     * cml-ops [deed [generate | ] | parcel [generate | remove] ] //give | list | rename | whitelist [add | remove | clear | list]]
+     * cml-ops
      */
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         dispatcher
