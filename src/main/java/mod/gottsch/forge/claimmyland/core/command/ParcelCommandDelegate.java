@@ -20,7 +20,6 @@
 package mod.gottsch.forge.claimmyland.core.command;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.BorderStone;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
@@ -28,6 +27,7 @@ import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.NationDeed;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
@@ -40,19 +40,15 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
- *
  * @author Mark Gottschling on Mar 28, 2024
- *
  */
 public class ParcelCommandDelegate {
 
@@ -66,7 +62,7 @@ public class ParcelCommandDelegate {
                 source.sendSuccess(() -> component, false);
             });
 
-        } catch(Exception e) {
+        } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred listing abandoned parcels:", e);
             source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
         }
@@ -74,7 +70,6 @@ public class ParcelCommandDelegate {
     }
 
     /**
-     *
      * @param source
      * @param ownerName
      * @return
@@ -116,7 +111,7 @@ public class ParcelCommandDelegate {
                 source.sendSuccess(() -> component, false);
             });
 
-        } catch(Exception e) {
+        } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred listing parcels by nation:", e);
             source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
         }
@@ -125,7 +120,7 @@ public class ParcelCommandDelegate {
 
     static List<Component> buildListTitle(List<Component> messages, Component title) {
         messages.add(Component.literal(""));
-        messages.add(((MutableComponent)title).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
+        messages.add(((MutableComponent) title).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
         messages.add(Component.literal(""));
 
         return messages;
@@ -135,8 +130,7 @@ public class ParcelCommandDelegate {
 
         if (list.isEmpty()) {
             messages.add(Component.translatable(LangUtil.chat("parcel.list.empty")).withStyle(ChatFormatting.AQUA));
-        }
-        else {
+        } else {
             list.forEach(parcel -> {
                 messages.add(
                         Component.literal(parcel.getName().toUpperCase()).withStyle(ChatFormatting.AQUA)
@@ -145,7 +139,7 @@ public class ParcelCommandDelegate {
                                         formatCoords(parcel.getMinCoords()),
                                         formatCoords(parcel.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
                                 )
-                                .append(Component.translatable(", [" + formatCoords(ModUtil.getSize( parcel.getSize()) ) + "]").withStyle(ChatFormatting.WHITE))
+                                .append(Component.translatable(", [" + formatCoords(ModUtil.getSize(parcel.getSize())) + "]").withStyle(ChatFormatting.WHITE))
                 );
 
 //				[STYLE].withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/tp @s " + blockpos.getX() + " " + s1 + " " + blockpos.getZ())).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("chat.coordinates.tooltip"))
@@ -170,7 +164,7 @@ public class ParcelCommandDelegate {
         UUID nationId = ParcelRegistry.getNations().stream()
                 .filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getName()))
                 .findFirst()
-                .map(n -> ((NationParcel)n).getNationId()).orElse(null);
+                .map(n -> ((NationParcel) n).getNationId()).orElse(null);
 
         ParcelType type = ParcelType.valueOf(parcelType);
 
@@ -199,7 +193,7 @@ public class ParcelCommandDelegate {
 
         if (player != null) {
             // create a relative sized Box
-            Box size = new Box(Coords.of(0, -ySizeDown, 0), Coords.of(xSize-1, ySizeUp-1, zSize-1));
+            Box size = new Box(Coords.of(0, -ySizeDown, 0), Coords.of(xSize - 1, ySizeUp - 1, zSize - 1));
             ICoords coords = Coords.of(pos);
             Optional<Parcel> parcelOptional = ParcelFactory.create(type, nationId);
             if (parcelOptional.isPresent()) {
@@ -217,7 +211,7 @@ public class ParcelCommandDelegate {
                     }
                     // modify the size
                     size.setMinCoords(size.getMinCoords().withY(source.getLevel().getMinBuildHeight()));
-                    size.setMaxCoords(size.getMaxCoords().withY(source.getLevel().getMaxBuildHeight()-1));
+                    size.setMaxCoords(size.getMaxCoords().withY(source.getLevel().getMaxBuildHeight() - 1));
                 }
 
                 // NOTE commands override the placement rules
@@ -239,8 +233,7 @@ public class ParcelCommandDelegate {
                 ClaimMyLand.LOGGER.error("unable to create parcel with provided nationid -> {}", nationId);
                 source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
             }
-        }
-        else {
+        } else {
             CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return 1;
@@ -258,8 +251,7 @@ public class ParcelCommandDelegate {
                     parcel.get().setAbandonedTime(source.getLevel().getGameTime());
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.abandon.success")).withStyle(ChatFormatting.GREEN), false);
                     CommandHelper.save(source.getLevel());
-                }
-                else {
+                } else {
                     ClaimMyLand.LOGGER.error("unable to locate parcel by owner -> {}", ownerName);
                     failure(source, "parcel.unable_to_locate");
                 }
@@ -273,7 +265,20 @@ public class ParcelCommandDelegate {
     }
 
     /**
+     * TODO flesh out to save to file(s)
+     *
+     * @param source
+     * @return
+     */
+    public static int backupParcels(CommandSourceStack source) {
+        String dump = ParcelRegistry.toJson();
+        ClaimMyLand.LOGGER.debug("backup -> {}", dump);
+        return 1;
+    }
+
+    /**
      * Ops version
+     *
      * @param source
      * @param nationName
      * @param borderType
@@ -289,29 +294,132 @@ public class ParcelCommandDelegate {
                     .filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getName()))
                     .findFirst()
                     .ifPresentOrElse(nation -> {
-                        ((NationParcel)nation).setBorderType(type);
+                        ((NationParcel) nation).setBorderType(type);
                         CommandHelper.save(source.getLevel());
                     }, () -> {
-                        failure(source,"parcel.nation.unable_to_locate");
+                        failure(source, "parcel.nation.unable_to_locate");
                     });
 
-        } catch(Exception e) {
+        } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred changing nation border type:", e);
             unexceptedError(source);
         }
         return 1;
     }
 
-    /**
-     * convenience chat method
-     * @param source
-     */
-    private static void unexceptedError(CommandSourceStack source) {
-        failure(source, "unexpected_error");
-    }
+    public static int claimedBy(CommandSourceStack source, BlockPos pos) {
 
-    private static void failure(CommandSourceStack source, String key) {
-        source.sendFailure(Component.translatable(LangUtil.chat(key)).withStyle(ChatFormatting.RED));
+        try {
+            ICoords posCoords;
+
+            if (pos == null) {
+                posCoords = Coords.of(source.getPosition());
+            } else {
+                posCoords = Coords.of(pos);
+            }
+            List<Parcel> parcels = new ArrayList<>(ParcelRegistry.find(posCoords).stream()
+                    .filter(p -> p.getType() != ParcelType.ZONE).toList());
+
+            if (!parcels.isEmpty()) {
+                List<Component> messages = new ArrayList<>();
+
+                // sort by volume using a comparator
+                parcels.sort(Parcel.volumeComparator);
+                parcels.forEach(p -> {
+                    // locate the player name
+                    String playerName;
+                    Player player = source.getLevel().getPlayerByUUID(p.getOwnerId());
+                    if (player != null) {
+                        playerName = player.getScoreboardName();
+                    } else {
+                        Optional<String> optionalPlayerName = PlayerRegistry.get(p.getOwnerId());
+                        playerName = optionalPlayerName.orElse(p.getOwnerId().toString());
+                    }
+
+                    // The block at (x, y, z) is claimed by [name].
+                    // Name:
+                    // Type:
+                    // Coords: x y z
+                    // Start: x y z
+                    // End: x y z
+                    // Size: x y z | x u d z
+                    // Area: [x]m^3
+                    // Border: [type]
+
+                    // first line
+                    Component location = Component.literal(posCoords.toShortString()).withStyle(ChatFormatting.AQUA);
+                    Component name = Component.literal(playerName).withStyle(ChatFormatting.AQUA);
+                    Component c = Component.translatable(LangUtil.chat("parcel.claimed_by"), location, name).withStyle(ChatFormatting.GOLD);
+                    messages.add(c);
+
+                    // name line
+                    messages.add(
+                       Component.translatable(LangUtil.chat("parcel.name"),
+                               Component.literal(p.getName()).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY)
+                    );
+                    // type
+                    messages.add(
+                            Component.translatable(LangUtil.chat("parcel.type"),
+                                    Component.literal(p.getType().getSerializedName().toLowerCase()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY)
+                    );
+
+                    // coords
+                    messages.add(
+                            Component.translatable(LangUtil.chat("parcel.coords"),
+                                    Component.literal(p.getCoords().toShortString()).withStyle(ChatFormatting.GREEN)).withStyle(ChatFormatting.GRAY)
+                    );
+
+                    // start
+                    messages.add(
+                            Component.translatable(LangUtil.chat("parcel.start"),
+                                    Component.literal(p.getAbsoluteBox().getMinCoords().toShortString()).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GRAY)
+                    );
+
+                    // end
+                    messages.add(
+                            Component.translatable(LangUtil.chat("parcel.end"),
+                                    Component.literal(p.getAbsoluteBox().getMaxCoords().toShortString()).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GRAY)
+                    );
+
+                    // size
+                    messages.add(
+                            Component.translatable(LangUtil.chat("parcel.size"),
+                                    Component.literal(ModUtil.getSize(p.getBox()).toShortString()).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GRAY)
+                    );
+
+                    // area
+                    messages.add(
+                            Component.translatable(LangUtil.chat("parcel.area"),
+                                    Component.literal(String.valueOf(ModUtil.getArea(p.getBox()))).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GRAY)
+                    );
+
+                    // volume
+                    messages.add(
+                            Component.translatable(LangUtil.chat("parcel.volume"),
+                                    Component.literal(String.valueOf(ModUtil.getVolume(p.getBox()))).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GRAY)
+                    );
+
+                    // border
+                    if (p.getType() == ParcelType.NATION) {
+                        messages.add(
+                                Component.translatable(LangUtil.chat("parcel.border"),
+                                        Component.literal(((NationParcel)p).getBorderType().getSerializedName().toLowerCase()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY)
+                        );
+                    }
+                    // add newline
+                    messages.add(Component.literal(LangUtil.NEWLINE));
+                });
+
+                // send all the messages
+                messages.forEach(message -> {
+                    source.sendSuccess(() -> message, false);
+                });
+            }
+        } catch (Exception e) {
+            ClaimMyLand.LOGGER.error("an error occurred retrieving claimed by:", e);
+            unexceptedError(source);
+        }
+        return 1;
     }
 
     /**
@@ -321,7 +429,7 @@ public class ParcelCommandDelegate {
      * @param parcelName
      * @return
      */
-    public static int demolishParcel(CommandSourceStack source, String ownerName, String parcelName) {
+    public static int demolishParcel (CommandSourceStack source, String ownerName, String parcelName){
         try {
             ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
             if (player != null) {
@@ -360,7 +468,7 @@ public class ParcelCommandDelegate {
                         // check if there is a border stone
                         BlockEntity be = source.getLevel().getBlockEntity(coords.toPos());
                         if (be instanceof BorderStoneBlockEntity) {
-                            ((BorderStoneBlockEntity)be).removeParcelBorder(source.getLevel(), coords);
+                            ((BorderStoneBlockEntity) be).removeParcelBorder(source.getLevel(), coords);
                         }
                     }
                 } else {
@@ -369,7 +477,7 @@ public class ParcelCommandDelegate {
             } else {
                 CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
             }
-        } catch(Exception e) {
+        } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred demolishing a parcels:", e);
             source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
         }
@@ -383,7 +491,7 @@ public class ParcelCommandDelegate {
      * @param parcelName
      * @return
      */
-    public static int removeParcel(CommandSourceStack source, String ownerName, String parcelName) {
+    public static int removeParcel (CommandSourceStack source, String ownerName, String parcelName){
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {
             List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
@@ -392,7 +500,7 @@ public class ParcelCommandDelegate {
                 // remove the border
                 BlockEntity blockEntity = source.getLevel().getBlockEntity(parcel.get().getCoords().toPos());
                 if (blockEntity instanceof FoundationStoneBlockEntity) {
-                    ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(source.getLevel(), parcel.get().getCoords());
+                    ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder(source.getLevel(), parcel.get().getCoords());
                 }
                 // unregister the parcel
                 ParcelRegistry.removeParcel(parcel.get());
@@ -408,7 +516,7 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
-    public static int renameParcel(CommandSourceStack source, String ownerName, String parcelName, String newName) {
+    public static int renameParcel (CommandSourceStack source, String ownerName, String parcelName, String newName){
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {
             List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
@@ -435,14 +543,15 @@ public class ParcelCommandDelegate {
      * @param newOwnerName
      * @return
      */
-    public static int transferParcel(CommandSourceStack source, String ownerName, String parcelName, String newOwnerName) {
+    public static int transferParcel (CommandSourceStack source, String ownerName, String parcelName, String
+            newOwnerName){
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {
             List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
                 // get the new owner
-                if(StringUtils.isNotBlank(newOwnerName)) {
+                if (StringUtils.isNotBlank(newOwnerName)) {
                     ServerPlayer newOwner = source.getServer().getPlayerList().getPlayerByName(newOwnerName);
                     if (newOwner != null) {
                         ParcelRegistry.updateOwner(parcel.get().getId(), newOwner.getUUID());
@@ -463,7 +572,7 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
-    public static int clearOwnerParcels(CommandSourceStack source, String ownerName) {
+    public static int clearOwnerParcels (CommandSourceStack source, String ownerName){
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {
             // remove all properties from player
@@ -476,7 +585,7 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
-    public static int clearAllParcels(CommandSourceStack source) {
+    public static int clearAllParcels (CommandSourceStack source){
         backupParcels(source);
         // TODO add an undo/restore command
         ParcelRegistry.clear();
@@ -484,14 +593,16 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
+    // TODO move to CommandHelper
     /**
-     * TODO flesh out to save to file(s)
+     * convenience chat method
      * @param source
-     * @return
      */
-    public static int backupParcels(CommandSourceStack source) {
-        String dump = ParcelRegistry.toJson();
-        ClaimMyLand.LOGGER.debug("backup -> {}", dump);
-        return 1;
+    private static void unexceptedError (CommandSourceStack source){
+        failure(source, "unexpected_error");
+    }
+
+    private static void failure (CommandSourceStack source, String key){
+        source.sendFailure(Component.translatable(LangUtil.chat(key)).withStyle(ChatFormatting.RED));
     }
 }

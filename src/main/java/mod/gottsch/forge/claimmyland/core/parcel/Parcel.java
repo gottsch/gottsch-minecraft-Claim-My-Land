@@ -31,6 +31,7 @@ import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,6 +47,20 @@ public interface Parcel {
     public static final String OWNER_ID = "owner_id";
     public static final String PARCEL_TYPE = "parcel_type";
     public static final String SIZE = "size";
+
+    public static Comparator<Parcel> volumeComparator = new Comparator<Parcel>() {
+        @Override
+        public int compare(Parcel p1, Parcel p2) {
+                // use p1 < p2 because the sort should be ascending
+                if (ModUtil.getVolume(p1.getBox()) < ModUtil.getVolume(p2.getBox())) {
+                    // greater than
+                    return 1;
+                } else {
+                    // less than
+                    return -1;
+                }
+            }
+    };
 
     void save(CompoundTag parcelTag);
     Parcel load(CompoundTag tag);

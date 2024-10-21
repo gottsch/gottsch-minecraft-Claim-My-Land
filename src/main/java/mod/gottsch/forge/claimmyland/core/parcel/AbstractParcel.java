@@ -265,7 +265,7 @@ public abstract class AbstractParcel implements Parcel {
     public int getArea() {
 //        ICoords absoluteSize = ModUtil.getSize(getSize());
 //        return absoluteSize.getX() * absoluteSize.getZ() * absoluteSize.getY();
-        return ModUtil.getArea(getSize());
+        return ModUtil.getVolume(getSize());
     }
 
     @Override

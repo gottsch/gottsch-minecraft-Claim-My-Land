@@ -36,10 +36,13 @@ import mod.gottsch.forge.claimmyland.core.setup.Registration;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
+import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -47,10 +50,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -89,7 +89,7 @@ public class PlayersCommand {
 
 	private static final SuggestionProvider<CommandSourceStack> OWNER_PARCEL_NAMES = (source, builder) -> {
 		ServerPlayer owner = source.getSource().getPlayerOrException();
-		List<String> names = ParcelRegistry.findNationsByOwner(owner.getUUID()).stream()
+		List<String> names = ParcelRegistry.findByOwner(owner.getUUID()).stream()
 				.map((Parcel::getName)).toList();
 		return SharedSuggestionProvider.suggest(names, builder);
 	};
@@ -190,7 +190,6 @@ public class PlayersCommand {
 										)
 										///// RENAME PARCEL /////
 										.then(Commands.literal(CommandHelper.RENAME)
-												.then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
 														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
 																.suggests(OWNER_PARCEL_NAMES)
 																.then(Commands.argument(CommandHelper.NEW_NAME, StringArgumentType.string())
@@ -201,7 +200,7 @@ public class PlayersCommand {
 																		})
 																)
 														)
-												)
+
 
 										)
 										///// TRANSFER /////
@@ -231,6 +230,17 @@ public class PlayersCommand {
 										) // end of ITEM
 								// TODO add ownership
 						)
+						///// CLAIMED_BY TOP-LEVEL OPTION /////
+						.then(Commands.literal(CommandHelper.CLAIMED_BY)
+								.executes(source -> {
+									return ParcelCommandDelegate.claimedBy(source.getSource(), null);
+								})
+								.then(Commands.argument(CommandHelper.POS, BlockPosArgument.blockPos())
+										.executes(source -> {
+											return ParcelCommandDelegate.claimedBy(source.getSource(), BlockPosArgument.getBlockPos(source, CommandHelper.POS));
+										})
+								)
+						) // end of CLAIMED_BY
 
 				); // end of register
 

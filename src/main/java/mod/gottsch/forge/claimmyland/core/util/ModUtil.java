@@ -2,9 +2,7 @@ package mod.gottsch.forge.claimmyland.core.util;
 
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
 
@@ -46,11 +44,17 @@ public class ModUtil {
     }
 
     /**
+     * area default is xz plane
      * convenience method until GottschCore is updated to include this in Box
      * @param box
      * @return
      */
     public static int getArea(Box box) {
+        ICoords absoluteSize = ModUtil.getSize(box);
+        return absoluteSize.getX() * absoluteSize.getZ();
+    }
+
+    public static int getVolume(Box box) {
       ICoords absoluteSize = ModUtil.getSize(box);
       return absoluteSize.getX() * absoluteSize.getZ() * absoluteSize.getY();
     }

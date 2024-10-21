@@ -1,7 +1,31 @@
 {
   "variants": {
-    "": {
-      "model": "claimmyland:block/citizen_foundation_stone"
+    "facing=down": {
+      "model": "claimmyland:block/citizen_foundation_stone",
+      "uvlock": true
+    },
+    "facing=east": {
+      "model": "claimmyland:block/citizen_foundation_stone",
+      "uvlock": true,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "claimmyland:block/citizen_foundation_stone",
+      "uvlock": true
+    },
+    "facing=south": {
+      "model": "claimmyland:block/citizen_foundation_stone",
+      "uvlock": true,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "claimmyland:block/citizen_foundation_stone",
+      "uvlock": true
+    },
+    "facing=west": {
+      "model": "claimmyland:block/citizen_foundation_stone",
+      "uvlock": true,
+      "y": 270
     }
   }
 }

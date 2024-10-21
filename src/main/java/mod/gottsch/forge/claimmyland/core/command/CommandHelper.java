@@ -76,6 +76,7 @@ public class CommandHelper {
 	};
 	public static final String GIVE = "give";
 	public static final String GIVE_ITEM = "give_item";
+	public static final String CLAIMED_BY = "claimed_by";
 
 	/**
 	 * marks persistent data as dirty so that minecraft will auto save it.

@@ -144,6 +144,18 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("zone_placement.not_owner"), "You are not the owner of this nation.");
 
 
+        // info
+        add(LangUtil.chat("parcel.claimed_by"), "The block at %s is claimed by %s:");
+        add(LangUtil.chat("parcel.name"), "Name: %s");
+        add(LangUtil.chat("parcel.type"), "Type: %s");
+        add(LangUtil.chat("parcel.coords"), "Pos: %s");
+        add(LangUtil.chat("parcel.start"), "Start: %s");
+        add(LangUtil.chat("parcel.end"), "End: %s");
+        add(LangUtil.chat("parcel.size"), "Size: %s");
+        add(LangUtil.chat("parcel.area"), "Area: %s m^2");
+        add(LangUtil.chat("parcel.volume"), "Volume: %s m^3");
+        add(LangUtil.chat("parcel.border"), "Border: %s");
+
         /*
          *  Util.tooltips
          */

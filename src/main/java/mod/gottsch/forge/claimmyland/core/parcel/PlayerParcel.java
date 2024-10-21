@@ -64,7 +64,7 @@ public class PlayerParcel extends AbstractParcel {
         // and this parcel is abandoned.
         return otherParcel.getType() == ParcelType.PLAYER
                 && this.getOwnerId() == null
-                && ModUtil.getArea(otherParcel.getBox()) >= ModUtil.getArea(this.getBox());
+                && ModUtil.getVolume(otherParcel.getBox()) >= ModUtil.getVolume(this.getBox());
         // TODO transfer parcel
     }
 
@@ -82,7 +82,7 @@ public class PlayerParcel extends AbstractParcel {
                 || parentParcel.getType() == ParcelType.PLAYER)
                 && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
 
-            if (ModUtil.getArea(parcelBox) >= parentParcel.getArea()) {
+            if (ModUtil.getVolume(parcelBox) >= parentParcel.getArea()) {
                 ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
                 result = ClaimResult.SUCCESS;
             } else {

@@ -69,7 +69,7 @@ public class NationParcel extends AbstractParcel implements INationParcel {
     public boolean grantsAccess(Parcel virtualParcel) {
         return virtualParcel.getType() == ParcelType.NATION
                 && this.getOwnerId() == null
-                && ModUtil.getArea(virtualParcel.getBox()) >= ModUtil.getArea(this.getBox());
+                && ModUtil.getVolume(virtualParcel.getBox()) >= ModUtil.getVolume(this.getBox());
     }
 
     /**
@@ -110,7 +110,7 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         if ((parentParcel.getType() == ParcelType.NATION)
                 && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
 
-            if (ModUtil.getArea(parcelBox) >= parentParcel.getArea()) {
+            if (ModUtil.getVolume(parcelBox) >= parentParcel.getArea()) {
                 ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
                 // update owner of any zones
                 List<Parcel> zones = ParcelRegistry.findChildrenByNationId(getNationId()).stream()

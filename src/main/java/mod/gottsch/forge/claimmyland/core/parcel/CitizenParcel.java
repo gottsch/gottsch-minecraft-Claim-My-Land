@@ -32,7 +32,6 @@ import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * Created by Mark Gottschling on Sep 14, 2024
@@ -114,7 +113,7 @@ public class CitizenParcel extends AbstractParcel {
                 // if the owner id is empty, it is claimable
                 && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
                 // check that this parcel is bigger than the existing parcel
-            if (ModUtil.getArea(parcelBox) >= parentParcel.getArea()) {
+            if (ModUtil.getVolume(parcelBox) >= parentParcel.getArea()) {
 //                parentParcel.setOwnerId(getOwnerId());
                 ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
                 result = ClaimResult.SUCCESS;
