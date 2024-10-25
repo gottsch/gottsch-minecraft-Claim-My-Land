@@ -1,0 +1,20 @@
+{
+  "name": "Borders & Buffers",
+  "icon": "claimmyland:border_stone",
+  "category": "claimmyland:manual",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "Border Blocks",
+      "text": "Not to be confused with $(l:border_stones#border_stones)Border Stones$(/l)$().$(br)Border blocks are display blocks used to show a Parcel's boundaries. They appear like solid lines forming a box around the area.",
+      "anchor": "border_blocks"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Buffer Blocks",
+      "text": "Buffer blocks are display blocks used to show a Parcel's buffer boundaries. They extend further out from the borders. They represent the the minimum distance between parcels. A Parcel's border cannot overlap another Parcel's buffer.$(br)Note: Buffers can overlap each other.",
+      "anchor": "buffer_blocks"
+    }
+  ]
+}

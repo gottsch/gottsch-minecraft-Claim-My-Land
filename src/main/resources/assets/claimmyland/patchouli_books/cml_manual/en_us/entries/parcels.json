@@ -1,0 +1,61 @@
+{
+  "name": "Parcels",
+  "icon": "minecraft:grass_block",
+  "category": "claimmyland:manual",
+  "sortnum": 0,
+  "pages": [
+    "A $(l)Parcel$() is the name of a claimed 3-dimensional space. A Parcel can be of any size and can be placed at any block position, given that it does not overlap another Parcel's space (currently only the Overworld is supported).",
+    {
+      "type": "patchouli:text",
+      "title": "Creating / Claiming",
+      "text": "A $(l:deeds)Deed$(/l) is used to place a potential Parcel into the world and also to claim it. Ops can add Parcels directly into the world by commands."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Types",
+      "text": "There are 4 types of Parcels:$(br)$(li)$(l:parcels#player_parcel)Player Parcel$(/l)$(li)$(l:parcels#nation_parcel)Nation Parcel$(/l)$(li)$(l:parcels#zone_parcel)Zone Parcel$(/l)$(li)$(l:parcels#citizen_parcel)Citizen Parcel$(/l)"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Player Parcel",
+      "text": "The Player Parcel is the default/standard Parcel. It can be placed anywhere in the world, except in Nation Parcels that have $(l)Closed$() borders.",
+      "anchor": "player_parcel"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Nation Parcel",
+      "text": "A Nation Parcel is a (typically) large, special Parcel. The Nation Owner can embed Zone and Citizen Parcels within it. Nations can have $(l)Open$() or $(l)Closed$() Borders. Open borders grant access to any Player or Citizen $(l:deeds)Deed$(/l) to claim or place Parcels in the designated Zones. Closed borders restricts access to only $(l:deeds#citizen_deed)Citizen Deeds$(/l) of the Nation.",
+      "anchor": "nation_parcel"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Zone Parcel",
+      "text": "A Zone Parcel is a special Parcel that can only be placed inside a Nation Parcel. It is used to designate spaces where Players can claim land within the Nation (using Citizen Deeds, or Player Deeds if the Nation has Open borders). Zones are added to Nation Parcels using $(l:commands)Commands$(/l) or the $(l:tools)Zone Placement Tool$(/l) by the Nation Owner.",
+      "anchor": "zone_parcel"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Citizen Parcel",
+      "text": "A Citizen Parcel is a special Parcel that can only be placed inside a Nation or Zone Parcel. Only the Nation owner can add Citizen Parcels directly to a Nation Parcel (ie not inside a Zone) using $(l:commands)Commands$(/l) or the $(l:tools)Citizen Placement Tool$(/l).",
+      "anchor": "citizen_parcel"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Ownership",
+      "text": "Parcels can only have one owner. Owners have access to all the Parcel Commands, and can perform any action (break, place, etc) within the Parcel space. A Parcel can have a whitelist, in which the whitelisted Players can perform the same actions (break, place etc) in the Parcel space as the Owner. Players are added to the whitelist by $(l:commands)Commands$(/l).",
+      "anchor": "parcel_ownership"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Abandoned Parcels",
+      "text": "Owners can abandon their Parcels by using a $(l:commands)Command$(/l). The Parcel will still exist in the world, but simply will not have an owner. Thus anyone will be able to perform any action (break, place, etc) in that space until it is claimed by a Player. Abandoned Parcels can be claimed by using a Deed of the same type and of equal or greater Parcel size (measured by x * y * z).",
+      "anchor": "abandoned_parcels"
+    },
+    "The main use of Abandoned Parcels is for Nation owners. They can create Citizen Parcels within their Nation at specific locations, and then abandon them. The owner can then issue Citizen Deeds to Players and the Player can claim one of the abandoned Parcels.$(br2)$(l:parcels#claiming_abandoned_parcels)Next Page ->$(/l)",
+    {
+      "type": "patchouli:text",
+      "text": "$(l)Claiming Scenarios$()$(br)$(li)Player Deed -> Player Parcel$(li)Player Deed -> Citizen Parcel (Open borders)$(li)Any Citizen Deed -> Citizen Parcel (Open borders)$(li)Citizen Deed -> Citizen Parcel of the same Nation (Closed borders)$(li)Nation Deed -> Nation Parcel",
+      "anchor": "claiming_abandoned_parcels"
+    }
+  ]
+}

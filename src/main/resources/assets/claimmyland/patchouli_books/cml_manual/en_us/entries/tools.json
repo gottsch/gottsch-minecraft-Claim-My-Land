@@ -1,0 +1,13 @@
+{
+  "name": "Tools",
+  "icon": "claimmyland:zoning_tool",
+  "category": "claimmyland:manual",
+  "sortnum": 4,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "Tools",
+      "text": "tools"
+    }
+  ]
+}

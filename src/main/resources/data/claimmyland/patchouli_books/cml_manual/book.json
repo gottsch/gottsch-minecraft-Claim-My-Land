@@ -1,0 +1,8 @@
+{
+  "name": "Claim My Land",
+  "landing_text": "Add landing text from main book.json",
+  "version": 1,
+  "pamphlet": true,
+  "creative_tab": "minecraft:tools_and_utilities",
+  "use_resource_pack": true
+}

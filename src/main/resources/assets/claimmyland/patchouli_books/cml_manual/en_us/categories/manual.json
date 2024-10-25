@@ -1,0 +1,6 @@
+{
+  "name": "Manual",
+  "icon": "minecraft:book",
+  "description": "This description is not used in Pamphlet style books. The first page of this category is used as the landing page when the category is opened.",
+  "category": "manual"
+}

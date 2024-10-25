@@ -1,0 +1,14 @@
+{
+  "name": "Border Stones",
+  "icon": "claimmyland:border_stone",
+  "category": "claimmyland:manual",
+  "sortnum": 3,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "Border Stones",
+      "text": "Border Stones are similar to Foundation Stones, however they cannot be used to claim a Parcel, but simply to display the Parcel borders.",
+      "anchor": "border_stones"
+    }
+  ]
+}

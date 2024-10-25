@@ -62,6 +62,10 @@ public class ItemModelsProvider extends ItemModelProvider {
 				mcLoc("item/generated"), "layer0", modLoc("item/nation_deed_100"));
 
 		// block items
+		withExistingParent(ModItems.PLAYER_FOUNDATION_STONE.getId().getPath(), modLoc("block/player_foundation_stone"));
+		withExistingParent(ModItems.CITIZEN_FOUNDATION_STONE.getId().getPath(), modLoc("block/citizen_foundation_stone"));
+		withExistingParent(ModItems.NATION_FOUNDATION_STONE.getId().getPath(), modLoc("block/nation_foundation_stone"));
+
 		withExistingParent(ModItems.BORDER_STONE.getId().getPath(), modLoc("block/border_stone"));
 
 		// tools

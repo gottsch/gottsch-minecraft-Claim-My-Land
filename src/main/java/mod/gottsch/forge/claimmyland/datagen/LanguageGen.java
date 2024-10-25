@@ -55,6 +55,8 @@ public class LanguageGen extends LanguageProvider {
         add(ModItems.CITIZEN_PLACEMENT_TOOL.get(), "Citizen Parcel Tool");
         add(ModItems.ZONING_PLACEMENT_TOOL.get(), "Zoning Tool");
 
+        add(ModBlocks.BORDER_STONE.get(), "Border Stone");
+
 //        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
 //
 //                "message.protectit.block_region.successfully_protected":"Region %s -> %s is now owned and protected.",

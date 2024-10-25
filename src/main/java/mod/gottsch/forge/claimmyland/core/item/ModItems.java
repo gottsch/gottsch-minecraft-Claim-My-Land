@@ -91,6 +91,11 @@ public class ModItems {
         }
     });
 
+    // NOTE these exist as item blocks, for the sole reason of displaying in a Patchouli book.
+    public static RegistryObject<Item> PLAYER_FOUNDATION_STONE = fromBlock(ModBlocks.PLAYER_FOUNDATION_STONE, Item.Properties::new);
+    public static RegistryObject<Item> CITIZEN_FOUNDATION_STONE = fromBlock(ModBlocks.CITIZEN_FOUNDATION_STONE, Item.Properties::new);
+    public static RegistryObject<Item> NATION_FOUNDATION_STONE = fromBlock(ModBlocks.NATION_FOUNDATION_STONE, Item.Properties::new);
+
     public static RegistryObject<Item> BORDER_STONE = fromBorderStone(ModBlocks.BORDER_STONE, Item.Properties::new);
     public static RegistryObject<Item> CITIZEN_PLACEMENT_TOOL = fromCitizenPlacement(ModBlocks.CITIZEN_PLACEMENT_BLOCK, Item.Properties::new);
     public static RegistryObject<Item> ZONING_PLACEMENT_TOOL = fromZonePlacement(ModBlocks.ZONE_PLACEMENT_BLOCK, Item.Properties::new);
@@ -121,6 +126,10 @@ public class ModItems {
 
     // convenience method: take a RegistryObject<Block> and make a corresponding RegistryObject<Item> from it
     public static <B extends Block> RegistryObject<Item> fromBlock(RegistryObject<B> block, Supplier<Item.Properties> itemProperties) {
+        return Registration.ITEMS.register(block.getId().getPath(), () -> new BlockItem(block.get(), itemProperties.get()));
+    }
+
+    public static <B extends Block> RegistryObject<Item> fromFoundationStone(RegistryObject<B> block, Supplier<Item.Properties> itemProperties) {
         return Registration.ITEMS.register(block.getId().getPath(), () -> new BlockItem(block.get(), itemProperties.get()));
     }
 

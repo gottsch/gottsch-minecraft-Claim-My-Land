@@ -1,0 +1,28 @@
+{
+  "name": "Foundation Stones",
+  "icon": "claimmyland:player_foundation_stone",
+  "category": "claimmyland:manual",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "Foundation Stones",
+      "text": "Foundation Stones can only be placed by a Deed. The stone will generate a border to indicate the boundaries of the potential Parcel. Breaking the stone will remove the borders. A stone has a lifespan of 5 minutes (by default) before removing itself and the borders."
+    },
+    "To claim a Parcel, use the Deed on the Foundation Stone to claim it. Only the Deed that was used to place the stone will be able to claim the parcel. At this point the stone and borders will be removed. Foundation Stones have a slightly different appearance for each type of Parcel.",
+    {
+      "type": "patchouli:spotlight",
+      "title": "Player Foundation Stone",
+      "item": {
+        "item": "claimmyland:player_foundation_stone"
+      },
+      "text": "",
+      "anchor": "player_foundation_stone"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Notes",
+      "text": "- Foundation Stones are not craftable and do not appear in the creative tabs.$(br)- Borders will immediately start to decay like leaves without a trunk. The stone will refresh them every x seconds until it is removed. This is to ensure that the borders do not exist forever causing visual pollution."
+    }
+  ]
+}

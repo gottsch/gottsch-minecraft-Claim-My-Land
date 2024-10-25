@@ -1,0 +1,13 @@
+{
+  "name": "Commands",
+  "icon": "minecraft:command_block",
+  "category": "claimmyland:manual",
+  "sortnum": 5,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "title": "Commands",
+      "text": "There are two sets of Commands:$(br)$(li)$(l)/cml$() - for regular Players$(li)$(l)/cml-ops$() - of Ops Players"
+    }
+  ]
+}
