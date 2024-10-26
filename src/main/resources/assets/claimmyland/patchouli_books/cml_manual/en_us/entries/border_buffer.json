@@ -4,16 +4,18 @@
   "category": "claimmyland:manual",
   "sortnum": 3,
   "pages": [
+    "Border and Buffer blocks are display blocks used to show a Parcel's space boundaries and buffer boundaries respectively.",
     {
       "type": "patchouli:text",
       "title": "Border Blocks",
-      "text": "Not to be confused with $(l:border_stones#border_stones)Border Stones$(/l)$().$(br)Border blocks are display blocks used to show a Parcel's boundaries. They appear like solid lines forming a box around the area.",
+      "text": "Not to be confused with $(l:border_stones#border_stones)Border Stones$(/l)$().$(br2)Border blocks appear as solid lines forming a wireframe box around the space.$(br)Each Parcel type has its own border color:$(li)Player -> Green$(li)Nation -> Blue$(li)Citizen -> Purple$(li)Zone -> Yellow",
       "anchor": "border_blocks"
     },
+    "If a potential Parcel overlaps the buffer or border of another Parcel, the border color will be Red. Parcels of the same owner will ignore the buffer restriction and thus can be placed beside each other.",
     {
       "type": "patchouli:text",
       "title": "Buffer Blocks",
-      "text": "Buffer blocks are display blocks used to show a Parcel's buffer boundaries. They extend further out from the borders. They represent the the minimum distance between parcels. A Parcel's border cannot overlap another Parcel's buffer.$(br)Note: Buffers can overlap each other.",
+      "text": "Buffer blocks extend further out from the borders. They represent the minimum distance between parcels. A Parcel's border cannot overlap another Parcel's buffer. The Buffer color for all Parcels is white, unless it overlaps a Parcel border, then it will be Red.$(br2)Note: Buffers can overlap each other.",
       "anchor": "buffer_blocks"
     }
   ]

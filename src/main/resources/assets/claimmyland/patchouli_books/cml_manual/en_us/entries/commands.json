@@ -7,7 +7,31 @@
     {
       "type": "patchouli:text",
       "title": "Commands",
-      "text": "There are two sets of Commands:$(br)$(li)$(l)/cml$() - for regular Players$(li)$(l)/cml-ops$() - of Ops Players"
-    }
+      "text": "There are two sets of Commands:$(br)$(li)$(l)$(l:commands#player_commands)/cml$(/l)$() - for regular Players$(li)$(l)$(l:commands#ops_commands)/cml-ops$(/l)$() - for Ops Players$(br2)Usage of Commands should be self-explanatory, as Minecraft's built-in structure will lead you through the arguments."
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Player Commands",
+      "text": "Use $(bold)/cml$() to access the root command.$(br)$(li)$(bold)claimed_by$() - displays detailed claim info on the specified block (if any)$(li)$(bold)give$() - gives the specified Claim My Land item to the player$(li)$(bold)deed$() - top-level argument of all the deed commands$(li)$(bold)parcel$() - top-level argument of all the parcel commands",
+      "anchor": "player_commands"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Ops Commands",
+      "text": "Ops Commands are restricted to Players with Ops level. Ops Commands share many of the same commands as Player Commands, but may have more arguments to select the Player, more Deed Types etc.$(br2)Use $(bold)/cml-ops$() to access the root command.",
+      "anchor": "ops_commands"
+    },
+    "$(li)$(bold)deed$() - top-level argument of all the deed related commands$(li)$(bold)parcel$() - top-level argument of all the parcel related commands",
+    {
+      "type": "patchouli:text",
+      "title": "Ops Deed Commands",
+      "text": "$(li)$(bold)new$() - generates a new Deed item$(li)$(bold)transfer$() - generates a Transfer Deed item for an existing Parcel. $(thing)$(bold)Not implemented yet$()"
+    },
+    {
+      "type": "patchouli:text",
+      "title": "Ops Parcel Commands",
+      "text": "$(li)$(bold)abandon$() - abandons (removes owner) of an owned Parcel$(li)$(bold)add$() - registers (ie adds) a new Parcel to the back-end$(li)$(bold)backup$() - writes the Parcel Registry to a json file$(li)$(bold)border_type$() - changes the border type of a Nation Parcel$(li)$(bold)clear$() - removes all Parcels from registry$(li)$(bold)demolish$() - removes an owned Parcel and returns a Deed to the player$(li)$(bold)list$() - lists all owned Parcels"
+    },
+    "$(li)$(bold)remove$() - unregisters (ie removes) a Parcel from the back-end$(li)$(bold)rename$() - renames an owned Parcel$(li)$(bold)transfer$() - not implemented yet$(li)$(bold)whitelist$()- whitelist (permission list) options"
   ]
 }

@@ -20,6 +20,24 @@
       "anchor": "player_foundation_stone"
     },
     {
+      "type": "patchouli:spotlight",
+      "title": "Citizen Foundation Stone",
+      "item": {
+        "item": "claimmyland:citizen_foundation_stone"
+      },
+      "text": "",
+      "anchor": "citizen_foundation_stone"
+    },
+    {
+      "type": "patchouli:spotlight",
+      "title": "Nation Foundation Stone",
+      "item": {
+        "item": "claimmyland:nation_foundation_stone"
+      },
+      "text": "",
+      "anchor": "nation_foundation_stone"
+    },
+    {
       "type": "patchouli:text",
       "title": "Notes",
       "text": "- Foundation Stones are not craftable and do not appear in the creative tabs.$(br)- Borders will immediately start to decay like leaves without a trunk. The stone will refresh them every x seconds until it is removed. This is to ensure that the borders do not exist forever causing visual pollution."

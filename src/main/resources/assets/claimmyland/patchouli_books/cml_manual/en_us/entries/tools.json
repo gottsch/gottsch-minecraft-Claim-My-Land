@@ -1,13 +1,14 @@
 {
   "name": "Tools",
-  "icon": "claimmyland:zoning_tool",
+  "icon": "claimmyland:zone_placement",
   "category": "claimmyland:manual",
   "sortnum": 4,
   "pages": [
     {
       "type": "patchouli:text",
       "title": "Tools",
-      "text": "tools"
-    }
+      "text": "There are two tool items provided to help Nation owners place Zone and Citizen Parcels:$(br2)$(li)Zone Placement Tool$(li)Citizen Placement Tool$(br2)Both work is a similar fashion. Placement Tools can only be used within a Nation, by a Nation owner."
+    },
+    "Using the tool the first time will place a Zone or Citizen Placement block into the World. Using the tool a second time at a different location will place another Placement block and generate the borders between the two blocks.$(br)This is the boundaries of the Parcel. Using the tool on either of the Placement blocks will create a new Parcel, and the blocks and border will be removed."
   ]
 }
