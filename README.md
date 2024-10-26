@@ -1,6 +1,15 @@
+# Claim My Land
+
+## **Mod ID**: `claimmyland`
+
+**Claim My Land** started out as a simple land claim mod, known as **Protect It!**
+It has been modified and updated to be a more advanced mod, but hopefully retains its simplicity.
+Unlike other land claim mods, there are no restrictions to adhering to a chunk-based sizing system. 
+A claim ( known as a Parcel ) can be any size and can be placed anywhere, ie. it does not need to be 16x16-based and line up exactly with a chunk. Ex. a parcel could be 24x37x101.
+A parcel's y-dimension can also be any size, instead of taking up the entire world height.
+
 # Parcels
 A **Parcel** is the name of a claimed 3-dimensional space. A Parcel can be of any size and can be placed at any block position, given that it does not overlap another Parcel's space (currently only the Overworld is supported).
-
 
 ## Creating / Claiming
 A [Deed](#deeds) is used to place a potential Parcel into the world and also to claim it. Ops can add Parcels directly into the world by commands.
