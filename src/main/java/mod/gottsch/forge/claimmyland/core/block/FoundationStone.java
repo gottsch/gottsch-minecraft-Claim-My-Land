@@ -115,7 +115,8 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockState blockState = this.defaultBlockState().setValue(FACING,
+        BlockState blockState = super.getStateForPlacement(context);
+        blockState = blockState.setValue(FACING,
                 context.getHorizontalDirection().getOpposite());
         return blockState;
     }

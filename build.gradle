@@ -110,8 +110,8 @@ dependencies {
     implementation fg.deobf("curse.maven:custom-starter-gear-253735:4683468")
 //    implementation fg.deobf("curse.maven:jade-324717:5339264")
 
-    compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-84-FORGE:api")
-    runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-84-FORGE")
+//    compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-84-FORGE:api")
+//    runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-84-FORGE")
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

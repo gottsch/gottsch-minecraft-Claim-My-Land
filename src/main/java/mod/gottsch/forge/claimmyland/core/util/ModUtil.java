@@ -1,9 +1,16 @@
 package mod.gottsch.forge.claimmyland.core.util;
 
+import com.google.gson.Gson;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.phys.AABB;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ModUtil {
@@ -107,5 +114,64 @@ public class ModUtil {
     // TODO add to Box in GottschCore
     public static AABB toAABB(Box box) {
         return new AABB(box.getMinCoords().toPos(), box.getMaxCoords().toPos());
+    }
+
+    // TODO move to PlayerRegistry
+    private static final String API_URL = "https://api.mojang.com/users/profiles/minecraft/";
+
+    public static Optional<UUID> getUUIDByPlayerName(String playerName) {
+//        String uuid = null;
+        MinecraftID minecraftID = null;
+        try {
+            // Construct the URL to the Mojang API
+            String urlString = API_URL + playerName;
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            // Read the response
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            StringBuilder response = new StringBuilder();
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+            // parse the JSON response
+            String jsonResponse = response.toString();
+            System.out.println(jsonResponse.toString());
+            if (!jsonResponse.isEmpty()) {
+                Gson gson = new Gson();
+                minecraftID = gson.fromJson(jsonResponse, MinecraftID.class);
+//                JSONObject jsonObject = new JSONObject(jsonResponse);
+//                uuid = jsonObject.getString("id"); // This returns the UUID
+            }
+//            System.out.println("uuid ->" + uuid);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return minecraftID != null ? Optional.of(UUID.fromString(minecraftID.getId())) : Optional.empty();
+    }
+
+    public static class MinecraftID {
+        String id;
+        String name;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 }

@@ -281,6 +281,14 @@ public abstract class Deed extends Item {
                return InteractionResult.FAIL;
             }
 
+            // validate size of Deed's dimensions
+            // an Ops or mod could create a Deed via NBT with wrong values
+            Box size = getSize(context.getItemInHand().getOrCreateTag());
+            if (size.getSize().getX() < 2 || size.getSize().getY() < 2 || size.getSize().getZ() < 2) {
+                context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.too_small")).withStyle(ChatFormatting.RED));
+                return InteractionResult.FAIL;
+            }
+
             BlockPlaceContext placeContext = new BlockPlaceContext(context);
             ICoords placeTargetCoords = Coords.of(placeContext.getClickedPos());
             return parcel.canPlaceAt(context.getLevel(), placeTargetCoords)
@@ -324,9 +332,14 @@ public abstract class Deed extends Item {
             ICoords oldFoundationStoneCoords = getPreviousCoords(context.getLevel(), tag);
 
             /*
+             * TEMP - for some reason getStateForPlacement() is not being called on the block,
+             * so have to setup the facing value here.
+             */
+            state = state.setValue(FoundationStone.FACING, context.getHorizontalDirection().getOpposite());
+            /*
              * add the foundation stone to the world
              */
-            boolean result = context.getLevel().setBlock(targetPos, state, 26);
+            boolean result = context.getLevel().setBlock(targetPos, state, 3);//26);
             if (result) {
                 // if successful handle post placement
                 handleBlockPlaced(context.getLevel(), targetPos, context.getPlayer(), context.getItemInHand(), oldFoundationStoneCoords);

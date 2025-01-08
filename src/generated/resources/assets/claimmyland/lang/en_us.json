@@ -10,6 +10,7 @@
   "chat.claimmyland.deed.claim.unable_to_claim": "You unable to claim parcel at [%s] of size [%s].",
   "chat.claimmyland.deed.generate.failure": "Unable to generate deed.",
   "chat.claimmyland.deed.not_owner": "You are not the owner of this deed.",
+  "chat.claimmyland.deed.too_small": "One of the Deed's dimensions is too small.",
   "chat.claimmyland.foundation_stone.incorrect_deed": "Only the deed used to place the foundation stone can be used here.",
   "chat.claimmyland.foundation_stone.unable_to_location": "Unable to locate foundation stone block entity.",
   "chat.claimmyland.parcel.abandon.failure": "Unable to abandon the parcel.",

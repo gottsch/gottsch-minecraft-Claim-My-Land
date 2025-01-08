@@ -38,6 +38,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.apache.commons.lang3.ObjectUtils;
@@ -670,7 +671,7 @@ public class ParcelRegistry {
             }
 
             // check player's access
-            return itemStack != ItemStack.EMPTY ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
+            return (itemStack != ItemStack.EMPTY && !itemStack.is(Items.AIR)) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
         }
         return true;
     }

@@ -19,13 +19,17 @@
  */
 package mod.gottsch.forge.claimmyland.core.item;
 
+import mod.gottsch.forge.claimmyland.core.block.BorderStone;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.gottschcore.block.BlockContext;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.Optional;
 
@@ -42,7 +46,7 @@ public class BorderStoneBlockItem extends BlockItem {
         // need to check to ensure you're in an existing parcel
         // NOTE this causes a redundant parcel registry search and
         // prevents the block being placed outside a parcel boundary.
-        // to/change prevent this the BlockEntity code would have to change
+        // to/change prevent this, the BlockEntity code would have to change
         // in some way to check for non-existing parcel - results in having different
         // code in the BorderStoneBE and the FoundationStoneBE
         Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
@@ -51,5 +55,15 @@ public class BorderStoneBlockItem extends BlockItem {
         } else {
             return super.place(context);
         }
+    }
+
+    @Override
+    protected boolean placeBlock(BlockPlaceContext context, BlockState state) {
+        BlockPos blockPos = context.getClickedPos().relative(state.getValue(BorderStone.FACING).getOpposite());
+        BlockContext blockContext = new BlockContext(context.getLevel(), blockPos);
+        if (blockContext.isAir() || blockContext.isReplaceable()) {
+            return context.getLevel().setBlock(context.getClickedPos(), state, 26);
+        }
+        return false;
     }
 }

@@ -133,6 +133,7 @@ public class LanguageGen extends LanguageProvider {
 
         add(LangUtil.chat("deed.generate.failure"), "Unable to generate deed.");
         add(LangUtil.chat("deed.not_owner"), "You are not the owner of this deed.");
+        add(LangUtil.chat("deed.too_small"), "One of the Deed's dimensions is too small.");
 
         // foundation stones
         add(LangUtil.chat("foundation_stone.unable_to_location"), "Unable to locate foundation stone block entity.");

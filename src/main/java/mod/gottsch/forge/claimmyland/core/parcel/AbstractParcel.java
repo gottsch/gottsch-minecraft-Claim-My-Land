@@ -105,13 +105,16 @@ public abstract class AbstractParcel implements Parcel {
     public boolean grantsAccess(UUID entityId) {
         // if a parcel has no owner, anyone has access to modify
         if (getOwnerId() == null) {
+//            ClaimMyLand.LOGGER.debug("parcel has no owner");
             return true;
         }
         // if a parcel has a owner, only the owner has access
         else if (getOwnerId().equals(entityId)) {
+//            ClaimMyLand.LOGGER.debug("ids match -> {} - {}", getOwnerId(), entityId);
             return true;
         } else {
-            // or the owener's whitelist has access
+//            ClaimMyLand.LOGGER.debug("checking whitelist ...");
+            // or the owner's whitelist has access
             return getWhitelist().stream().anyMatch(uuid -> uuid.equals(entityId));
         }
     }
@@ -126,6 +129,7 @@ public abstract class AbstractParcel implements Parcel {
      */
     @Override
     public boolean grantsAccess(UUID entityId, ItemStack stack) {
+//        ClaimMyLand.LOGGER.debug("in grantsAccess() for entityId -> {} and item -> {}", entityId, stack.getDisplayName().getString());
         return grantsAccess(entityId);
     }
 

@@ -97,7 +97,7 @@ public class ModEvents {
     }
 
     @SubscribeEvent
-    public void onBlockPlace(final BlockEvent.EntityPlaceEvent event) {
+    public static void onBlockPlace(final BlockEvent.EntityPlaceEvent event) {
         if (ClaimMyLand.LOGGER.isDebugEnabled()) {
 //            ClaimMyLand.LOGGER.debug("attempt to place block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
         }
@@ -105,6 +105,7 @@ public class ModEvents {
         if (!Config.SERVER.protection.enableEntityPlaceEvent.get()
 //				|| event.getEntity().hasPermissions(Config.GENERAL.opsPermissionLevel.get())
         ) {
+            ClaimMyLand.LOGGER.debug("block placement not enabled");
             return;
         }
 
@@ -115,6 +116,7 @@ public class ModEvents {
 
         // prevent protected blocks from placing
         if (event.getEntity() instanceof Player) {
+//            ClaimMyLand.LOGGER.debug("player is holding -> {}", ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
             if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND))) {
                 event.setCanceled(true);
                 if (ClaimMyLand.LOGGER.isDebugEnabled()) {
@@ -133,7 +135,7 @@ public class ModEvents {
     }
 
     @SubscribeEvent
-    public void onMutliBlockPlace(final BlockEvent.EntityMultiPlaceEvent event) {
+    public static void onMutliBlockPlace(final BlockEvent.EntityMultiPlaceEvent event) {
         if (!Config.SERVER.protection.enableEntityMultiPlaceEvent.get()
                 || event.getEntity().hasPermissions(Config.SERVER.general.opsPermissionLevel.get()) ) {
             return;
@@ -162,7 +164,7 @@ public class ModEvents {
     }
 
     @SubscribeEvent
-    public void onToolInteract(final BlockEvent.BlockToolModificationEvent event) {
+    public static void onToolInteract(final BlockEvent.BlockToolModificationEvent event) {
         if (!Config.SERVER.protection.enableBlockToolInteractEvent.get()
                 || event.getPlayer().hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) {
             return;
@@ -186,7 +188,7 @@ public class ModEvents {
     }
 
     @SubscribeEvent
-    public void onPlayerInteract(final PlayerInteractEvent.RightClickBlock event) {
+    public static void onPlayerInteract(final PlayerInteractEvent.RightClickBlock event) {
         if (!Config.SERVER.protection.enableRightClickBlockEvent.get()
                 || event.getEntity().hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) {
             return;
@@ -219,7 +221,7 @@ public class ModEvents {
     }
 
     @SubscribeEvent
-    public void onLivingDestroyBlock(final LivingDestroyBlockEvent event) {
+    public static void onLivingDestroyBlock(final LivingDestroyBlockEvent event) {
         // prevent protected blocks from breaking by mob action
         if (Config.SERVER.protection.enableLivingDestroyBlockEvent.get()
                 && ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
@@ -231,7 +233,7 @@ public class ModEvents {
     }
 
     @SubscribeEvent
-    public void onPiston(final PistonEvent.Pre event) {
+    public static void onPiston(final PistonEvent.Pre event) {
         if (!Config.SERVER.protection.enablePistionEvent.get()) {
             return;
         }
@@ -292,7 +294,7 @@ public class ModEvents {
     }
 
     @SubscribeEvent
-    public void onExplosion(final ExplosionEvent.Detonate event) {
+    public static void onExplosion(final ExplosionEvent.Detonate event) {
         // remove any affected blocks that are protected
         event.getAffectedBlocks().removeIf(block -> {
             // prevent protected blocks from breaking

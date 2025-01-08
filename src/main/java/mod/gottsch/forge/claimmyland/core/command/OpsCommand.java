@@ -437,11 +437,18 @@ public class OpsCommand {
                 .findFirst()
                 .map(n -> ((NationParcel)n).getNationId()).orElse(null);
 
-        // validation
+        // validations
         if ((type == ParcelType.CITIZEN || type == ParcelType.ZONE) && nationId == null) {
             source.sendFailure(Component.translatable(LangUtil.chat("deed.citizen.nationId_required")).withStyle(ChatFormatting.RED));
             return 0;
         }
+
+        if (xSize < 2 || ySizeUp < 2 || ySizeDown < 2 || zSize < 2) {
+            CommandHelper.failure(source, "deed.too_small");
+            return 0;
+        }
+
+        if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown))
 
         // create a relative sized Box
         Box size = new Box(new Coords(0, -ySizeDown, 0), new Coords(xSize-1, ySizeUp-1, zSize-1));
@@ -449,8 +456,6 @@ public class OpsCommand {
         // attempt to add the deed item to the player inventory
         try {
             // create a deed item
-
-
             ItemStack deed = switch (type) {
                 case PLAYER -> DeedFactory.createPlayerDeed(size);
                 // NOTE nation DEED does NOT take in a nationId nor nationName as

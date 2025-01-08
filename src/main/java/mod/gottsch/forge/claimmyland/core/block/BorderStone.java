@@ -178,8 +178,7 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
-        BlockState blockState = this.defaultBlockState().setValue(FACING,
+        return this.defaultBlockState().setValue(FACING,
                 context.getHorizontalDirection().getOpposite());
-        return blockState;
     }
 }
