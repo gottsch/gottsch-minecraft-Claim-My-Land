@@ -448,7 +448,10 @@ public class OpsCommand {
             return 0;
         }
 
-        if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown))
+        if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown)) {
+            source.sendFailure(Component.translatable(LangUtil.chat("deed.outside_world_boundaries")).withStyle(ChatFormatting.RED));
+            return 0;
+        }
 
         // create a relative sized Box
         Box size = new Box(new Coords(0, -ySizeDown, 0), new Coords(xSize-1, ySizeUp-1, zSize-1));
