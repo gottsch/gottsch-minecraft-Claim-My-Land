@@ -33,7 +33,7 @@ import net.minecraftforge.fml.common.Mod;
 public class ModCommands {
 	@SubscribeEvent
 	public static void onServerStarting(RegisterCommandsEvent event) {
-		OpsCommand.register(event.getDispatcher());
+		OpsCommand.register(event.getDispatcher(), event.getBuildContext());
 		PlayersCommand.register(event.getDispatcher());
 	}
 }

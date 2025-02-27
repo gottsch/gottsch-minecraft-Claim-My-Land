@@ -16,6 +16,7 @@ import java.util.Optional;
  * @author Mark Gottschling on Mar 28, 2024
  *
  */
+@Deprecated
 public class ParcelWhitelistCommandDelegate {
 
 
@@ -25,6 +26,7 @@ public class ParcelWhitelistCommandDelegate {
             List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
+                // TODO this is wrong. need to provide the player name to add
                 parcel.get().getWhitelist().add(player.getUUID());
                 CommandHelper.save(source.getLevel());
                 source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.whitelist.add.success")).withStyle(ChatFormatting.RED), false);
@@ -46,7 +48,6 @@ public class ParcelWhitelistCommandDelegate {
             List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
-                parcel.get().getWhitelist();
                 CommandHelper.sendNewLineMessage(source);
                 source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.whitelist.list"))
                         .withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD)

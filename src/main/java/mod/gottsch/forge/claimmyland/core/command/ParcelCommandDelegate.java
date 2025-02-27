@@ -449,16 +449,17 @@ public class ParcelCommandDelegate {
                         case ZONE -> ItemStack.EMPTY;
                     };
 
-                    // copy props over
-                    CompoundTag tag = deed.getOrCreateTag();
-                    tag.putUUID(Deed.PARCEL_ID, parcel.get().getId());
-                    if (parcel.get().getNationId() != null) {
-                        tag.putUUID(NationDeed.NATION_ID, parcel.get().getNationId());
-                    }
-
                     // give parcel to player
                     if (deed != ItemStack.EMPTY) {
+                        // copy props over
+                        CompoundTag tag = deed.getOrCreateTag();
+                        tag.putUUID(Deed.PARCEL_ID, parcel.get().getId());
+                        if (parcel.get().getNationId() != null) {
+                            tag.putUUID(NationDeed.NATION_ID, parcel.get().getNationId());
+                        }
+
                         player.getInventory().add(deed);
+
                         // remove the parcel
                         ParcelRegistry.removeParcel(parcel.get());
 
@@ -470,9 +471,12 @@ public class ParcelCommandDelegate {
                         if (be instanceof BorderStoneBlockEntity) {
                             ((BorderStoneBlockEntity) be).removeParcelBorder(source.getLevel(), coords);
                         }
+                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.success")).withStyle(ChatFormatting.GREEN), false);
+                    } else {
+                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.zone_cannot_demolish")).withStyle(ChatFormatting.RED), false);
                     }
                 } else {
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.abandon.failure")).withStyle(ChatFormatting.RED), false);
+                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.failure")).withStyle(ChatFormatting.RED), false);
                 }
             } else {
                 CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);

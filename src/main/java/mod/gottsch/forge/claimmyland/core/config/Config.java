@@ -228,6 +228,7 @@ public class Config extends AbstractConfig {
 		public BooleanValue enableEntityMultiPlaceEvent;
 		public BooleanValue enableBlockToolInteractEvent;
 		public BooleanValue enableRightClickBlockEvent;
+		public BooleanValue enableRightClickItemEvent;
 		public BooleanValue enableLivingDestroyBlockEvent;
 		public BooleanValue enablePistionEvent;
 		public BooleanValue enableExplosionDetonateEvent;
@@ -257,8 +258,12 @@ public class Config extends AbstractConfig {
 					.define("enableBlockToolInteractProtection", true);
 			
 			enableRightClickBlockEvent = builder					
-					.comment(" Enables right click protection. If enabled, blocks in the property will not perform any action if right-clicked. Ex. chests will not open for others.")
-					.define("enableRightClickProtection", true);
+					.comment(" Enables right click block protection. If enabled, blocks in the property will not perform any action if right-clicked. Ex. chests will not open for others.")
+					.define("enableRightClickBlockProtection", true);
+
+			enableRightClickItemEvent = builder
+					.comment(" Enables right click item protection. If enabled, item use in the property will not perform any action if right-clicked.")
+					.define("enableRightClickItemProtection", true);
 
 			enableLivingDestroyBlockEvent = builder
 					.comment(" Enables block break protection from living entities. If enabled, blocks in the property  are protected from being broken for living entities (mobs).")

@@ -1,0 +1,12 @@
+{
+  "values": [
+    {
+      "id": "treasure2:wooden_chest",
+      "required": false
+    },
+    {
+      "id": "treasure2:cardboard_box",
+      "required": false
+    }
+  ]
+}

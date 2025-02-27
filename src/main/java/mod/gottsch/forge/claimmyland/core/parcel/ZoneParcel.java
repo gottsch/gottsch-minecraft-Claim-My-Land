@@ -23,9 +23,12 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
+import mod.gottsch.forge.claimmyland.core.item.PlayerDeed;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -63,7 +66,7 @@ public class ZoneParcel extends AbstractParcel {
                 nation = (NationParcel) nations.get(0);
             }
 
-            // a personal deed cannot be used on an existing parcel
+            // a personal deed cannot be used in a closed-border nation
             if (virtualParcel.getType() == ParcelType.PLAYER
                     && nation.getBorderType() == NationBorderType.OPEN) {
                 return true;
@@ -74,6 +77,23 @@ public class ZoneParcel extends AbstractParcel {
                 }
             }
         }
+        return false;
+    }
+
+    @Override
+    public boolean grantsAccess(UUID entityId, ItemStack stack) {
+        ClaimMyLand.LOGGER.debug("checking Zone parcel grantsAccess for player -> 0{} with item -> {}", entityId.toString(), stack.getDisplayName().getString());
+        if (grantsAccess(entityId)) {
+            return true;
+        }
+        ClaimMyLand.LOGGER.debug("player does not have uuid access, check item...");
+
+        // check what stack the player is holding
+        if (stack.getItem() instanceof PlayerDeed || stack.getItem() instanceof CitizenDeed) {
+            ClaimMyLand.LOGGER.debug("player DOES have item access...");
+            return true;
+        }
+        ClaimMyLand.LOGGER.debug("player does not have item access...");
         return false;
     }
 

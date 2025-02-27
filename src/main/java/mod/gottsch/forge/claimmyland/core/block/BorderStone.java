@@ -59,6 +59,8 @@ import java.util.Optional;
 public class BorderStone extends BaseEntityBlock implements EntityBlock {
     public static final EnumProperty<Direction> FACING = EnumProperty.create("facing", Direction.class);
 
+    private static final VoxelShape BOTTOM = Block.box(0, 0, 0, 16, 3, 16);
+    // TODO finish
     private static final VoxelShape SHAPE = Block.box(0D, 0D, 0D, 16D, 11D, 16D);
 
     /**

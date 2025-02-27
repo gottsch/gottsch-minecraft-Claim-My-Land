@@ -56,6 +56,11 @@ public class LanguageGen extends LanguageProvider {
         add(ModItems.ZONING_PLACEMENT_TOOL.get(), "Zoning Tool");
 
         add(ModBlocks.BORDER_STONE.get(), "Border Stone");
+        add(ModBlocks.PLAYER_BORDER.get(), "Player Parcel Border");
+        add(ModBlocks.CITIZEN_BORDER.get(), "Citizen Parcel Border");
+        add(ModBlocks.NATION_BORDER.get(), "Nation Parcel Border");
+        add(ModBlocks.ZONE_BORDER.get(), "Zone Parcel Border");
+        add(ModBlocks.BUFFER.get(), "Parcel Buffer");
 
 //        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
 //
@@ -107,6 +112,10 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.add.failure_with_overlaps"), "Unable to add the parcel. It intersects with another parcel.");
         add(LangUtil.chat("parcel.add.failure_too_small"), "Unable to add the parcel. The dimension(s) are too small (< 2).");
 
+        add(LangUtil.chat("parcel.demolish.success"), "The parcel has been demolished.");
+        add(LangUtil.chat("parcel.demolish.failure"), "Unable to demolish the parcel.");
+        add(LangUtil.chat("parcel.demolish.zone_cannot_demolish"), "A Zone parcel cannot be demolished. Use 'remove' instead.");
+
         add(LangUtil.chat("parcel.remove.success"), "The parcel has been removed.");
         add(LangUtil.chat("parcel.remove.failure"), "Unable to remove the parcel.");
 
@@ -116,9 +125,34 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.transfer.success"), "The parcel has been transferred.");
         add(LangUtil.chat("parcel.transfer.failure"), "Unable to transfer the parcel.");
 
-        add(LangUtil.chat("parcel.whitelist.add.success"), "A player was added to the whitelist.");
-        add(LangUtil.chat("parcel.whitelist.add.failure"), "Unable to player to the whitelist.");
-        add(LangUtil.chat("parcel.whitelist.list"), "Whitelist for property ");
+        add(LangUtil.chat("parcel.whitelist.add.success"), "Player was added to the whitelist.");
+        add(LangUtil.chat("parcel.whitelist.add.failure"), "Unable to add player to the whitelist.");
+        add(LangUtil.chat("parcel.whitelist.list"), "Player Whitelist for parcel ");
+
+        add(LangUtil.chat("parcel.block_tag.add.success"), "A block tag was added to the block tag whitelist.");
+        add(LangUtil.chat("parcel.block_tag.add.failure"), "Unable to add block tag to the block tag whitelist.");
+        add(LangUtil.chat("parcel.block_tag.remove.success"), "A block tag was removed to the block tag whitelist.");
+        add(LangUtil.chat("parcel.block_tag.remove.failure"), "Unable to remove block tag to the block tag whitelist.");
+
+        add(LangUtil.chat("parcel.block.add.success"), "A block was added to the block whitelist.");
+        add(LangUtil.chat("parcel.block.add.failure"), "Unable to add block to the block whitelist.");
+        add(LangUtil.chat("parcel.block.remove.success"), "A block was removed to the block whitelist.");
+        add(LangUtil.chat("parcel.block.remove.failure"), "Unable to remove block to the block whitelist.");
+
+        add(LangUtil.chat("parcel.item_tag.add.success"), "An item tag was added to the item tag whitelist.");
+        add(LangUtil.chat("parcel.item_tag.add.failure"), "Unable to add item tag to the item tag whitelist.");
+        add(LangUtil.chat("parcel.item_tag.remove.success"), "An item tag was removed to the item tag whitelist.");
+        add(LangUtil.chat("parcel.item_tag.remove.failure"), "Unable to remove item tag to the item tag whitelist.");
+
+        add(LangUtil.chat("parcel.item.add.success"), "A item was added to the item whitelist.");
+        add(LangUtil.chat("parcel.item.add.failure"), "Unable to add item to the item whitelist.");
+        add(LangUtil.chat("parcel.item.remove.success"), "A item was removed to the item whitelist.");
+        add(LangUtil.chat("parcel.item.remove.failure"), "Unable to remove item to the item whitelist.");
+
+        add(LangUtil.chat("parcel.block_tag.list"), "Block Tag Whitelist for parcel ");
+        add(LangUtil.chat("parcel.block.list"), "Block Whitelist for parcel ");
+        add(LangUtil.chat("parcel.item_tag.list"), "Item Tag Whitelist for parcel ");
+        add(LangUtil.chat("parcel.item.list"), "Item Whitelist for parcel ");
 
         add(LangUtil.chat("parcel.citizen.nationId_required"), "A nation name is required to add a citizen parcel.");
         add(LangUtil.chat("parcel.nation.nationName_already_exists"), "A nation with that name already exists.");

@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.item;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.parcel.CitizenParcel;
+import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -132,7 +133,12 @@ public class CitizenDeed extends Deed {
             tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
         }
         if (stack.getTag() != null && stack.getTag().contains(NationDeed.NATION_ID)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + stack.getTag().getString(NationDeed.NATION_ID)));
+            Optional<Parcel> parcel = ParcelRegistry.getNations().stream().filter(nation -> nation.getNationId().equals(stack.getTag().getUUID(NationDeed.NATION_ID))).findFirst();
+            if (parcel.isPresent()) {
+                tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + parcel.get().getName()));
+            } else {
+                tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + "Unknown"));
+            }
         }
         if (stack.getTag() != null && stack.getTag().contains(Deed.SIZE)) {
             appendSizeHoverText(stack, level, tooltip, flag);

@@ -24,7 +24,6 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
 import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
@@ -32,22 +31,18 @@ import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.setup.Registration;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
-import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
@@ -59,7 +54,7 @@ import java.util.stream.Stream;
  *
  */
 public class PlayersCommand {
-	private static final String PROTECT = "cml";
+	private static final String CML = "cml";
 	private static final String CURRENT_NAME = "current_name";
 	private static final String NEW_NAME = "new_name";
 
@@ -109,87 +104,89 @@ public class PlayersCommand {
 	 */
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 		dispatcher
-				.register(Commands.literal(PROTECT)
-						.requires(source -> {
-							return source.hasPermission(0);
-						})
-						///// DEED TOP-LEVEL OPTION /////
-						.then(Commands.literal(CommandHelper.DEED).requires(source -> {
-											return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
-										})
-										.then(Commands.literal(CommandHelper.NEW)
-												.then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
-														.suggests(DEED_TYPES)
-														.then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
-																.then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
-																		.then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
-																				.then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
-																						.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
-																								.suggests(OWNER_NATION_NAMES)
-																								.executes(source -> {
-																									return generateDeed(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
-																											IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
-																											IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
-																											IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
-																											IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE),
-																											StringArgumentType.getString(source, CommandHelper.NATION_NAME)
-																									);
-																									// TODO need to supply the owner name
-																								})
+				.register(Commands.literal(CML)
+								.requires(source -> {
+									return source.hasPermission(0);
+								})
+								///// DEED TOP-LEVEL OPTION /////
+								.then(Commands.literal(CommandHelper.DEED)
+//								.requires(source -> {
+//											return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
+//										})
+												.then(Commands.literal(CommandHelper.NEW)
+														.then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
+																.suggests(DEED_TYPES)
+																.then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
+																		.then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
+																				.then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
+																						.then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
+																								.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
+																										.suggests(OWNER_NATION_NAMES)
+																										.executes(source -> {
+																											return generateDeed(source.getSource(),
+																													StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
+																													IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
+																													IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
+																													IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
+																													IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE),
+																													StringArgumentType.getString(source, CommandHelper.NATION_NAME)
+																											);
+																											// TODO need to supply the owner name
+																										})
+																								)
 																						)
-																				)
 
+																				)
 																		)
 																)
 														)
 												)
-										)
-						)
-						///// PARCEL TOP-LEVEL OPTION /////
-						.then(Commands.literal(CommandHelper.PARCEL).requires(source -> {
-											return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
-										})
-										///// LIST OPTION /////
-										.then(Commands.literal(CommandHelper.LIST)
-												.executes(source -> {
-													return listParcels(source.getSource());
-												})
-										)
-										///// ABANDON OPTION /////
-										.then(Commands.literal(CommandHelper.ABANDON)
-												.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-														.suggests(OWNER_PARCEL_NAMES)
+								)
+								///// PARCEL TOP-LEVEL OPTION /////
+								.then(Commands.literal(CommandHelper.PARCEL)
+//										.requires(source -> {
+//											return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
+//										})
+												///// LIST OPTION /////
+												.then(Commands.literal(CommandHelper.LIST)
 														.executes(source -> {
-															return abandonParcel(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+															return listParcels(source.getSource());
 														})
 												)
-										)
-										///// BORDER TYPE /////
-										.then(Commands.literal(CommandHelper.BORDER_TYPE)
-												.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
-														.suggests(OWNER_NATION_NAMES)
-														.then(Commands.argument(CommandHelper.BORDER_TYPE, StringArgumentType.string())
-																.suggests(CommandHelper.BORDER_TYPES)
+												///// ABANDON OPTION /////
+												.then(Commands.literal(CommandHelper.ABANDON)
+														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																.suggests(OWNER_PARCEL_NAMES)
 																.executes(source -> {
-																	return borderType(source.getSource(), StringArgumentType.getString(source, CommandHelper.NATION_NAME), StringArgumentType.getString(source, CommandHelper.BORDER_TYPE));
+																	return abandonParcel(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+																})
+														)
+												)
+												///// BORDER TYPE /////
+												.then(Commands.literal(CommandHelper.BORDER_TYPE)
+														.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
+																.suggests(OWNER_NATION_NAMES)
+																.then(Commands.argument(CommandHelper.BORDER_TYPE, StringArgumentType.string())
+																		.suggests(CommandHelper.BORDER_TYPES)
+																		.executes(source -> {
+																			return borderType(source.getSource(), StringArgumentType.getString(source, CommandHelper.NATION_NAME), StringArgumentType.getString(source, CommandHelper.BORDER_TYPE));
+																		})
+																)
+
+														)
+												)
+												///// DEMOLISH /////
+												.then(Commands.literal(CommandHelper.DEMOLISH)
+														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																.suggests(OWNER_PARCEL_NAMES)
+																.executes(source -> {
+																	return demolishParcel(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
 																})
 														)
 
 												)
-										)
-										///// DEMOLISH /////
-										.then(Commands.literal(CommandHelper.DEMOLISH)
-												.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-														.suggests(OWNER_PARCEL_NAMES)
-														.executes(source -> {
-															return demolishParcel(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-														})
-												)
-
-										)
-										///// RENAME PARCEL /////
-										.then(Commands.literal(CommandHelper.RENAME)
+												///// RENAME PARCEL /////
+												.then(Commands.literal(CommandHelper.RENAME)
 														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
 																.suggests(OWNER_PARCEL_NAMES)
 																.then(Commands.argument(CommandHelper.NEW_NAME, StringArgumentType.string())
@@ -202,48 +199,103 @@ public class PlayersCommand {
 														)
 
 
-										)
-										///// TRANSFER /////
-										.then(Commands.literal(CommandHelper.TRANSFER)
-												.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-														.suggests(OWNER_PARCEL_NAMES)
-														.then(Commands.argument(CommandHelper.NEW_OWNER_NAME, StringArgumentType.string())
-																.suggests(PLAYER_NAMES)
-																.executes(source -> {
-																	return transferParcel(source.getSource(),
-																			StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-																			StringArgumentType.getString(source, CommandHelper.NEW_OWNER_NAME));
-																})
+												)
+												///// TRANSFER /////
+												.then(Commands.literal(CommandHelper.TRANSFER)
+														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																.suggests(OWNER_PARCEL_NAMES)
+																.then(Commands.argument(CommandHelper.NEW_OWNER_NAME, StringArgumentType.string())
+																		.suggests(PLAYER_NAMES)
+																		.executes(source -> {
+																			return transferParcel(source.getSource(),
+																					StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																					StringArgumentType.getString(source, CommandHelper.NEW_OWNER_NAME));
+																		})
+																)
+														)
+
+												)
+										///// WHITELIST OPTION /////
+												.then(Commands.literal(CommandHelper.WHITELIST)
+														// TODO change to subcommand [PLAYER | BLOCK_TAG | BLOCK | etc]
+														///// BLOCK TAG WHITELIST OPTION /////
+														.then(Commands.literal(CommandHelper.BLOCK_TAG)
+																		///// WHITELIST ADD /////
+																		.then(Commands.literal(CommandHelper.ADD)
+																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																								.suggests(OWNER_PARCEL_NAMES)
+																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+																										.suggests(CommandHelper.BLOCK_TAGS)
+																										.executes(source -> {
+																											return addWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+																										})
+																								)
+																						)
+																				)
+
+																		///// BLOCK TAGS WHITELIST LIST /////
+//																		.then(Commands.literal(CommandHelper.LIST)
+//																							.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//																								.suggests(OWNER_PARCEL_NAMES)
+//																								.executes(source -> {
+//																									return list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+//																											ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+//																								})
+//																						)
+//																				)
+//																		)
+//																		///// BLOCK TAGS WHITELIST REMOVE /////
+//																		.then(Commands.literal(CommandHelper.REMOVE)
+//																				.then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+//																						.suggests(OWNER_NAMES)
+//																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//																								.suggests(PARCEL_NAMES)
+//																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+//																										.suggests(CURRENT_BLOCK_TAGS)
+//																										.executes(source -> {
+//																											return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+//																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+//																										})
+//																								)
+//																						)
+//																				)
+//																		)
+																///// TODO WHITELIST REMOVE /////
+
 														)
 												)
 
-										)
-
-						) // end of parcel
-						///// GIVE TOP-LEVEL OPTION /////
-						.then(Commands.literal(CommandHelper.GIVE)
-										.then(Commands.argument(CommandHelper.GIVE_ITEM, StringArgumentType.greedyString())
-												.suggests(GIVABLE_ITEMS)
-												.executes(source -> {
-													return give(source.getSource(), StringArgumentType.getString(source, CommandHelper.GIVE_ITEM));
-												})
-										) // end of ITEM
-								// TODO add ownership
-						)
-						///// CLAIMED_BY TOP-LEVEL OPTION /////
-						.then(Commands.literal(CommandHelper.CLAIMED_BY)
-								.executes(source -> {
-									return ParcelCommandDelegate.claimedBy(source.getSource(), null);
-								})
-								.then(Commands.argument(CommandHelper.POS, BlockPosArgument.blockPos())
-										.executes(source -> {
-											return ParcelCommandDelegate.claimedBy(source.getSource(), BlockPosArgument.getBlockPos(source, CommandHelper.POS));
-										})
+								) // end of parcel
+								///// GIVE TOP-LEVEL OPTION /////
+								.then(Commands.literal(CommandHelper.GIVE)
+												.then(Commands.argument(CommandHelper.GIVE_ITEM, StringArgumentType.greedyString())
+														.suggests(GIVABLE_ITEMS)
+														.executes(source -> {
+															return give(source.getSource(), StringArgumentType.getString(source, CommandHelper.GIVE_ITEM));
+														})
+												) // end of ITEM
+										// TODO add ownership
 								)
-						) // end of CLAIMED_BY
+								///// CLAIMED_BY TOP-LEVEL OPTION /////
+								.then(Commands.literal(CommandHelper.CLAIMED_BY)
+										.executes(source -> {
+											return ParcelCommandDelegate.claimedBy(source.getSource(), null);
+										})
+										.then(Commands.argument(CommandHelper.POS, BlockPosArgument.blockPos())
+												.executes(source -> {
+													return ParcelCommandDelegate.claimedBy(source.getSource(), BlockPosArgument.getBlockPos(source, CommandHelper.POS));
+												})
+										)
+								) // end of CLAIMED_BY
 
 				); // end of register
 
+	}
+
+	private static int addWhitelist(CommandSourceStack source, String parcelName, ResourceLocation id, ParcelWhitelistCommandsDelegate.WhitelistType type) {
+
+		return 1;
 	}
 
 	/**

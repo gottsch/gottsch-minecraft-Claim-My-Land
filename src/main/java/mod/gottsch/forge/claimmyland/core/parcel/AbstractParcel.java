@@ -27,6 +27,7 @@ import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -52,6 +53,10 @@ public abstract class AbstractParcel implements Parcel {
     public static final String COORDS_KEY = "coords";
     public static final String SIZE_KEY = "size";
     public static final String WHITELIST_KEY = "whitelist";
+    public static final String BLOCK_TAG_WHITELIST_KEY = "blockTagWhitelist";
+    public static final String BLOCK_WHITELIST_KEY = "blockWhitelist";
+    public static final String ITEM_TAG_WHITELIST_KEY = "itemTagWhitelist";
+    public static final String ITEM_WHITELIST_KEY = "itemWhitelist";
 
     // TODO this probably can be moved into Parcel (replace PARCEL_TYPE)
     public static final String TYPE = "type";
@@ -78,8 +83,17 @@ public abstract class AbstractParcel implements Parcel {
     private long ownerTime;
     private long abandonedTime;
 
+    private List<String> blockWhitelist;
+    private List<String> blockTagWhitelist;
+    private List<String> itemWhitelist;
+    private List<String> itemTagWhitelist;
+
     public AbstractParcel() {
         setId(UUID.randomUUID());
+        blockWhitelist = new ArrayList<>();
+        blockTagWhitelist = new ArrayList<>();
+        itemWhitelist = new ArrayList<>();
+        itemTagWhitelist = new ArrayList<>();
     }
 
     @Override
@@ -181,6 +195,7 @@ public abstract class AbstractParcel implements Parcel {
         getSize().save(sizeTag);
         tag.put(SIZE_KEY, sizeTag);
 
+        // player whitelist
         if (getWhitelist() != null) {
             ListTag list = new ListTag();
             getWhitelist().forEach(data -> {
@@ -191,6 +206,42 @@ public abstract class AbstractParcel implements Parcel {
             tag.put(WHITELIST_KEY, list);
         }
 
+        if (getBlockTagWhitelist() != null) {
+            ListTag list = new ListTag();
+            getBlockTagWhitelist().forEach(data -> {
+                StringTag elementTag = StringTag.valueOf(data);
+                list.add(elementTag);
+            });
+            tag.put(BLOCK_TAG_WHITELIST_KEY, list);
+        }
+
+        if (getBlockWhitelist() != null) {
+            ListTag list = new ListTag();
+            getBlockWhitelist().forEach(data -> {
+                StringTag elementTag = StringTag.valueOf(data);
+                list.add(elementTag);
+            });
+            tag.put(BLOCK_WHITELIST_KEY, list);
+        }
+
+        if (getItemTagWhitelist() != null) {
+            ListTag list = new ListTag();
+            getItemTagWhitelist().forEach(data -> {
+                StringTag elementTag = StringTag.valueOf(data);
+                list.add(elementTag);
+            });
+            tag.put(ITEM_TAG_WHITELIST_KEY, list);
+        }
+
+        if (getItemWhitelist() != null) {
+            ListTag list = new ListTag();
+            getItemWhitelist().forEach(data -> {
+                StringTag elementTag = StringTag.valueOf(data);
+                list.add(elementTag);
+            });
+            tag.put(ITEM_WHITELIST_KEY, list);
+        }
+
         tag.putLong("foundedTime", getFoundedTime());
         tag.putLong("ownerTime", getOnwerTime());
         tag.putLong("abandonedTime", getAbandonedTime());
@@ -198,6 +249,13 @@ public abstract class AbstractParcel implements Parcel {
 
     @Override
     public Parcel load(CompoundTag tag) {
+        // clear the white lists
+        getWhitelist().clear();
+        getBlockTagWhitelist().clear();
+        getBlockWhitelist().clear();
+        getItemTagWhitelist().clear();
+        getItemWhitelist().clear();
+
         if (tag.contains(ID_KEY)) {
             setId(tag.getUUID(ID_KEY));
         } else if (this.getId() == null) {
@@ -231,6 +289,38 @@ public abstract class AbstractParcel implements Parcel {
                 if (uuidTag.contains(ID_KEY)) {
                     getWhitelist().add(uuidTag.getUUID(ID_KEY));
                 }
+            });
+        }
+
+        if (tag.contains(BLOCK_TAG_WHITELIST_KEY)) {
+            ListTag list = tag.getList(BLOCK_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String blockTag = element.getAsString();
+                    getBlockTagWhitelist().add(blockTag);
+            });
+        }
+
+        if (tag.contains(BLOCK_WHITELIST_KEY)) {
+            ListTag list = tag.getList(BLOCK_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String block = element.getAsString();
+                getBlockWhitelist().add(block);
+            });
+        }
+
+        if (tag.contains(ITEM_TAG_WHITELIST_KEY)) {
+            ListTag list = tag.getList(ITEM_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String itemTag = element.getAsString();
+                getItemTagWhitelist().add(itemTag);
+            });
+        }
+
+        if (tag.contains(ITEM_WHITELIST_KEY)) {
+            ListTag list = tag.getList(ITEM_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String item = element.getAsString();
+                getItemWhitelist().add(item);
             });
         }
 
@@ -365,6 +455,51 @@ public abstract class AbstractParcel implements Parcel {
     @Override
     public void setWhitelist(List<UUID> whitelist) {
         this.whitelist = whitelist;
+    }
+
+    @Override
+    public List<String> getBlockTagWhitelist() {
+        if (blockTagWhitelist == null) {
+            blockTagWhitelist = new ArrayList<>();
+        }
+        return blockTagWhitelist;
+    }
+
+    @Override
+    public void setBlockTagWhitelist(List<String> blockTagWhitelist) {
+        this.blockTagWhitelist = blockTagWhitelist;
+    }
+
+    @Override
+    public List<String> getBlockWhitelist() {
+        if (blockWhitelist == null) {
+            blockWhitelist = new ArrayList<>();
+        }
+        return blockWhitelist;
+    }
+
+
+    public void setBlockWhitelist(List<String> blockWhitelist) {
+        this.blockWhitelist = blockWhitelist;
+    }
+
+    @Override
+    public List<String> getItemTagWhitelist() {
+        return itemTagWhitelist;
+    }
+
+    @Override
+    public void setItemTagWhitelist(List<String> itemTagWhitelist) {
+        this.itemTagWhitelist = itemTagWhitelist;
+    }
+
+    @Override
+    public List<String> getItemWhitelist() {
+        return itemWhitelist;
+    }
+
+    public void setItemWhitelist(List<String> itemWhitelist) {
+        this.itemWhitelist = itemWhitelist;
     }
 
     @Override
