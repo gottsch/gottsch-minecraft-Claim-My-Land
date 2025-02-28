@@ -21,6 +21,8 @@ package mod.gottsch.forge.claimmyland.datagen;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.tags.ModTags;
+import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.treasure2.core.block.TreasureBlocks;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
@@ -44,42 +46,6 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
 
     @Override
     protected void addTags(Provider provider) {
-        tag(ModTags.Blocks.COMMON_NATION_WHITELIST)
-                .addTags(
-                        BlockTags.WOODEN_DOORS,
-                        BlockTags.WOODEN_TRAPDOORS,
-                        BlockTags.FENCE_GATES,
-
-                        BlockTags.WOODEN_BUTTONS,
-                        BlockTags.WOODEN_PRESSURE_PLATES,
-
-                        BlockTags.STONE_BUTTONS,
-                        BlockTags.STONE_PRESSURE_PLATES,
-
-                        BlockTags.ANVIL,
-                        BlockTags.BEDS,
-                        BlockTags.CAULDRONS,
-                        Tags.Blocks.CHESTS,
-                        Tags.Blocks.BARRELS,
-                        Tags.Blocks.BOOKSHELVES
-                )
-                .add(
-                        Blocks.CRAFTING_TABLE,
-                        Blocks.FURNACE,
-                        Blocks.BLAST_FURNACE,
-                        Blocks.LOOM,
-                        Blocks.STONECUTTER,
-                        Blocks.SMOKER,
-                        Blocks.JUKEBOX,
-						Blocks.IRON_DOOR,
-                        Blocks.IRON_TRAPDOOR
-                );
-
-        tag(ModTags.Blocks.CHEST_BARREL_WHITELIST)
-                .addTags(
-                        Tags.Blocks.CHESTS,
-                        Tags.Blocks.BARRELS);
-
         tag(ModTags.Blocks.DOOR_GATE_WHITELIST)
                 .addTags(
                         BlockTags.WOODEN_DOORS,
@@ -90,13 +56,68 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
                         Blocks.IRON_TRAPDOOR
                 );
 
+        tag(ModTags.Blocks.CHEST_BARREL_WHITELIST)
+                .addTags(
+                        Tags.Blocks.CHESTS,
+                        Tags.Blocks.BARRELS);
+
+        tag(ModTags.Blocks.CRAFTING_WHITELIST)
+                .add(
+                        Blocks.CRAFTING_TABLE,
+                        Blocks.FURNACE,
+                        Blocks.BLAST_FURNACE,
+                        Blocks.LOOM,
+                        Blocks.STONECUTTER,
+                        Blocks.SMOKER
+                );
+
+        tag(ModTags.Blocks.COMMON_NATION_WHITELIST)
+                .addTags(
+                        ModTags.Blocks.DOOR_GATE_WHITELIST,
+                        ModTags.Blocks.CHEST_BARREL_WHITELIST,
+                        ModTags.Blocks.CRAFTING_WHITELIST,
+
+                        BlockTags.WOODEN_BUTTONS,
+                        BlockTags.WOODEN_PRESSURE_PLATES,
+
+                        BlockTags.STONE_BUTTONS,
+                        BlockTags.STONE_PRESSURE_PLATES,
+
+                        BlockTags.ANVIL,
+                        BlockTags.BEDS,
+
+                        BlockTags.CAULDRONS,
+                        Tags.Blocks.BOOKSHELVES
+                )
+                .add(
+                        Blocks.JUKEBOX
+	                );
+
         // populate integration tags
-        String T2_ID = "treasure2";
+//        String T2_ID = "treasure2";
         // TODO complete
         tag(ModTags.Blocks.TREASURE2_CHEST_WHITELIST)
-                .addOptional(new ResourceLocation(T2_ID, "wooden_chest"))
-                .addOptional(new ResourceLocation(T2_ID, "cardboard_box"));
-
+                .addOptional(ModUtil.getName(TreasureBlocks.WOOD_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.CRATE_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.MOLDY_CRATE_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.IRONBOUND_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.CARDBOARD_BOX.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.MILK_CRATE.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.PIRATE_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.IRON_STRONGBOX.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.GOLD_STRONGBOX.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.VIKING_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.SAFE.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.DREAD_PIRATE_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.COMPRESSOR_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.SKULL_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.GOLD_SKULL_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.CRYSTAL_SKULL_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.SPIDER_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.WITHER_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.CAULDRON_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.BARREL_CHEST.get()))
+                .addOptional(ModUtil.getName(TreasureBlocks.VANILLA_CHEST.get()));
         String LV = "legacyvault";
         tag(ModTags.Blocks.LEGACY_VAULT_WHITELIST)
                 .addOptional(new ResourceLocation(LV, "community_vault"));

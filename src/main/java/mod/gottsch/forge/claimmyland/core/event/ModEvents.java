@@ -78,12 +78,13 @@ public class ModEvents {
             return;
         }
 
-        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+//        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
 //            ClaimMyLand.LOGGER.debug("attempt to break block by player -> {} @ {}", event.getPlayer().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
-        }
+//        }
 
         // execute if event is enabled
-        if (!Config.SERVER.protection.enableBlockBreakEvent.get()) {
+        if (!Config.SERVER.protection.enableBlockBreakEvent.get()
+                || hasOpsPermission(event.getPlayer())) {
             return;
         }
 
@@ -95,9 +96,9 @@ public class ModEvents {
         // prevent protected blocks from breaking
         if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID())) {
             event.setCanceled(true);
-            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+//            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
 //                ClaimMyLand.LOGGER.debug("denied block break -> {} @ {}", event.getPlayer().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
-            }
+//            }
 //            if (!event.getLevel().isClientSide()) {
 //                sendProtectedMessage(event.getLevel(), event.getPlayer());
 //            }
@@ -110,13 +111,12 @@ public class ModEvents {
             return;
         }
 
-        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-            ClaimMyLand.LOGGER.debug("attempt to place block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
-        }
+//        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+//            ClaimMyLand.LOGGER.debug("attempt to place block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
+//        }
 
         if (!Config.SERVER.protection.enableEntityPlaceEvent.get()
-//				|| event.getEntity().hasPermissions(Config.GENERAL.opsPermissionLevel.get())
-        ) {
+				|| (event.getEntity() instanceof Player && hasOpsPermission((Player)event.getEntity()))) {
             ClaimMyLand.LOGGER.debug("block placement not enabled");
             return;
         }
@@ -142,8 +142,6 @@ public class ModEvents {
         else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
             event.setCanceled(true);
         }
-
-        ClaimMyLand.LOGGER.debug("allowed to place ??");
     }
 
     @SubscribeEvent
@@ -152,12 +150,12 @@ public class ModEvents {
             return;
         }
 
-        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-            ClaimMyLand.LOGGER.debug("attempt to place multi-block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
-        }
+//        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+//            ClaimMyLand.LOGGER.debug("attempt to place multi-block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
+//        }
 
         if (!Config.SERVER.protection.enableEntityMultiPlaceEvent.get()
-                || event.getEntity().hasPermissions(Config.SERVER.general.opsPermissionLevel.get()) ) {
+                || hasOpsPermission((Player)event.getEntity()) ) {
             return;
         }
 
@@ -199,7 +197,7 @@ public class ModEvents {
         }
 
         if (!Config.SERVER.protection.enableBlockToolInteractEvent.get()
-                || event.getPlayer().hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) {
+                || (event.getPlayer() != null && hasOpsPermission(event.getPlayer()))) {
             return;
         }
 
@@ -209,6 +207,8 @@ public class ModEvents {
         }
 
         ItemStack heldItemStack = event.getHeldItemStack();
+//        ClaimMyLand.LOGGER.debug("player -> {} is hold item in main hand -> {}", event.getPlayer().getDisplayName().getString(), ((Player)event.getPlayer()).getItemInHand(InteractionHand.MAIN_HAND));
+
         if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID(), heldItemStack)) {
             event.setCanceled(true);
             if (ClaimMyLand.LOGGER.isDebugEnabled()) {
@@ -227,7 +227,7 @@ public class ModEvents {
         }
 
         if (!Config.SERVER.protection.enableRightClickBlockEvent.get()
-                || event.getEntity().hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) {
+                ||hasOpsPermission(event.getEntity())) {
             return;
         }
 
@@ -269,8 +269,9 @@ public class ModEvents {
             return;
         }
 
-        if (!Config.SERVER.protection.enableRightClickItemEvent.get()
-                || hasOpsPermission((Player)event.getEntity())) {
+        // TEMP log
+        ClaimMyLand.LOGGER.debug("player -> {} attempting to use item -> {}", event.getEntity().getDisplayName().getString(), ((Player)event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
+        if (!Config.SERVER.protection.enableRightClickItemEvent.get() || hasOpsPermission(event.getEntity())) {
             return;
         }
 
@@ -279,7 +280,7 @@ public class ModEvents {
             return;
         }
 
-        if (event.getEntity() instanceof Player) {
+//        if (event.getEntity() instanceof Player) {
 
             ItemStack heldItem = ItemStack.EMPTY;
             if (event.getHand() == InteractionHand.MAIN_HAND) {
@@ -297,11 +298,11 @@ public class ModEvents {
 //                        sendProtectedMessage(event.getLevel(), (Player) event.getEntity());
 //                    }
 //                }
-            }
+//            }
         }
-        else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
-            event.setCanceled(true);
-        }
+//        else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
+//            event.setCanceled(true);
+//        }
     }
 
     @SubscribeEvent
@@ -397,16 +398,34 @@ public class ModEvents {
     }
 
 
-    @SubscribeEvent
-    public static void onPlayerUseItem(final LivingEntityUseItemEvent event) {
-        if (event.getEntity().level().isClientSide()) {
-            return;
-        }
+//    @SubscribeEvent
+//    public static void onPlayerUseItem(final LivingEntityUseItemEvent event) {
+////        if (event.getEntity().level().isClientSide()) {
+////            return;
+////        }
+//
+//        // TODO finish
+//    }
+
+    /**
+     * Ops permission.
+     * @param player
+     * @return
+     */
+    private static boolean hasOpsPermission(Player player) {
+        return player.hasPermissions(Config.SERVER.general.opsPermissionLevel.get());
+        // TODO are part of the ops/admin config list
     }
 
-    private static boolean hasOpsPermission(Player entity) {
-        return entity.hasPermissions(Config.SERVER.general.opsPermissionLevel.get());
-    }
+//    /**
+//     * Most powerful permission. Can do anything, anywhere, regardless of parcel protections.
+//     * @param player
+//     * @return
+//     */
+//    private static boolean hasDeityPermission(Player player) {
+//        // has Ops AND is Creative mod
+//        return hasOpsPermission(player) && player.getAbilities().instabuild;
+//    }
 
     /**
      * TODO move to MessageUtil class

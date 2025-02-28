@@ -25,6 +25,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
@@ -636,30 +637,42 @@ public class OpsCommand {
                                                                 )
                                                                 .then(Commands.literal(CommandHelper.PLAYERS)
                                                                                 ///// WHITELIST ADD /////
-                                                                                .then(Commands.literal(CommandHelper.ADD)
-                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-                                                                                                .suggests(OWNER_NAMES)
-                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-                                                                                                        .suggests(PARCEL_NAMES)
-                                                                                                        .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandDelegate.addToWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-                                                                                                        })
-                                                                                                )
-                                                                                        )
-                                                                                )
-                                                                                ///// WHITELIST LIST /////
-                                                                                .then(Commands.literal(CommandHelper.LIST)
-                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-                                                                                                .suggests(OWNER_NAMES)
-                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-                                                                                                        .suggests(PARCEL_NAMES)
-                                                                                                        .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandDelegate.displayWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-                                                                                                        })
-                                                                                                )
-                                                                                        )
-                                                                                )
+//                                                                                .then(Commands.literal(CommandHelper.ADD)
+//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+//                                                                                                .suggests(OWNER_NAMES)
+//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//                                                                                                        .suggests(PARCEL_NAMES)
+//                                                                                                        .executes(source -> {
+//                                                                                                            return ParcelWhitelistCommandDelegate.addToWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+//                                                                                                        })
+//                                                                                                )
+//                                                                                        )
+//                                                                                )
+//                                                                                ///// WHITELIST LIST /////
+//                                                                                .then(Commands.literal(CommandHelper.LIST)
+//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+//                                                                                                .suggests(OWNER_NAMES)
+//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//                                                                                                        .suggests(PARCEL_NAMES)
+//                                                                                                        .executes(source -> {
+//                                                                                                            return ParcelWhitelistCommandDelegate.displayWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+//                                                                                                        })
+//                                                                                                )
+//                                                                                        )
+//                                                                                )
                                                                         ///// TODO WHITELIST REMOVE /////
+                                                                        ///// PLAYER WHITELIST REMOVE /////
+//                                                                        .then(Commands.literal(CommandHelper.LIST)
+//                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+//                                                                                        .suggests(OWNER_NAMES)
+//                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//                                                                                                .suggests(PARCEL_NAMES)
+//                                                                                                .executes(source -> {
+//                                                                                                    return ParcelWhitelistCommandDelegate.removeFromWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+//                                                                                                })
+//                                                                                        )
+//                                                                                )
+//                                                                        )
                                                                 )
                                                 )
                                                 .then(Commands.literal(CommandHelper.BACKUP)
@@ -689,7 +702,13 @@ public class OpsCommand {
      */
     private static int generateDeed(CommandSourceStack source, String deedType, int xSize, int ySizeUp, int ySizeDown, int zSize, String nationName) {
         // get the type
-        ParcelType type = ParcelType.valueOf(deedType);
+        ParcelType type;
+        try {
+            type = ParcelType.valueOf(deedType);
+        } catch (Exception e) {
+            source.sendFailure(Component.translatable(LangUtil.chat("deed.invalid_type")).withStyle(ChatFormatting.RED));
+            return 0;
+        }
 
         // find the nation by name
         UUID nationId = ParcelRegistry.getNations().stream()
@@ -725,7 +744,11 @@ public class OpsCommand {
                 // a deed is a net new parcel to be used by anyone. the name would not be known
                 // and also this avoids duplicate names floating around in the deeds.
                 case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
-                case CITIZEN -> DeedFactory.createCitizenDeed(size, nationId);
+                case CITIZEN -> {
+                    ItemStack d = DeedFactory.createCitizenDeed(size, nationId);
+                    d.getOrCreateTag().putString(CitizenDeed.NATION_NAME, nationName);
+                    yield d;
+                }
                 case ZONE -> ItemStack.EMPTY;
             };
 
@@ -773,7 +796,7 @@ public class OpsCommand {
                         source.getPlayerOrException().getInventory().add(deed);
                     }
                 } catch (Exception e) {
-                    ClaimMyLand.LOGGER.error("error on give -> ", e);
+                    ClaimMyLand.LOGGER.error("error on generateFromParcel -> ", e);
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED), false);
 
                 }
@@ -802,7 +825,7 @@ public class OpsCommand {
                     source.getPlayerOrException().getInventory().add(deed);
                 }
             } catch (Exception e) {
-                ClaimMyLand.LOGGER.error("error on give -> ", e);
+                ClaimMyLand.LOGGER.error("error on generateDeedFromNation -> ", e);
                 CommandHelper.sendUnableToGenerateDeedMessage(source, nationName);
             }
         } else {

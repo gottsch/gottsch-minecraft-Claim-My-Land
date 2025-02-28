@@ -683,32 +683,8 @@ public class ParcelRegistry {
                 parcel = parcels.get(0);
             }
 
-            if (itemStack != ItemStack.EMPTY && !itemStack.is(Items.AIR)) {
-                // TODO add whitelist checks here as well
-                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", itemStack.getDisplayName().getString(), parcel);
-                // TODO block tag and block could be merged into one list, where tags are prefixed with # and would have to be removed before checking
-                // test the item against the whitelisted item tags for the parcel
-                for (String tagName : parcel.getItemTagWhitelist()) {
-                    ResourceLocation location = new ResourceLocation(tagName);
-                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
-                    // get the tag from the resource key
-                    if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) {
-                        return true;
-                    }
-                }
-
-                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
-                for (String itemName : parcel.getItemWhitelist()) {
-                    ResourceLocation location = new ResourceLocation(itemName);
-                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
-                    if (ModUtil.getName(itemStack.getItem()).equals(location)) {
-                        return true;
-                    }
-                }
-            }
-
             // check player's access
-            return (itemStack != ItemStack.EMPTY && !itemStack.is(Items.AIR)) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
+            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
         }
         return true;
     }
@@ -741,6 +717,7 @@ public class ParcelRegistry {
                 parcel = parcels.get(0);
             }
 
+            // TODO move to AbstractParcel - shouldn't be globally controlled by registry
             ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
             // TODO block tag and block could be merged into one list, where tags are prefixed with # and would have to be removed before checking
             // test the block against the whitelisted block tags for the parcel
@@ -762,10 +739,6 @@ public class ParcelRegistry {
                     return true;
                 }
             }
-
-            // TODO check ItemTagWhitelist
-
-            // TODO check ItemWhitelist
 
             return parcel.grantsAccess(entityId, heldItem);
          }

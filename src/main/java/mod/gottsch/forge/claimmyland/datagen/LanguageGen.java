@@ -169,6 +169,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("deed.not_owner"), "You are not the owner of this deed.");
         add(LangUtil.chat("deed.too_small"), "One of the Deed's dimensions is too small.");
         add(LangUtil.chat("deed.outside_world_boundaries"), "The parcel would extend beyond the world boundaries.");
+        add(LangUtil.chat("deed.invalid_type"), "Invalid deed type. The accepted values are: PLAYER, CITIZEN, or NATION.");
 
         // foundation stones
         add(LangUtil.chat("foundation_stone.unable_to_location"), "Unable to locate foundation stone block entity.");
@@ -193,6 +194,8 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.area"), "Area: %s m^2");
         add(LangUtil.chat("parcel.volume"), "Volume: %s m^3");
         add(LangUtil.chat("parcel.border"), "Border: %s");
+        add(LangUtil.chat("parcel.claimed_by.not_claimed"), "The block at %s is not claimed.");
+        add(LangUtil.chat("parcel.claimed_by.abandoned"), "None (abandoned)");
 
         /*
          *  Util.tooltips

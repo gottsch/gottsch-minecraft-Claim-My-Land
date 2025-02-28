@@ -1,0 +1,28 @@
+{
+  "values": [
+    {
+      "id": "mageflame:mage_flame_scroll",
+      "required": false
+    },
+    {
+      "id": "mageflame:lesser_revelation_scroll",
+      "required": false
+    },
+    {
+      "id": "mageflame:greater_revelation_scroll",
+      "required": false
+    },
+    {
+      "id": "mageflame:bubble_flame_scroll",
+      "required": false
+    },
+    {
+      "id": "mageflame:winged_torch_scroll",
+      "required": false
+    },
+    {
+      "id": "mageflame:ember_hound_scroll",
+      "required": false
+    }
+  ]
+}

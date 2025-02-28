@@ -21,17 +21,14 @@ package mod.gottsch.forge.claimmyland.datagen;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.tags.ModTags;
+import mod.gottsch.forge.treasure2.core.item.TreasureItems;
 import net.minecraft.core.HolderLookup.Provider;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.TagLoader;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.common.data.BlockTagsProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 
 import java.util.concurrent.CompletableFuture;
@@ -50,12 +47,13 @@ public class ModItemTagsProvider extends ItemTagsProvider {
     protected void addTags(Provider provider) {
         tag(ModTags.Items.COMMON_NATION_WHITELIST)
                 .addTags(
-
+                        ItemTags.BOATS
                 )
                 .add(
                         Items.BOOK,
                         Items.ENCHANTED_BOOK,
-                        Items.MAP
+                        Items.MAP,
+                        Items.POTION
                 );
 
 
@@ -63,13 +61,37 @@ public class ModItemTagsProvider extends ItemTagsProvider {
         String MF = "mageflame";
         // TODO complete
         tag(ModTags.Items.MAGEFLAME_SCROLLS_WHITELIST)
-                .addOptional(new ResourceLocation(MF, "mage_flame"))
-                .addOptional(new ResourceLocation(MF, "lesser_revelation"))
-                .addOptional(new ResourceLocation(MF, "greater_revelation"))
-                .addOptional(new ResourceLocation(MF, "bubble_flame"))
-                .addOptional(new ResourceLocation(MF, "winged_torch"))
-                .addOptional(new ResourceLocation(MF, "ember_hound"))
+                .addOptional(new ResourceLocation(MF, "mage_flame_scroll"))
+                .addOptional(new ResourceLocation(MF, "lesser_revelation_scroll"))
+                .addOptional(new ResourceLocation(MF, "greater_revelation_scroll"))
+                .addOptional(new ResourceLocation(MF, "bubble_flame_scroll"))
+                .addOptional(new ResourceLocation(MF, "winged_torch_scroll"))
+                .addOptional(new ResourceLocation(MF, "ember_hound_scroll"))
         ;
+
+        tag(ModTags.Items.TREASURE2_KEYS_WHITELIST)
+                .addOptional(TreasureItems.WOOD_KEY.getId())
+                .addOptional(TreasureItems.STONE_KEY.getId())
+                .addOptional(TreasureItems.LEAF_KEY.getId())
+                .addOptional(TreasureItems.EMBER_KEY.getId())
+                .addOptional(TreasureItems.LIGHTNING_KEY.getId())
+                .addOptional(TreasureItems.IRON_KEY.getId())
+                .addOptional(TreasureItems.GOLD_KEY.getId())
+                .addOptional(TreasureItems.METALLURGISTS_KEY.getId())
+                .addOptional(TreasureItems.ONYX_KEY.getId())
+                .addOptional(TreasureItems.TOPAZ_KEY.getId())
+                .addOptional(TreasureItems.RUBY_KEY.getId())
+                .addOptional(TreasureItems.SAPPHIRE_KEY.getId())
+                .addOptional(TreasureItems.DIAMOND_KEY.getId())
+                .addOptional(TreasureItems.EMERALD_KEY.getId())
+                .addOptional(TreasureItems.JEWELLED_KEY.getId())
+                .addOptional(TreasureItems.SKELETON_KEY.getId())
+                .addOptional(TreasureItems.SPIDER_KEY.getId())
+                .addOptional(TreasureItems.WITHER_KEY.getId())
+                .addOptional(TreasureItems.ONE_KEY.getId())
+                .addOptional(TreasureItems.PILFERERS_LOCK_PICK.getId())
+                .addOptional(TreasureItems.THIEFS_LOCK_PICK.getId())
+                ;
 
         // TODO add some more common tags
     }

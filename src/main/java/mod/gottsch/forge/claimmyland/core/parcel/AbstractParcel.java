@@ -21,7 +21,9 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
@@ -29,6 +31,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
@@ -119,12 +122,12 @@ public abstract class AbstractParcel implements Parcel {
     public boolean grantsAccess(UUID entityId) {
         // if a parcel has no owner, anyone has access to modify
         if (getOwnerId() == null) {
-//            ClaimMyLand.LOGGER.debug("parcel has no owner");
+            ClaimMyLand.LOGGER.debug("parcel has no owner");
             return true;
         }
         // if a parcel has a owner, only the owner has access
         else if (getOwnerId().equals(entityId)) {
-//            ClaimMyLand.LOGGER.debug("ids match -> {} - {}", getOwnerId(), entityId);
+            ClaimMyLand.LOGGER.debug("ids match -> {} - {}", getOwnerId(), entityId);
             return true;
         } else {
 //            ClaimMyLand.LOGGER.debug("checking whitelist ...");
@@ -138,12 +141,44 @@ public abstract class AbstractParcel implements Parcel {
      * ie certain items grant the player access, like a deed, which under normal circumstances they
      * would not have access.
      * @param entityId
-     * @param stack
+     * @param itemStack
      * @return
      */
     @Override
-    public boolean grantsAccess(UUID entityId, ItemStack stack) {
-//        ClaimMyLand.LOGGER.debug("in grantsAccess() for entityId -> {} and item -> {}", entityId, stack.getDisplayName().getString());
+    public boolean grantsAccess(UUID entityId, ItemStack itemStack) {
+
+        /*
+         * NOTE item right-click of a deed is permitted in any parcel,
+         * but the actual usage/execution is checked during use().
+         */
+        if (itemStack.getItem() instanceof Deed) {
+            return true;
+        }
+
+        // if you have an item in your hand, do whitelist short-circuit tests
+        if (itemStack != null && !itemStack.isEmpty()) {
+            ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", itemStack.getDisplayName().getString(), this);
+            // test the item against the whitelisted item tags for the parcel
+            for (String tagName : getItemTagWhitelist()) {
+                ResourceLocation location = new ResourceLocation(tagName);
+                ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
+                // get the tag from the resource key
+                if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) {
+                    return true;
+                }
+            }
+
+            ClaimMyLand.LOGGER.debug("value of item white list -> {}", getItemWhitelist());
+            for (String itemName : getItemWhitelist()) {
+                ResourceLocation location = new ResourceLocation(itemName);
+                ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+                if (ModUtil.getName(itemStack.getItem()).equals(location)) {
+                    return true;
+                }
+            }
+        }
+
+        //        ClaimMyLand.LOGGER.debug("in grantsAccess() for entityId -> {} and item -> {}", entityId, stack.getDisplayName().getString());
         return grantsAccess(entityId);
     }
 
@@ -545,7 +580,9 @@ public abstract class AbstractParcel implements Parcel {
     @Override
     public String toString() {
         return "AbstractParcel{" +
-                "id=" + id +
+                "abandonedTime=" + abandonedTime +
+                ", id=" + id +
+                ", nationId=" + nationId +
                 ", ownerId=" + ownerId +
                 ", deedId=" + deedId +
                 ", name='" + name + '\'' +
@@ -553,6 +590,12 @@ public abstract class AbstractParcel implements Parcel {
                 ", size=" + size +
                 ", whitelist=" + whitelist +
                 ", type=" + type +
+                ", foundedTime=" + foundedTime +
+                ", ownerTime=" + ownerTime +
+                ", blockWhitelist=" + blockWhitelist +
+                ", blockTagWhitelist=" + blockTagWhitelist +
+                ", itemWhitelist=" + itemWhitelist +
+                ", itemTagWhitelist=" + itemTagWhitelist +
                 '}';
     }
 }

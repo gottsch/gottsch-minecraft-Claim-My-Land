@@ -24,6 +24,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
 import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
@@ -446,6 +447,7 @@ public class PlayersCommand {
 
 			// create a deed item
 			ItemStack deed = DeedFactory.createCitizenDeed(size, nation.get().getNationId());
+			deed.getOrCreateTag().putString(CitizenDeed.NATION_NAME, nationName);
 
 			// attempt to add the deed item to the player inventory
 			if (deed != ItemStack.EMPTY) {
