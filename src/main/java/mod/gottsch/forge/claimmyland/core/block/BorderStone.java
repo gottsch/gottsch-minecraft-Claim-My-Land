@@ -46,6 +46,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,7 +60,12 @@ import java.util.Optional;
 public class BorderStone extends BaseEntityBlock implements EntityBlock {
     public static final EnumProperty<Direction> FACING = EnumProperty.create("facing", Direction.class);
 
-    private static final VoxelShape SHAPE = Block.box(0D, 0D, 0D, 16D, 11D, 16D);
+    private static final VoxelShape BOTTOM = Block.box(0, 0, 0, 16, 3, 16);
+    private static final VoxelShape MIDDLE = Block.box(1, 3, 1, 15, 7, 15);
+    private static final VoxelShape TOP = Block.box(0, 7, 0, 16, 10, 16);
+
+    // TODO finish
+    private static final VoxelShape SHAPE = Shapes.or(BOTTOM, MIDDLE, TOP);
 
     /**
      *

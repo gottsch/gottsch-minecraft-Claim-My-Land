@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.command;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
+import mod.gottsch.forge.claimmyland.core.tags.ModTags;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -29,7 +30,9 @@ import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * 
@@ -62,6 +65,12 @@ public class CommandHelper {
 	public static final String BACKUP = "backup";
 	public static final String RESTORE = "restore";
 	public static final String WHITELIST = "whitelist";
+	public static final String BLOCK_TAG = "block_tags";
+	public static final String BLOCKS = "blocks";
+	public static final String ITEM_TAG = "item_tags";
+	public static final String ITEMS = "items";
+	public static final String PLAYERS = "players";
+	public static final String TAG_NAME = "tag_name";
 	public static final String BY_OWNER = "by_owner";
 	public static final String BY_NATION = "by_nation";
 	public static final String NATION_NAME = "nation_name";
@@ -70,13 +79,30 @@ public class CommandHelper {
 	public static final String FROM_PARCEL = "from_parcel";
 	public static final String DEMOLISH = "demolish";
     public static final String BORDER_TYPE ="border_type" ;
+	public static final String ITEM = "item";
+	public static final String GIVE = "give";
+	public static final String GIVE_ITEM = "give_item";
+	public static final String CLAIMED_BY = "claimed_by";
 
 	public static final SuggestionProvider<CommandSourceStack> BORDER_TYPES = (source, builder) -> {
 		return SharedSuggestionProvider.suggest(Arrays.stream(NationBorderType.values()).map(NationBorderType::getSerializedName), builder);
 	};
-	public static final String GIVE = "give";
-	public static final String GIVE_ITEM = "give_item";
-	public static final String CLAIMED_BY = "claimed_by";
+
+	public static final SuggestionProvider<CommandSourceStack> BLOCK_TAGS = (source, builder) -> {
+		List<String> tags = new ArrayList<>();
+		ModTags.Blocks.BLOCK_TAG_WHITELISTS.forEach(tagKey -> {
+			tags.add(tagKey.location().toString());
+		});
+		return SharedSuggestionProvider.suggest(tags, builder);
+	};
+
+	public static final SuggestionProvider<CommandSourceStack> ITEM_TAGS = (source, builder) -> {
+		List<String> tags = new ArrayList<>();
+		ModTags.Items.ITEM_TAG_WHITELISTS.forEach(tagKey -> {
+			tags.add(tagKey.location().toString());
+		});
+		return SharedSuggestionProvider.suggest(tags, builder);
+	};
 
 	/**
 	 * marks persistent data as dirty so that minecraft will auto save it.

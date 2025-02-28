@@ -2,11 +2,15 @@
 package mod.gottsch.forge.claimmyland.datagen;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
+import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraftforge.data.event.GatherDataEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 
@@ -20,12 +24,14 @@ public class DataGenerators {
 	public static void gatherData(GatherDataEvent event) {
 		DataGenerator generator = event.getGenerator();
 		PackOutput output = generator.getPackOutput();
+		CompletableFuture<HolderLookup.Provider> lookupProvider = event.getLookupProvider();
+
 		if (event.includeServer()) {
 //			generator.addProvider(event.includeServer(), new Recipes(output));
-			//            generator.addProvider(new TutLootTables(generator));
-			//            TutBlockTags blockTags = new TutBlockTags(generator, event.getExistingFileHelper());
-			//            generator.addProvider(blockTags);
-			//            generator.addProvider(new DDItemTags(generator, blockTags, event.getExistingFileHelper()));
+			ModBlockTagsProvider blockTags = new ModBlockTagsProvider(output, lookupProvider, event.getExistingFileHelper());
+			generator.addProvider(true, blockTags);
+			generator.addProvider(true, new ModItemTagsProvider(output, lookupProvider, blockTags.contentsGetter(), event.getExistingFileHelper()));
+
 		}
 		if (event.includeClient()) {
 			generator.addProvider(event.includeClient(), new BlockStates(output, event.getExistingFileHelper()));

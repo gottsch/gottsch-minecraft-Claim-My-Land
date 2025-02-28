@@ -289,6 +289,18 @@ public interface Parcel {
 
     int getBufferSize();
 
+    List<String> getBlockTagWhitelist();
+
+    void setBlockTagWhitelist(List<String> blockTagWhitelist);
+
+    List<String> getBlockWhitelist();
+
+    List<String> getItemTagWhitelist();
+
+    void setItemTagWhitelist(List<String> itemTagWhitelist);
+
+    List<String> getItemWhitelist();
+
     ParcelType getType();
 
     void setType(ParcelType type);

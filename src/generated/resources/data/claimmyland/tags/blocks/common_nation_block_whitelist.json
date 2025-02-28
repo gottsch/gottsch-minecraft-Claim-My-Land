@@ -1,0 +1,16 @@
+{
+  "values": [
+    "#claimmyland:door_gate_whitelist",
+    "#claimmyland:chest_barrel_whitelist",
+    "#claimmyland:crafting_whitelist",
+    "#minecraft:wooden_buttons",
+    "#minecraft:wooden_pressure_plates",
+    "#minecraft:stone_buttons",
+    "#minecraft:stone_pressure_plates",
+    "#minecraft:anvil",
+    "#minecraft:beds",
+    "#minecraft:cauldrons",
+    "#forge:bookshelves",
+    "minecraft:jukebox"
+  ]
+}

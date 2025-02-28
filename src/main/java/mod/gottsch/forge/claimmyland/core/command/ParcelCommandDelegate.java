@@ -307,6 +307,9 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
+    /*
+     *
+     */
     public static int claimedBy(CommandSourceStack source, BlockPos pos) {
 
         try {
@@ -328,12 +331,21 @@ public class ParcelCommandDelegate {
                 parcels.forEach(p -> {
                     // locate the player name
                     String playerName;
-                    Player player = source.getLevel().getPlayerByUUID(p.getOwnerId());
-                    if (player != null) {
-                        playerName = player.getScoreboardName();
+
+                    // check if the parcel has an owner
+                    if (p.getOwnerId() != null) {
+                        // get online player
+                        Player player = source.getLevel().getPlayerByUUID(p.getOwnerId());
+                        if (player != null) {
+                            playerName = player.getScoreboardName();
+                        } else {
+                            // get player from the player registry
+                            Optional<String> optionalPlayerName = PlayerRegistry.get(p.getOwnerId());
+                            // TODO if not found, be the offline player name
+                            playerName = optionalPlayerName.orElse(p.getOwnerId().toString());
+                        }
                     } else {
-                        Optional<String> optionalPlayerName = PlayerRegistry.get(p.getOwnerId());
-                        playerName = optionalPlayerName.orElse(p.getOwnerId().toString());
+                        playerName = Component.translatable(LangUtil.chat("parcel.claimed_by.abandoned")).getString();
                     }
 
                     // The block at (x, y, z) is claimed by [name].
@@ -414,6 +426,8 @@ public class ParcelCommandDelegate {
                 messages.forEach(message -> {
                     source.sendSuccess(() -> message, false);
                 });
+            } else {
+                source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.claimed_by.not_claimed"), posCoords.toShortString()).withStyle(ChatFormatting.GREEN), false);
             }
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred retrieving claimed by:", e);
@@ -449,16 +463,17 @@ public class ParcelCommandDelegate {
                         case ZONE -> ItemStack.EMPTY;
                     };
 
-                    // copy props over
-                    CompoundTag tag = deed.getOrCreateTag();
-                    tag.putUUID(Deed.PARCEL_ID, parcel.get().getId());
-                    if (parcel.get().getNationId() != null) {
-                        tag.putUUID(NationDeed.NATION_ID, parcel.get().getNationId());
-                    }
-
                     // give parcel to player
                     if (deed != ItemStack.EMPTY) {
+                        // copy props over
+                        CompoundTag tag = deed.getOrCreateTag();
+                        tag.putUUID(Deed.PARCEL_ID, parcel.get().getId());
+                        if (parcel.get().getNationId() != null) {
+                            tag.putUUID(NationDeed.NATION_ID, parcel.get().getNationId());
+                        }
+
                         player.getInventory().add(deed);
+
                         // remove the parcel
                         ParcelRegistry.removeParcel(parcel.get());
 
@@ -470,9 +485,12 @@ public class ParcelCommandDelegate {
                         if (be instanceof BorderStoneBlockEntity) {
                             ((BorderStoneBlockEntity) be).removeParcelBorder(source.getLevel(), coords);
                         }
+                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.success")).withStyle(ChatFormatting.GREEN), false);
+                    } else {
+                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.zone_cannot_demolish")).withStyle(ChatFormatting.RED), false);
                     }
                 } else {
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.abandon.failure")).withStyle(ChatFormatting.RED), false);
+                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.failure")).withStyle(ChatFormatting.RED), false);
                 }
             } else {
                 CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);

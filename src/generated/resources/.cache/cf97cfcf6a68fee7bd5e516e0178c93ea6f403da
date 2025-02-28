@@ -1,0 +1,7 @@
+// 1.20.1	2025-02-27T09:30:43.0952592	Tags for minecraft:block mod id claimmyland
+c5fc952862c804466804688f97629482fdf389ea data/claimmyland/tags/blocks/chest_barrel_whitelist.json
+631b5737b7a4981ff5defd66105916dfa3766788 data/claimmyland/tags/blocks/common_nation_block_whitelist.json
+e521e77f618ccb5927ac948dd9046c6a0e09b6b3 data/claimmyland/tags/blocks/crafting_whitelist.json
+dd79d03189856ae2a5bec03776a1cee8397b9ea6 data/claimmyland/tags/blocks/door_gate_whitelist.json
+83c1cc1669d50dc97b06cb4f58d3c6e842f7546f data/claimmyland/tags/blocks/legacy_vault_whitelist.json
+40adb803d4c6883e413ac8d06c94f5c9e6c2cb20 data/claimmyland/tags/blocks/treasure2_chest_whitelist.json

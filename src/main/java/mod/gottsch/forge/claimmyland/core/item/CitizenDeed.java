@@ -19,9 +19,11 @@
  */
 package mod.gottsch.forge.claimmyland.core.item;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.parcel.CitizenParcel;
+import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -48,6 +50,7 @@ import java.util.Optional;
  *
  */
 public class CitizenDeed extends Deed {
+    public static final String NATION_NAME = "nation_name";
 
     public CitizenDeed(Properties properties) {
         super(properties);
@@ -131,8 +134,11 @@ public class CitizenDeed extends Deed {
         if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
             tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
         }
-        if (stack.getTag() != null && stack.getTag().contains(NationDeed.NATION_ID)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + stack.getTag().getString(NationDeed.NATION_ID)));
+        if (stack.getTag() != null && stack.getTag().contains(CitizenDeed.NATION_NAME)) {
+            String nation_name = stack.getTag().getString(NATION_NAME);
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + nation_name));
+        } else {
+            ClaimMyLand.LOGGER.debug("Citizen Deed doesn't have a Nation ID");
         }
         if (stack.getTag() != null && stack.getTag().contains(Deed.SIZE)) {
             appendSizeHoverText(stack, level, tooltip, flag);

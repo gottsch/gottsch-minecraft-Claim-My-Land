@@ -25,6 +25,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
@@ -33,18 +34,23 @@ import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
+import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -96,10 +102,68 @@ public class OpsCommand {
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
+    private static final SuggestionProvider<CommandSourceStack> BLOCKS = (source, builder) -> {
+        List<String> tags = List.of(
+                ModUtil.getName(Blocks.CHEST).toString(),
+                ModUtil.getName(Blocks.BARREL).toString()
+        );
+
+        return SharedSuggestionProvider.suggest(tags, builder);
+    };
+
+
+    private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCK_TAGS = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
+        String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+        Optional<List<String>> list = Optional.empty();
+        try {
+            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+        } catch(Exception e){
+            // TODO add warning
+        }
+        return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+    };
+
+    private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCKS = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
+        String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+        Optional<List<String>> list = Optional.empty();
+        try {
+            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
+        } catch(Exception e){
+            // TODO add warning
+        }
+        return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+    };
+
+    private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEM_TAGS = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
+        String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+        Optional<List<String>> list = Optional.empty();
+        try {
+            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+        } catch(Exception e){
+            // TODO add warning
+        }
+        return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+    };
+
+    private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEMS = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
+        String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+        Optional<List<String>> list = Optional.empty();
+        try {
+            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
+        } catch(Exception e){
+            // TODO add warning
+        }
+        return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+    };
+
     /*
      * cml-ops
      */
-    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+    public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext buildContext) {
         dispatcher
                 .register(Commands.literal(CommandHelper.CML_OPS).requires(source -> {
                                     return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get()); // only ops can use command
@@ -110,72 +174,72 @@ public class OpsCommand {
                                                 })
                                                 ///// GENERATE OPTION /////
 //                                                .then(Commands.literal(CommandHelper.GENERATE)
-                                                        ///// NEW DEED /////
-                                                        .then(Commands.literal(CommandHelper.NEW)
-                                                                .then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
-                                                                        .suggests(DEED_TYPES)
-                                                                        .then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
-                                                                                .then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
-                                                                                        .then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
-                                                                                                .then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
+                                                ///// NEW DEED /////
+                                                .then(Commands.literal(CommandHelper.NEW)
+                                                        .then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
+                                                                .suggests(DEED_TYPES)
+                                                                .then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
+                                                                        .then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
+                                                                                .then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
+                                                                                        .then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
+                                                                                                .executes(source -> {
+                                                                                                    return generateDeed(source.getSource(),
+                                                                                                            StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
+                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
+                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
+                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
+                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE)
+                                                                                                    );
+                                                                                                })
+                                                                                                .then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
+                                                                                                        .suggests(NATION_NAMES)
                                                                                                         .executes(source -> {
                                                                                                             return generateDeed(source.getSource(),
                                                                                                                     StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
                                                                                                                     IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
                                                                                                                     IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
                                                                                                                     IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
-                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE)
+                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE),
+                                                                                                                    StringArgumentType.getString(source, CommandHelper.NATION_NAME)
                                                                                                             );
+                                                                                                            // TODO need to supply the owner name
                                                                                                         })
-                                                                                                        .then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
-                                                                                                                .suggests(NATION_NAMES)
-                                                                                                                .executes(source -> {
-                                                                                                                    return generateDeed(source.getSource(),
-                                                                                                                            StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
-                                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
-                                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
-                                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
-                                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE),
-                                                                                                                            StringArgumentType.getString(source, CommandHelper.NATION_NAME)
-                                                                                                                    );
-                                                                                                                    // TODO need to supply the owner name
-                                                                                                                })
-                                                                                                        )
                                                                                                 )
-
                                                                                         )
+
                                                                                 )
                                                                         )
                                                                 )
                                                         )
-                                                        ///// TRANSFER /////
-                                                        .then(Commands.literal(CommandHelper.TRANSFER)
+                                                )
+                                                ///// TRANSFER /////
+                                                .then(Commands.literal(CommandHelper.TRANSFER)
 //                                                                .then(Commands.literal(CommandHelper.BY_OWNER)
-                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-                                                                                .suggests(OWNER_NAMES)
-                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-                                                                                        .suggests(PARCEL_NAMES)
+                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                        .suggests(OWNER_NAMES)
+                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                .suggests(PARCEL_NAMES)
+                                                                                .executes(source -> {
+                                                                                    // TODO make new method
+                                                                                    return generateDeedFromParcel(source.getSource(),
+                                                                                            StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
+                                                                                            StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                            "");
+                                                                                })
+                                                                                .then(Commands.argument(CommandHelper.NEW_OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
                                                                                         .executes(source -> {
-                                                                                            // TODO make new method
                                                                                             return generateDeedFromParcel(source.getSource(),
                                                                                                     StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
                                                                                                     StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                    "");
+                                                                                                    StringArgumentType.getString(source, CommandHelper.NEW_OWNER_NAME));
                                                                                         })
-                                                                                        .then(Commands.argument(CommandHelper.NEW_OWNER_NAME, StringArgumentType.string())
-                                                                                                .suggests(OWNER_NAMES)
-                                                                                                .executes(source -> {
-                                                                                                    return generateDeedFromParcel(source.getSource(),
-                                                                                                            StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
-                                                                                                            StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                            StringArgumentType.getString(source, CommandHelper.NEW_OWNER_NAME));
-                                                                                                })
-                                                                                        )
                                                                                 )
                                                                         )
+                                                                )
 //                                                                )
-                                                        )
-                                                        // TODO deprecated
+                                                )
+                                        // TODO deprecated
 //                                                        .then(Commands.literal("citizen_of_nation")
 //                                                                .then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
 //                                                                        .suggests(NATION_NAMES)
@@ -215,17 +279,17 @@ public class OpsCommand {
                                                                 )
                                                         )
                                                         .then(Commands.literal(CommandHelper.BY_OWNER)
-                                                            .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-                                                                    .suggests(OWNER_NAMES)
-                                                                    .executes(source -> {
-                                                                        return ParcelCommandDelegate.listParcelsByOwner(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME));
-                                                                    })
-                                                            )
+                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                        .suggests(OWNER_NAMES)
+                                                                        .executes(source -> {
+                                                                            return ParcelCommandDelegate.listParcelsByOwner(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME));
+                                                                        })
+                                                                )
                                                         )
                                                         .then(Commands.literal(CommandHelper.BY_ABANDONED)
-                                                            .executes(source -> {
-                                                                return ParcelCommandDelegate.listParcelsByAbandoned(source.getSource());
-                                                            })
+                                                                .executes(source -> {
+                                                                    return ParcelCommandDelegate.listParcelsByAbandoned(source.getSource());
+                                                                })
                                                         )
                                                 )
 
@@ -292,12 +356,12 @@ public class OpsCommand {
                                                 .then(Commands.literal(CommandHelper.BORDER_TYPE)
                                                         .then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
                                                                 .suggests(NATION_NAMES)
-                                                                        .then(Commands.argument(CommandHelper.BORDER_TYPE, StringArgumentType.string())
-                                                                                .suggests(BORDER_TYPES)
-                                                                                .executes(source -> {
-                                                                                    return ParcelCommandDelegate.borderType(source.getSource(), StringArgumentType.getString(source, CommandHelper.NATION_NAME), StringArgumentType.getString(source, CommandHelper.BORDER_TYPE));
-                                                                                })
-                                                                       )
+                                                                .then(Commands.argument(CommandHelper.BORDER_TYPE, StringArgumentType.string())
+                                                                        .suggests(BORDER_TYPES)
+                                                                        .executes(source -> {
+                                                                            return ParcelCommandDelegate.borderType(source.getSource(), StringArgumentType.getString(source, CommandHelper.NATION_NAME), StringArgumentType.getString(source, CommandHelper.BORDER_TYPE));
+                                                                        })
+                                                                )
 
                                                         )
                                                 )
@@ -375,33 +439,242 @@ public class OpsCommand {
                                                 )
                                                 ///// WHITELIST OPTION /////
                                                 .then(Commands.literal(CommandHelper.WHITELIST)
-                                                        ///// WHITELIST ADD /////
-                                                        .then(Commands.literal(CommandHelper.ADD)
-                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-                                                                        .suggests(OWNER_NAMES)
-                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-                                                                                .suggests(PARCEL_NAMES)
-                                                                                .executes(source -> {
-                                                                                    return ParcelWhitelistCommandDelegate.addToWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-                                                                                })
+                                                                // TODO change to subcommand [PLAYER | BLOCK_TAG | BLOCK | etc]
+                                                                ///// BLOCK TAG WHITELIST OPTION /////
+                                                                .then(Commands.literal(CommandHelper.BLOCK_TAG)
+                                                                        ///// WHITELIST ADD /////
+                                                                        .then(Commands.literal(CommandHelper.ADD)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+                                                                                                        .suggests(CommandHelper.BLOCK_TAGS)
+                                                                                                        .executes(source -> {
+                                                                                                            return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// BLOCK TAGS WHITELIST LIST /////
+                                                                        .then(Commands.literal(CommandHelper.LIST)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .executes(source -> {
+                                                                                                    return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+                                                                                                })
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// BLOCK TAGS WHITELIST REMOVE /////
+                                                                        .then(Commands.literal(CommandHelper.REMOVE)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+                                                                                                        .suggests(CURRENT_BLOCK_TAGS)
+                                                                                                        .executes(source -> {
+                                                                                                            return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
                                                                         )
                                                                 )
-                                                        )
-                                                        ///// WHITELIST LIST /////
-                                                        .then(Commands.literal(CommandHelper.LIST)
-                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-                                                                        .suggests(OWNER_NAMES)
-                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-                                                                                .suggests(PARCEL_NAMES)
-                                                                                .executes(source -> {
-                                                                                    return ParcelWhitelistCommandDelegate.displayWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-                                                                                })
+                                                                /// ///
+                                                                ///// BLOCK WHITELIST OPTION /////
+                                                                .then(Commands.literal(CommandHelper.BLOCKS)
+                                                                                ///// BLOCK WHITELIST ADD /////
+                                                                                .then(Commands.literal(CommandHelper.ADD)
+                                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                                                .suggests(OWNER_NAMES)
+                                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                                                .suggests(PARCEL_NAMES)
+//                                                                                        .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+                                                                                                                                .then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
+                                                                                                                                                .executes(source -> {
+                                                                                                                                                    return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+//                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
+                                                                                                                                                            ItemArgument.getItem(source, CommandHelper.ITEM),
+                                                                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
+                                                                                                                                                })
+                                                                                                                                )
+                                                                                                                )
+                                                                                                )
+                                                                                )
+                                                                                ///// BLOCK WHITELIST REMOVE /////
+                                                                                .then(Commands.literal(CommandHelper.REMOVE)
+                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                                .suggests(OWNER_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                        .suggests(PARCEL_NAMES)
+                                                                                                        .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+                                                                                                                .suggests(CURRENT_BLOCKS)
+                                                                                                                .executes(source -> {
+                                                                                                                    return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
+                                                                                                                })
+                                                                                                        )
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                                ///// BLOCK WHITELIST LIST /////
+                                                                                .then(Commands.literal(CommandHelper.LIST)
+                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                                .suggests(OWNER_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                        .suggests(PARCEL_NAMES)
+                                                                                                        .executes(source -> {
+                                                                                                            return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                )
+                                                                ///// ITEM TAG WHITELIST OPTION /////
+                                                                .then(Commands.literal(CommandHelper.ITEM_TAG)
+                                                                        ///// WHITELIST ADD /////
+                                                                        .then(Commands.literal(CommandHelper.ADD)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+                                                                                                        .suggests(CommandHelper.ITEM_TAGS)
+                                                                                                        .executes(source -> {
+                                                                                                            return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// ITEM TAGS WHITELIST LIST /////
+                                                                        .then(Commands.literal(CommandHelper.LIST)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .executes(source -> {
+                                                                                                    return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+                                                                                                })
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// BLOCK TAGS WHITELIST REMOVE /////
+                                                                        .then(Commands.literal(CommandHelper.REMOVE)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+                                                                                                        .suggests(CURRENT_ITEM_TAGS)
+                                                                                                        .executes(source -> {
+                                                                                                            return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
                                                                         )
                                                                 )
-                                                        )
+                                                                ///// ITEM WHITELIST OPTION /////
+                                                                .then(Commands.literal(CommandHelper.ITEMS)
+                                                                                ///// BLOCK WHITELIST ADD /////
+                                                                                .then(Commands.literal(CommandHelper.ADD)
+                                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                                                .suggests(OWNER_NAMES)
+                                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                                                          .then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
+                                                                                                                                                .executes(source -> {
+                                                                                                                                                    return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                                                            ItemArgument.getItem(source, CommandHelper.ITEM),
+                                                                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
+                                                                                                                                                })
+                                                                                                                                )
+                                                                                                                )
+                                                                                                )
+                                                                                )
+                                                                                ///// ITEM WHITELIST REMOVE /////
+                                                                                .then(Commands.literal(CommandHelper.REMOVE)
+                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                                .suggests(OWNER_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                        .suggests(PARCEL_NAMES)
+                                                                                                        .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+                                                                                                                .suggests(CURRENT_ITEMS)
+                                                                                                                .executes(source -> {
+                                                                                                                    return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
+                                                                                                                })
+                                                                                                        )
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                                ///// ITEM WHITELIST LIST /////
+                                                                                .then(Commands.literal(CommandHelper.LIST)
+                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                                .suggests(OWNER_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                        .suggests(PARCEL_NAMES)
+                                                                                                        .executes(source -> {
+                                                                                                            return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                )
+                                                                .then(Commands.literal(CommandHelper.PLAYERS)
+                                                                                ///// WHITELIST ADD /////
+//                                                                                .then(Commands.literal(CommandHelper.ADD)
+//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+//                                                                                                .suggests(OWNER_NAMES)
+//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//                                                                                                        .suggests(PARCEL_NAMES)
+//                                                                                                        .executes(source -> {
+//                                                                                                            return ParcelWhitelistCommandDelegate.addToWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+//                                                                                                        })
+//                                                                                                )
+//                                                                                        )
+//                                                                                )
+//                                                                                ///// WHITELIST LIST /////
+//                                                                                .then(Commands.literal(CommandHelper.LIST)
+//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+//                                                                                                .suggests(OWNER_NAMES)
+//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//                                                                                                        .suggests(PARCEL_NAMES)
+//                                                                                                        .executes(source -> {
+//                                                                                                            return ParcelWhitelistCommandDelegate.displayWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+//                                                                                                        })
+//                                                                                                )
+//                                                                                        )
+//                                                                                )
+                                                                        ///// TODO WHITELIST REMOVE /////
+                                                                        ///// PLAYER WHITELIST REMOVE /////
+//                                                                        .then(Commands.literal(CommandHelper.LIST)
+//                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+//                                                                                        .suggests(OWNER_NAMES)
+//                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+//                                                                                                .suggests(PARCEL_NAMES)
+//                                                                                                .executes(source -> {
+//                                                                                                    return ParcelWhitelistCommandDelegate.removeFromWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+//                                                                                                })
+//                                                                                        )
+//                                                                                )
+//                                                                        )
+                                                                )
                                                 )
-
-
                                                 .then(Commands.literal(CommandHelper.BACKUP)
                                                         .executes(source -> {
                                                             return ParcelCommandDelegate.backupParcels(source.getSource());
@@ -429,7 +702,13 @@ public class OpsCommand {
      */
     private static int generateDeed(CommandSourceStack source, String deedType, int xSize, int ySizeUp, int ySizeDown, int zSize, String nationName) {
         // get the type
-        ParcelType type = ParcelType.valueOf(deedType);
+        ParcelType type;
+        try {
+            type = ParcelType.valueOf(deedType);
+        } catch (Exception e) {
+            source.sendFailure(Component.translatable(LangUtil.chat("deed.invalid_type")).withStyle(ChatFormatting.RED));
+            return 0;
+        }
 
         // find the nation by name
         UUID nationId = ParcelRegistry.getNations().stream()
@@ -448,7 +727,10 @@ public class OpsCommand {
             return 0;
         }
 
-        if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown))
+        if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown)) {
+            source.sendFailure(Component.translatable(LangUtil.chat("deed.outside_world_boundaries")).withStyle(ChatFormatting.RED));
+            return 0;
+        }
 
         // create a relative sized Box
         Box size = new Box(new Coords(0, -ySizeDown, 0), new Coords(xSize-1, ySizeUp-1, zSize-1));
@@ -462,7 +744,11 @@ public class OpsCommand {
                 // a deed is a net new parcel to be used by anyone. the name would not be known
                 // and also this avoids duplicate names floating around in the deeds.
                 case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
-                case CITIZEN -> DeedFactory.createCitizenDeed(size, nationId);
+                case CITIZEN -> {
+                    ItemStack d = DeedFactory.createCitizenDeed(size, nationId);
+                    d.getOrCreateTag().putString(CitizenDeed.NATION_NAME, nationName);
+                    yield d;
+                }
                 case ZONE -> ItemStack.EMPTY;
             };
 
@@ -510,7 +796,7 @@ public class OpsCommand {
                         source.getPlayerOrException().getInventory().add(deed);
                     }
                 } catch (Exception e) {
-                    ClaimMyLand.LOGGER.error("error on give -> ", e);
+                    ClaimMyLand.LOGGER.error("error on generateFromParcel -> ", e);
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED), false);
 
                 }
@@ -539,9 +825,9 @@ public class OpsCommand {
                     source.getPlayerOrException().getInventory().add(deed);
                 }
             } catch (Exception e) {
-                ClaimMyLand.LOGGER.error("error on give -> ", e);
+                ClaimMyLand.LOGGER.error("error on generateDeedFromNation -> ", e);
                 CommandHelper.sendUnableToGenerateDeedMessage(source, nationName);
-             }
+            }
         } else {
             // TODO can't find nation
         }

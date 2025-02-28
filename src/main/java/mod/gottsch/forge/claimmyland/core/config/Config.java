@@ -159,7 +159,7 @@ public class Config extends AbstractConfig {
 	 *
 	 */
 	public static class General {
-		public IntValue giveCommandLevel;
+//		public IntValue giveCommandLevel;
 		public IntValue parcelsPerPlayer;
 		public IntValue opsPermissionLevel;
 		public IntValue parcelBufferRadius;
@@ -168,16 +168,16 @@ public class Config extends AbstractConfig {
 		General(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, " General properties for Protect It  mod.", CATEGORY_DIV).push(GENERAL_CATEGORY);
 			
-			giveCommandLevel = builder
-					.comment("The access level required for the 'give' command.")
-					.defineInRange("giveCommandLevel", 2, 0, 4);
+//			giveCommandLevel = builder
+//					.comment("The access level required for the Claim My Land 'give' command.")
+//					.defineInRange("giveCommandLevel", 0, 0, 4);
 			parcelsPerPlayer = builder
-					.comment(" The number of properties each player can own per world.")
+					.comment(" The number of parcels each player can own per world.")
 					.defineInRange("parcelsPerPlayer", 5, 1, 100);
 			opsPermissionLevel = builder
-					.comment(" The permission level required to be Ops within Protect It.","This is not the op-permission-level that is set in the server.propeties.",
-							" This allows players who are not server-level ops, to have Protect It Ops permissions. ie protections don't protect against Ops.",
-							" Ex. server-level ops = 4, but Protect It ops = 3 - a player with permission 3 would be considered an Ops within Protect It.")
+					.comment(" The permission level required to be Ops within Claim My Land.","This is not the op-permission-level that is set in the server.propeties.",
+							" This allows players who are not server-level ops, to have Claim My Land Ops permissions. ie protections don't protect against Ops.",
+							" Ex. server-level ops = 4, but Claim My Land ops = 3 - a player with permission 3 would be considered an Ops within Claim My Land.")
 					.defineInRange("opsPermissionLevel", 4, 0, 4);
 
 			parcelBufferRadius = builder
@@ -228,6 +228,7 @@ public class Config extends AbstractConfig {
 		public BooleanValue enableEntityMultiPlaceEvent;
 		public BooleanValue enableBlockToolInteractEvent;
 		public BooleanValue enableRightClickBlockEvent;
+		public BooleanValue enableRightClickItemEvent;
 		public BooleanValue enableLivingDestroyBlockEvent;
 		public BooleanValue enablePistionEvent;
 		public BooleanValue enableExplosionDetonateEvent;
@@ -257,8 +258,12 @@ public class Config extends AbstractConfig {
 					.define("enableBlockToolInteractProtection", true);
 			
 			enableRightClickBlockEvent = builder					
-					.comment(" Enables right click protection. If enabled, blocks in the property will not perform any action if right-clicked. Ex. chests will not open for others.")
-					.define("enableRightClickProtection", true);
+					.comment(" Enables right click block protection. If enabled, blocks in the property will not perform any action if right-clicked. Ex. chests will not open for others.")
+					.define("enableRightClickBlockProtection", true);
+
+			enableRightClickItemEvent = builder
+					.comment(" Enables right click item protection. If enabled, item use in the property will not perform any action if right-clicked.")
+					.define("enableRightClickItemProtection", true);
 
 			enableLivingDestroyBlockEvent = builder
 					.comment(" Enables block break protection from living entities. If enabled, blocks in the property  are protected from being broken for living entities (mobs).")

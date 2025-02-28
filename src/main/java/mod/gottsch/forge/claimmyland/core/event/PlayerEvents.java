@@ -32,6 +32,7 @@ import mod.gottsch.forge.gottschcore.spatial.Coords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -46,9 +47,7 @@ import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import java.util.UUID;
 
 /**
- * 
  * @author Mark Gottschling Sep 25, 2024
- *
  */
 @EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
 public class PlayerEvents {
@@ -86,39 +85,47 @@ public class PlayerEvents {
 //		tag.put(Deed.SIZE, sizeTag);
 //	}
 
-	@SubscribeEvent
-	public static void onPlayerHurt(LivingHurtEvent event) {
-		if (event.getEntity() instanceof Player) {
-			Player player = (ServerPlayer) event.getEntity();
-			
-			// mob on player hurt
-			if (event.getSource().getEntity() instanceof Mob) {
-				// prevent mob from hurting player
-				// NOTE for now ALL parcels are protected against hurt events
-				if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()))) {
-					event.setCanceled(true);
-//					ProtectIt.LOGGER.debug("denied mob attack -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(player.blockPosition()).toShortString());
-				}
-			}
-			// player on player hurt
-			else if (event.getSource().getEntity() instanceof Player) {
-				// prevent player from hurting player
-				// NOTE for now ALL parcels are protected against hurt events
-				if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()))) {
-					event.setCanceled(true);
-//					ProtectIt.LOGGER.debug("denied player attack -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(player.blockPosition()).toShortString());
-				}
-			}
-		}
-	}
+    @SubscribeEvent
+    public static void onPlayerHurt(LivingHurtEvent event) {
+        if (event.getEntity() instanceof Player) {
+            Player player = (ServerPlayer) event.getEntity();
 
-	// NOTE for now ALL parcels are protected against mob spawns
-	@SubscribeEvent
-	public static void onSpawnEntity(MobSpawnEvent.FinalizeSpawn event) {
-		if (ParcelRegistry.intersectsParcel(Coords.of(event.getEntity().blockPosition()))) {
-			event.setResult(Result.DENY);
-			event.setSpawnCancelled(true);
+            // mob on player hurt
+            if (event.getSource().getEntity() instanceof Mob) {
+                // prevent mob from hurting player
+                // NOTE for now ALL parcels are protected against hurt events
+                if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()))) {
+                    event.setCanceled(true);
+//					ProtectIt.LOGGER.debug("denied mob attack -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(player.blockPosition()).toShortString());
+                }
+            }
+            // player on player hurt
+            else if (event.getSource().getEntity() instanceof Player) {
+                // prevent player from hurting player
+                // NOTE for now ALL parcels are protected against hurt events
+                if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()))) {
+                    event.setCanceled(true);
+//					ProtectIt.LOGGER.debug("denied player attack -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(player.blockPosition()).toShortString());
+                }
+            }
+        }
+    }
+
+    /*
+     * NOTE for now ALL parcels are protected against mob spawns, unless
+     * the source of spawn is from an egg. the usage of the egg has it's own event
+     * to check protections against.
+     * Ex. if a player attempts to use an egg in a parcel that is not theirs, the egg item
+     * usage would be denied and this spawn event wouldn't be called.
+     */
+    @SubscribeEvent
+    public static void onSpawnEntity(MobSpawnEvent.FinalizeSpawn event) {
+
+        if (ParcelRegistry.intersectsParcel(Coords.of(event.getEntity().blockPosition()))
+                && !event.getSpawnType().equals(MobSpawnType.SPAWN_EGG)) {
+            event.setResult(Result.DENY);
+            event.setSpawnCancelled(true);
 //			ProtectIt.LOGGER.debug("denied mob spawn -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(event.getEntity().blockPosition()).toShortString());
-		}
-	}
+        }
+    }
 }

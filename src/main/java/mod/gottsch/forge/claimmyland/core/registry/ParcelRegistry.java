@@ -28,6 +28,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
+import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.bst.CoordsInterval;
 import mod.gottsch.forge.gottschcore.bst.CoordsIntervalTree;
@@ -37,10 +38,12 @@ import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.*;
@@ -642,6 +645,16 @@ public class ParcelRegistry {
         return hasAccess(coords, coords, entityId, stack);
     }
 
+    public static boolean hasAccess(ICoords coords, UUID entityId, BlockState state) {
+        return hasAccess(coords, coords, entityId, state, ItemStack.EMPTY);
+    }
+
+    public static boolean hasAccess(ICoords coords, UUID entityId, BlockState state, ItemStack heldItem ) {
+        return hasAccess(coords, coords, entityId, state, heldItem);
+    }
+
+    // TODO add hasAccess(... BlockState, ItemStack stack) version
+
     public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
         // this is the fastest lookup
         List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
@@ -671,8 +684,64 @@ public class ParcelRegistry {
             }
 
             // check player's access
-            return (itemStack != ItemStack.EMPTY && !itemStack.is(Items.AIR)) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
+            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
         }
+        return true;
+    }
+
+    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
+        // this is the fastest lookup
+        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
+        if (!intervals.isEmpty()) {
+            Parcel parcel;
+            // convert to parcels
+            List<Parcel> parcels = getAsParcels(intervals);
+
+            if (parcels.isEmpty()) {
+                return true;
+            }
+            if (intervals.size() > 1) {
+                // find the least significant parcel
+                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
+                if (parcelOptional.isPresent()) {
+                    parcel = parcelOptional.get();
+                } else {
+                    // TODO add chat warning
+                    // TODO add log warning
+                    // TODO maybe do something like labelling as abandoned and has a timer before it is removed from registry.
+                    // this is a case where the interval still exists but the parcel has been removed
+                    TREE.delete(intervals.get(0));
+                    return true;
+                }
+            } else {
+                parcel = parcels.get(0);
+            }
+
+            // TODO move to AbstractParcel - shouldn't be globally controlled by registry
+            ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
+            // TODO block tag and block could be merged into one list, where tags are prefixed with # and would have to be removed before checking
+            // test the block against the whitelisted block tags for the parcel
+            for (String tagName : parcel.getBlockTagWhitelist()) {
+                ResourceLocation location = new ResourceLocation(tagName);
+                ClaimMyLand.LOGGER.debug("creating tag for parcel block tag -> {}", location.toString());
+                // get the tag from the resource key
+                if (TagHelper.doesBlockBelongToTag(state.getBlock(), location)) {
+                    return true;
+                }
+            }
+
+            // check BlockWhitelist
+            ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getBlockWhitelist());
+            for (String blockName : parcel.getBlockWhitelist()) {
+                ResourceLocation location = new ResourceLocation(blockName);
+                ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
+                if (ModUtil.getName(state.getBlock()).equals(location)) {
+                    return true;
+                }
+            }
+
+            return parcel.grantsAccess(entityId, heldItem);
+         }
         return true;
     }
 

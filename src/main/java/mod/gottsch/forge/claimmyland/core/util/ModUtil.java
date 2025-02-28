@@ -4,7 +4,11 @@ import com.google.gson.Gson;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.client.Minecraft;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.registries.ForgeRegistries;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -16,6 +20,19 @@ import java.util.UUID;
 public class ModUtil {
 
     private ModUtil() {}
+
+    public static ResourceLocation getName(Block block) {
+        // don't bother checking optional - if it is empty, then the block isn't registered and this shouldn't run anyway.
+        ResourceLocation name = ForgeRegistries.BLOCKS.getResourceKey(block).get().location();
+        return name;
+    }
+
+    public static ResourceLocation getName(Item item) {
+        // don't bother checking optional - if it is empty, then the block isn't registered and this shouldn't run anyway.
+        ResourceLocation name = ForgeRegistries.ITEMS.getResourceKey(item).get().location();
+        return name;
+    }
+
     public static String getPlayerNameByUUID(UUID uuid) {
 //        MinecraftServer server = MinecraftServer.getServer();
 //        if (server != null) {

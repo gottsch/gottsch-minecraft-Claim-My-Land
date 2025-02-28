@@ -132,9 +132,14 @@ public class NationDeed extends Deed {
         if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
             tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
         }
-        if (stack.getTag() != null && stack.getTag().contains(NATION_ID)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + stack.getTag().getString(NATION_ID)));
-        }
+
+        // NOTE nation DEED does NOT have a nationId nor nationName as
+        // a deed is a net new parcel to be used by anyone. the name would not be known
+        // and also this avoids duplicate names floating around in the deeds.
+//        if (stack.getTag() != null && stack.getTag().contains(NATION_ID)) {
+//            String id = stack.getTag().getUUID(NationDeed.NATION_ID).toString();
+//            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + id));
+//        }
 
         if (stack.getTag() != null && stack.getTag().contains(Deed.SIZE)) {
             appendSizeHoverText(stack, level, tooltip, flag);
