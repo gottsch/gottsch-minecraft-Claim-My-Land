@@ -20,7 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.block;
 
 /**
- * Created by Mark Gottschling on 9/15/2024
+ * @author Mark Gottschling on 9/15/2024
  */
 public interface IBorderBlock {
 }
