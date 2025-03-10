@@ -125,9 +125,9 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.transfer.success"), "The parcel has been transferred.");
         add(LangUtil.chat("parcel.transfer.failure"), "Unable to transfer the parcel.");
 
-        add(LangUtil.chat("parcel.whitelist.add.success"), "Player was added to the whitelist.");
-        add(LangUtil.chat("parcel.whitelist.add.failure"), "Unable to add player to the whitelist.");
-        add(LangUtil.chat("parcel.whitelist.list"), "Player Whitelist for parcel ");
+        add(LangUtil.chat("parcel.whitelist.add.success"), "Friend was added to the whitelist.");
+        add(LangUtil.chat("parcel.whitelist.add.failure"), "Unable to add friend to the whitelist.");
+        add(LangUtil.chat("parcel.whitelist.list"), "Friend Whitelist for parcel ");
 
         add(LangUtil.chat("parcel.block_tag.add.success"), "A block tag was added to the block tag whitelist.");
         add(LangUtil.chat("parcel.block_tag.add.failure"), "Unable to add block tag to the block tag whitelist.");

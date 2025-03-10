@@ -36,14 +36,17 @@ import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
@@ -99,11 +102,52 @@ public class PlayersCommand {
 		return SharedSuggestionProvider.suggest(Stream.of("border_stone", "citizen_tool", "zoning_tool"), builder);
 	};
 
+	private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCK_TAGS = (source, builder) -> {
+		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+		Optional<List<String>> list = Optional.empty();
+		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+		if (ownerUuid.isPresent()) {
+			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+		}
+		return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+	};
+
+	private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCKS = (source, builder) -> {
+		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+		Optional<List<String>> list = Optional.empty();
+
+		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+		if (ownerUuid.isPresent()) {
+			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
+		}
+		return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+	};
+
+	private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEM_TAGS = (source, builder) -> {
+		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+		Optional<List<String>> list = Optional.empty();
+		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+		if (ownerUuid.isPresent()) {
+			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+		}
+		return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+	};
+
+	private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEMS = (source, builder) -> {
+		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+		Optional<List<String>> list = Optional.empty();
+		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+		if (ownerUuid.isPresent()) {
+			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
+		}
+		return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
+	};
+
 	/**
 	 *
 	 * @param dispatcher
 	 */
-	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+	public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext buildContext) {
 		dispatcher
 				.register(Commands.literal(CML)
 								.requires(source -> {
@@ -216,56 +260,200 @@ public class PlayersCommand {
 														)
 
 												)
-										///// WHITELIST OPTION /////
+												///// WHITELIST OPTION /////
 												.then(Commands.literal(CommandHelper.WHITELIST)
-														// TODO change to subcommand [PLAYER | BLOCK_TAG | BLOCK | etc]
-														///// BLOCK TAG WHITELIST OPTION /////
-														.then(Commands.literal(CommandHelper.BLOCK_TAG)
-																		///// WHITELIST ADD /////
-																		.then(Commands.literal(CommandHelper.ADD)
+																// TODO change to subcommand [PLAYER | BLOCK_TAG | BLOCK | etc]
+																///// BLOCK TAG WHITELIST OPTION /////
+																.then(Commands.literal(CommandHelper.BLOCK_TAG)
+																				///// WHITELIST ADD /////
+																				.then(Commands.literal(CommandHelper.ADD)
 																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
 																								.suggests(OWNER_PARCEL_NAMES)
 																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
 																										.suggests(CommandHelper.BLOCK_TAGS)
 																										.executes(source -> {
-																											return addWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+																											return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
 																										})
 																								)
 																						)
 																				)
 
-																		///// BLOCK TAGS WHITELIST LIST /////
-//																		.then(Commands.literal(CommandHelper.LIST)
-//																							.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																								.suggests(OWNER_PARCEL_NAMES)
-//																								.executes(source -> {
-//																									return list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-//																								})
-//																						)
-//																				)
-//																		)
-//																		///// BLOCK TAGS WHITELIST REMOVE /////
-//																		.then(Commands.literal(CommandHelper.REMOVE)
-//																				.then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_NAMES)
-//																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																								.suggests(PARCEL_NAMES)
-//																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-//																										.suggests(CURRENT_BLOCK_TAGS)
-//																										.executes(source -> {
-//																											return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-//																										})
-//																								)
-//																						)
-//																				)
-//																		)
-																///// TODO WHITELIST REMOVE /////
+																				///// BLOCK TAGS WHITELIST LIST /////
+																				.then(Commands.literal(CommandHelper.LIST)
+																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																								.suggests(OWNER_PARCEL_NAMES)
+																								.executes(source -> {
+																									return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
+																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+																								})
+																						)
+																				)
+
+//																				///// BLOCK TAGS WHITELIST REMOVE /////
+																				.then(Commands.literal(CommandHelper.REMOVE)
+																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																								.suggests(OWNER_PARCEL_NAMES)
+																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+																										.suggests(CURRENT_BLOCK_TAGS)
+																										.executes(source -> {
+																											return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+																										})
+																								)
+																						)
+																				)
+																)
+																.then(Commands.literal(CommandHelper.BLOCKS)
+																		///// WHITELIST ADD /////
+																		.then(Commands.literal(CommandHelper.ADD)
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
+																								.executes(source -> {
+																									return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																											ItemArgument.getItem(source, CommandHelper.ITEM),
+																											InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
+																								})
+																						)
+																				)
+																		)
+																)
+
+																///// BLOCK WHITELIST REMOVE /////
+																.then(Commands.literal(CommandHelper.REMOVE)
+
+																		.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																				.suggests(OWNER_PARCEL_NAMES)
+																				.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+																						.suggests(CURRENT_BLOCKS)
+																						.executes(source -> {
+																							return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																									ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
+																						})
+																				)
+
+																		)
+																)
+																///// BLOCK WHITELIST LIST /////
+																.then(Commands.literal(CommandHelper.LIST)
+																		.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																				.suggests(OWNER_PARCEL_NAMES)
+																				.executes(source -> {
+																					return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																							InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
+																				})
+																		)
+																)
+
+
+																///// ITEM TAG WHITELIST OPTION /////
+																.then(Commands.literal(CommandHelper.ITEM_TAG)
+																		///// WHITELIST ADD /////
+																		.then(Commands.literal(CommandHelper.ADD)
+
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+																								.suggests(CommandHelper.ITEM_TAGS)
+																								.executes(source -> {
+																									return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+																								})
+																						)
+
+																				)
+																		)
+																		///// ITEM TAGS WHITELIST LIST /////
+																		.then(Commands.literal(CommandHelper.LIST)
+
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.executes(source -> {
+																							return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																									InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+																						})
+
+																				)
+																		)
+																		///// ITEM TAGS WHITELIST REMOVE /////
+																		.then(Commands.literal(CommandHelper.REMOVE)
+
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+																								.suggests(CURRENT_ITEM_TAGS)
+																								.executes(source -> {
+																									return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+																								})
+																						)
+																				)
+
+																		)
+																)
+																///// ITEM WHITELIST OPTION /////
+																.then(Commands.literal(CommandHelper.ITEMS)
+																		///// ITEM WHITELIST ADD /////
+																		.then(Commands.literal(CommandHelper.ADD)
+
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
+																								.executes(source -> {
+																									return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																											ItemArgument.getItem(source, CommandHelper.ITEM),
+																											InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
+																								})
+																						)
+																				)
+
+																		)
+																		///// ITEM WHITELIST REMOVE /////
+																		.then(Commands.literal(CommandHelper.REMOVE)
+
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
+																								.suggests(CURRENT_ITEMS)
+																								.executes(source -> {
+																									return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
+																								})
+																						)
+
+																				)
+																		)
+																		///// ITEM WHITELIST LIST /////
+																		.then(Commands.literal(CommandHelper.LIST)
+
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.executes(source -> {
+																							return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																									InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
+																						})
+																				)
+
+																		)
+																)
+												)
+												.then(Commands.literal(CommandHelper.FRIENDS)
+														///// FRIENDS WHITELIST ADD /////
+														.then(Commands.literal(CommandHelper.ADD)
+																.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																		.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
+																				.suggests(PLAYER_NAMES)
+																				.executes(source -> {
+																					return FriendsWhitelistCommandDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																							StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+																				})
+																		)
+																)
 
 														)
 												)
+										// TODO FRIENDS WHITELIST
 
 								) // end of parcel
 								///// GIVE TOP-LEVEL OPTION /////
@@ -294,7 +482,7 @@ public class PlayersCommand {
 
 	}
 
-	private static int addWhitelist(CommandSourceStack source, String parcelName, ResourceLocation id, ParcelWhitelistCommandsDelegate.WhitelistType type) {
+	private static int addWhitelist(CommandSourceStack source, String parcelName, ResourceLocation id, InteractWhitelistCommandsDelegate.WhitelistType type) {
 
 		return 1;
 	}

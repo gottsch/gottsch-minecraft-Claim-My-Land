@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-
+
+### Changed
+- Zone parcel inherits Nation parcel's whitelists values
+
+### Added
+- blockTag, block, itemTag, and item whitelists for parcels available from player command (/cml).
+  - whitelists allow blocks and items to be used within claimed parcels.
+- Tag for Macaw's Furniture.
+
 ## [1.2.0] - 2025-02-27
 
 ### Changed

@@ -19,20 +19,24 @@
  */
 package mod.gottsch.forge.claimmyland.core.command;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.tags.ModTags;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 /**
  * 
@@ -60,6 +64,7 @@ public class CommandHelper {
 	public static final String Z_SIZE = "z_size";
 	public static final String OWNER_NAME = "owner_name";
 	public static final String NEW_OWNER_NAME = "new_owner_name";
+	public static final String FRIEND_NAME = "friend_name";
 	public static final String PARCEL_NAME = "parcel_name";
 	public static final String NEW_NAME = "new_name";
 	public static final String BACKUP = "backup";
@@ -69,6 +74,7 @@ public class CommandHelper {
 	public static final String BLOCKS = "blocks";
 	public static final String ITEM_TAG = "item_tags";
 	public static final String ITEMS = "items";
+	public static final String FRIENDS = "friends";
 	public static final String PLAYERS = "players";
 	public static final String TAG_NAME = "tag_name";
 	public static final String BY_OWNER = "by_owner";
@@ -116,12 +122,70 @@ public class CommandHelper {
 		}
 	}
 
+	public static Optional<Parcel> getParcelByOwner(CommandSourceStack source, UUID ownerUuid, String parcelName) {
+		return getParcelsByOwner(source, ownerUuid).stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
+	}
+
+	public static List<Parcel> getParcelsByOwner(CommandSourceStack source, UUID playerUuid) {
+		return ParcelRegistry.findByOwner(playerUuid);
+	}
+
+
+	/*
+	 * get command player
+	 */
+	public static ServerPlayer getPlayer(CommandSourceStack source) throws CommandSyntaxException {
+		return source.getPlayerOrException();
+	}
+
+	public static Optional<UUID> getPlayerUuid(CommandSourceStack source) {
+		try {
+			return Optional.of(getPlayer(source).getUUID());
+		} catch(CommandSyntaxException e) {
+			return Optional.empty();
+		}
+	}
+
+	/*
+	 * get player using extended search
+	 * 1. online
+	 * 2. PlayerRegistry
+	 * 3. offline
+	 */
+	public static Optional<UUID> getPlayerUuid(CommandSourceStack source, String playerName) {
+		// get the online player
+		ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(playerName);
+		if (player == null) {
+			// get the player from the player registry
+			return PlayerRegistry.get(playerName).or(() -> {
+				if (Config.SERVER.general.allowMojangNameCalls.get()) {
+					Optional<UUID> playerUuid = PlayerRegistry.getUUIDFromNameSynchronized(playerName);
+					// before returning, update PlayerRegistry with the UUID/name mapping
+					playerUuid.ifPresent(ownerUuid -> PlayerRegistry.update(ownerUuid, playerName));
+					return playerUuid;
+				} else {
+					return Optional.empty();
+				}
+			});
+
+//            if (playerUuid.isEmpty()) {
+//                return PlayerRegistry.getUUIDFromNameSynchronized(playerName);
+//            } else {
+//                return playerUuid;
+//            }
+		}
+		return Optional.of(player.getUUID());
+	}
+
 	public static void sendNewLineMessage(CommandSourceStack source) {
 		source.sendSuccess(() -> Component.translatable(LangUtil.NEWLINE), false);
 	}
 
 	public static void sendUnableToLocatePlayerMessage(CommandSourceStack source, String name) {
 		source.sendSuccess(() -> Component.translatable(LangUtil.chat("unable_locate_player"), name).withStyle(ChatFormatting.RED), false);
+	}
+	public static void sendUnableToLocatePlayerMessage(CommandSourceStack source) {
+		source.sendSuccess(() -> Component.translatable(LangUtil.chat("unable_locate_player")).withStyle(ChatFormatting.RED), false);
 	}
 
 	public static void sendUnableToGenerateDeedMessage(CommandSourceStack source, String nationName) {

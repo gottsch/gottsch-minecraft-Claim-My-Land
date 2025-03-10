@@ -155,30 +155,7 @@ public abstract class AbstractParcel implements Parcel {
             return true;
         }
 
-        // if you have an item in your hand, do whitelist short-circuit tests
-        if (itemStack != null && !itemStack.isEmpty()) {
-            ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", itemStack.getDisplayName().getString(), this);
-            // test the item against the whitelisted item tags for the parcel
-            for (String tagName : getItemTagWhitelist()) {
-                ResourceLocation location = new ResourceLocation(tagName);
-                ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
-                // get the tag from the resource key
-                if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) {
-                    return true;
-                }
-            }
-
-            ClaimMyLand.LOGGER.debug("value of item white list -> {}", getItemWhitelist());
-            for (String itemName : getItemWhitelist()) {
-                ResourceLocation location = new ResourceLocation(itemName);
-                ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
-                if (ModUtil.getName(itemStack.getItem()).equals(location)) {
-                    return true;
-                }
-            }
-        }
-
-        //        ClaimMyLand.LOGGER.debug("in grantsAccess() for entityId -> {} and item -> {}", entityId, stack.getDisplayName().getString());
+        // ClaimMyLand.LOGGER.debug("in grantsAccess() for entityId -> {} and item -> {}", entityId, stack.getDisplayName().getString());
         return grantsAccess(entityId);
     }
 
@@ -513,7 +490,7 @@ public abstract class AbstractParcel implements Parcel {
         return blockWhitelist;
     }
 
-
+    @Override
     public void setBlockWhitelist(List<String> blockWhitelist) {
         this.blockWhitelist = blockWhitelist;
     }
@@ -533,6 +510,7 @@ public abstract class AbstractParcel implements Parcel {
         return itemWhitelist;
     }
 
+    @Override
     public void setItemWhitelist(List<String> itemWhitelist) {
         this.itemWhitelist = itemWhitelist;
     }

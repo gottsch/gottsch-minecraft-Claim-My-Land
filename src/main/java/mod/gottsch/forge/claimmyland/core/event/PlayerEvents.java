@@ -52,12 +52,12 @@ import java.util.UUID;
 @EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
 public class PlayerEvents {
 
-//	@SubscribeEvent
-//	public static void onEntityJoinWorld(EntityJoinLevelEvent event) {
-//		if (!event.getLevel().isClientSide()) {
-//			if (event.getEntity() instanceof Player) {
-//				PlayerRegistry.update(event.getEntity().getUUID(), event.getEntity().getScoreboardName());
-//			}
+	@SubscribeEvent
+	public static void onEntityJoinWorld(EntityJoinLevelEvent event) {
+		if (!event.getLevel().isClientSide()) {
+			if (event.getEntity() instanceof Player) {
+				PlayerRegistry.update(event.getEntity().getUUID(), event.getEntity().getScoreboardName());
+			}
 //			else if (event.getEntity() instanceof ItemEntity itemEntity) {
 //			 	if (itemEntity.getItem().getItem() instanceof Deed) {
 //					if (itemEntity.getItem().is(ModItems.PLAYER_DEED_10.get())) {
@@ -71,8 +71,8 @@ public class PlayerEvents {
 //					}
 //				}
 //			}
-//		}
-//	}
+		}
+	}
 
 //	private static void createPlayerParcel(ItemStack stack, Box size) {
 //		CompoundTag tag = stack.getOrCreateTag();

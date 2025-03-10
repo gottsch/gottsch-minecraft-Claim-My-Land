@@ -45,7 +45,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Mark Gottschling on Mar 28, 2024
@@ -161,10 +163,16 @@ public class ParcelCommandDelegate {
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
 
         // find the nation by name
-        UUID nationId = ParcelRegistry.getNations().stream()
+//        UUID nationId = ParcelRegistry.getNations().stream()
+//                .filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getName()))
+//                .findFirst()
+//                .map(n -> ((NationParcel) n).getNationId()).orElse(null);
+
+        Parcel nation = ParcelRegistry.getNations().stream()
                 .filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getName()))
-                .findFirst()
-                .map(n -> ((NationParcel) n).getNationId()).orElse(null);
+                .findFirst().orElse(null);
+
+        // TODO if nation == null, throw error message
 
         ParcelType type = ParcelType.valueOf(parcelType);
 
@@ -174,7 +182,7 @@ public class ParcelCommandDelegate {
         }
 
         // validate type
-        if ((type == ParcelType.CITIZEN || type == ParcelType.ZONE) && nationId == null) {
+        if ((type == ParcelType.CITIZEN || type == ParcelType.ZONE) && nation == null) {
             source.sendFailure(Component.translatable(LangUtil.chat("parcel.citizen.nationId_required")).withStyle(ChatFormatting.RED));
             return 0;
         }
@@ -185,7 +193,7 @@ public class ParcelCommandDelegate {
         // validate nation name is unique if adding a nation
         if (type == ParcelType.NATION && StringUtils.isNotBlank(nationName)) {
             // if the name was found then fail
-            if (nationId != null) {
+            if (nation != null) {
                 source.sendFailure(Component.translatable(LangUtil.chat("parcel.nation.nationName_already_exists")).withStyle(ChatFormatting.RED));
                 return 0;
             }
@@ -195,7 +203,7 @@ public class ParcelCommandDelegate {
             // create a relative sized Box
             Box size = new Box(Coords.of(0, -ySizeDown, 0), Coords.of(xSize - 1, ySizeUp - 1, zSize - 1));
             ICoords coords = Coords.of(pos);
-            Optional<Parcel> parcelOptional = ParcelFactory.create(type, nationId);
+            Optional<Parcel> parcelOptional = ParcelFactory.create(type, (NationParcel) nation);
             if (parcelOptional.isPresent()) {
                 Parcel parcel = parcelOptional.get();
                 parcel.setOwnerId(player.getUUID());
@@ -230,7 +238,7 @@ public class ParcelCommandDelegate {
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.add.failure_with_overlaps")).withStyle(ChatFormatting.RED), false);
                 }
             } else {
-                ClaimMyLand.LOGGER.error("unable to create parcel with provided nationid -> {}", nationId);
+                ClaimMyLand.LOGGER.error("unable to create parcel with provided nationid -> {}", nation.getNationId());
                 source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
             }
         } else {

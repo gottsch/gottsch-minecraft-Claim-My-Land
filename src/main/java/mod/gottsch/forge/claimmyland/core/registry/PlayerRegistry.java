@@ -21,6 +21,8 @@ package mod.gottsch.forge.claimmyland.core.registry;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -28,13 +30,27 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by Mark Gottschling on Sep 23, 2024
  */
 public class PlayerRegistry {
+    private static final String MOJANG_API_URL = "https://api.mojang.com/user/profile/";
+    private static final String MOJANG_API_URL2 = "https://api.mojang.com/users/profiles/minecraft/";
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newCachedThreadPool();
+
+    private static final String PLAYER_REGISTRY = "playerRegistry";
+    private static final String NAME = "name";
+    private static final String ID = "id";
 
     public static final BiMap<UUID, String> NAMES = HashBiMap.create();
 
@@ -101,28 +117,28 @@ public class PlayerRegistry {
         ListTag listTag = new ListTag();
         NAMES.forEach((key, val) -> {
             CompoundTag kv = new CompoundTag();
-            kv.putUUID("id", key);
-            kv.putString("name", val);
+            kv.putUUID(ID, key);
+            kv.putString(NAME, val);
             listTag.add(kv);
         });
-        tag.put("playerRegistry", listTag);
+        tag.put(PLAYER_REGISTRY, listTag);
         ClaimMyLand.LOGGER.debug("saved player registry");
         return tag;
     }
 
     public static synchronized void load(CompoundTag tag) {
-        if (tag.contains("playerRegistry")) {
-            ListTag list = tag.getList("playerRegistry", Tag.TAG_COMPOUND);
+        if (tag.contains(PLAYER_REGISTRY)) {
+            ListTag list = tag.getList(PLAYER_REGISTRY, Tag.TAG_COMPOUND);
             if (list != null) {
                 list.forEach(t -> {
                     CompoundTag c = (CompoundTag) t;
                     UUID id = null;
                     String name = null;
-                    if (c.contains("id")) {
-                        id = c.getUUID("id");
+                    if (c.contains(ID)) {
+                        id = c.getUUID(ID);
                     }
-                    if (c.contains("name")) {
-                        name = c.getString("name");
+                    if (c.contains(NAME)) {
+                        name = c.getString(NAME);
                     }
                     if (id != null || name != null) {
                         register(id, name);
@@ -131,4 +147,126 @@ public class PlayerRegistry {
             }
         }
     }
+
+    public static CompletableFuture<String> getOfflinePlayerName(UUID uuid) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                // mojang api requires uuid without dashes
+                URL url = new URL(MOJANG_API_URL + uuid.toString().replace("-", ""));
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    reader.close();
+
+                    Gson gson = new Gson();
+                    JsonObject jsonObject = gson.fromJson(response.toString(), JsonObject.class);
+                    return jsonObject.get("name").getAsString();
+
+                } else if(connection.getResponseCode() == HttpURLConnection.HTTP_NO_CONTENT){
+                    return null; //UUID not found
+                } else {
+                    System.err.println("Error fetching name from UUID: " + connection.getResponseCode());
+                    return null;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }, EXECUTOR_SERVICE);
+    }
+
+    public static CompletableFuture<UUID> getUUIDFromName(String playerName) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                URL url = new URL(MOJANG_API_URL2 + playerName);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("GET");
+
+                if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                    StringBuilder response = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        response.append(line);
+                    }
+                    reader.close();
+
+                    Gson gson = new Gson();
+                    JsonObject jsonObject = gson.fromJson(response.toString(), JsonObject.class);
+
+                    if (jsonObject.has("id")) {
+                        String uuidString = jsonObject.get("id").getAsString();
+                        return UUID.fromString(uuidString.replaceFirst("(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)", "$1-$2-$3-$4-$5"));
+                    } else {
+                        return null; // Player not found or no ID in response.
+                    }
+
+                } else if(connection.getResponseCode() == HttpURLConnection.HTTP_NO_CONTENT){
+                    return null; //Player not found
+                } else {
+                    System.err.println("Error fetching UUID from name: " + connection.getResponseCode());
+                    return null;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }, EXECUTOR_SERVICE);
+    }
+
+    public static Optional<UUID> getUUIDFromNameSynchronized(String playerName) {
+        try {
+            URL url = new URL(MOJANG_API_URL2 + playerName);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+
+                Gson gson = new Gson();
+                JsonObject jsonObject = gson.fromJson(response.toString(), JsonObject.class);
+
+                if (jsonObject.has("id")) {
+                    String uuidString = jsonObject.get("id").getAsString();
+                    return Optional.of(UUID.fromString(uuidString.replaceFirst("(\\p{XDigit}{8})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}{4})(\\p{XDigit}+)", "$1-$2-$3-$4-$5")));
+                } else {
+                    return Optional.empty(); // player not found or no ID in response.
+                }
+
+            } else if(connection.getResponseCode() == HttpURLConnection.HTTP_NO_CONTENT){
+                return Optional.empty(); // player not found
+            } else {
+                System.err.println("Error fetching UUID from name: " + connection.getResponseCode());
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
+    // Example usage (e.g., in a command or event handler):
+//    public static void exampleUsage(ServerPlayer player, UUID uuid) {
+//        getNameFromUUID(uuid).thenAccept(name -> {
+//            if (name != null) {
+//                player.sendSystemMessage(Component.literal("Player name: " + name));
+//            } else {
+//                player.sendSystemMessage(Component.literal("Player not found with that UUID."));
+//            }
+//        });
+//
+//    }
 }

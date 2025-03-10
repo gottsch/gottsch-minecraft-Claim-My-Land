@@ -19,6 +19,7 @@ package mod.gottsch.forge.claimmyland.core.config;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
+import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.gottschcore.config.AbstractConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
@@ -116,7 +117,7 @@ public class Config extends AbstractConfig {
 		public Borders borders;
 		public Protection protection;
 
-		public ServerConfig(ForgeConfigSpec.Builder builder) {
+        public ServerConfig(ForgeConfigSpec.Builder builder) {
 			general = new General(builder);
 			borders = new Borders(builder);
 			protection = new Protection(builder);
@@ -164,6 +165,7 @@ public class Config extends AbstractConfig {
 		public IntValue opsPermissionLevel;
 		public IntValue parcelBufferRadius;
 		public IntValue nationParcelBufferRadius;
+		public BooleanValue allowMojangNameCalls;
 		
 		General(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, " General properties for Protect It  mod.", CATEGORY_DIV).push(GENERAL_CATEGORY);
@@ -192,6 +194,11 @@ public class Config extends AbstractConfig {
 			nationParcelBufferRadius = builder
 					.comment(" Like 'parcelBufferRadius', but for Nation parcels.")
 							.defineInRange("nationParcelBufferRadius", 10, 1, 50);
+
+			allowMojangNameCalls = builder
+					.comment(" Allows external HTTP calls to Mojang's web API (ex. https://api.mojang.com/users/profiles/minecraft/)",
+							" This is used to find offline player's UUID by name, or visa versa.")
+					.define("allowMojangNameCalls", true);
 
 			builder.pop();
 		}

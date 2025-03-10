@@ -295,11 +295,15 @@ public interface Parcel {
 
     List<String> getBlockWhitelist();
 
+    void setBlockWhitelist(List<String> blockWhitelist);
+
     List<String> getItemTagWhitelist();
 
     void setItemTagWhitelist(List<String> itemTagWhitelist);
 
     List<String> getItemWhitelist();
+
+    void setItemWhitelist(List<String> itemWhitelist);
 
     ParcelType getType();
 

@@ -19,6 +19,8 @@
  */
 package mod.gottsch.forge.claimmyland.datagen;
 
+import com.mcwfurnitures.kikoz.MacawsFurnitures;
+import com.mcwfurnitures.kikoz.init.ItemInit;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.tags.ModTags;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -94,8 +96,6 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
 	                );
 
         // populate integration tags
-//        String T2_ID = "treasure2";
-        // TODO complete
         tag(ModTags.Blocks.TREASURE2_CHEST_WHITELIST)
                 .addOptional(ModUtil.getName(TreasureBlocks.WOOD_CHEST.get()))
                 .addOptional(ModUtil.getName(TreasureBlocks.CRATE_CHEST.get()))
@@ -118,10 +118,31 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
                 .addOptional(ModUtil.getName(TreasureBlocks.CAULDRON_CHEST.get()))
                 .addOptional(ModUtil.getName(TreasureBlocks.BARREL_CHEST.get()))
                 .addOptional(ModUtil.getName(TreasureBlocks.VANILLA_CHEST.get()));
+
         String LV = "legacyvault";
         tag(ModTags.Blocks.LEGACY_VAULT_WHITELIST)
                 .addOptional(new ResourceLocation(LV, "community_vault"));
 
+        String MCWF = "mcwfurnitures";
+        tag(ModTags.Blocks.MACAWS_FURNITURE_WHITELIST)
+                .addOptionalTag(new ResourceLocation(MCWF, "bookshelf"))
+                .addOptionalTag(new ResourceLocation(MCWF, "bookshelf_cupboard"))
+                .addOptionalTag(new ResourceLocation(MCWF, "bookshelf_drawer"))
+                .addOptionalTag(new ResourceLocation(MCWF, "cabinet"))
+                .addOptionalTag(new ResourceLocation(MCWF, "chair"))
+                .addOptionalTag(new ResourceLocation(MCWF, "cupboard_counter"))
+                .addOptionalTag(new ResourceLocation(MCWF, "double_drawer"))
+                .addOptionalTag(new ResourceLocation(MCWF, "double_drawer_counter"))
+                .addOptionalTag(new ResourceLocation(MCWF, "large_drawer"))
+                .addOptionalTag(new ResourceLocation(MCWF, "lower_bookshelf_drawer"))
+                .addOptionalTag(new ResourceLocation(MCWF, "lower_triple_drawer"))
+                .addOptionalTag(new ResourceLocation(MCWF, "modern_chair"))
+                .addOptionalTag(new ResourceLocation(MCWF, "modern_wardrobe"))
+                .addOptionalTag(new ResourceLocation(MCWF, "stool_chair"))
+                .addOptionalTag(new ResourceLocation(MCWF, "striped_chair"))
+                .addOptionalTag(new ResourceLocation(MCWF, "triple_drawer"))
+                .addOptionalTag(new ResourceLocation(MCWF, "wardrobe"))
+        ;
         // TODO add some more common tags
     }
 

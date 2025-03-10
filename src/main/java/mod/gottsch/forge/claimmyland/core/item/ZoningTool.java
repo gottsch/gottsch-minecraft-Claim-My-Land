@@ -23,10 +23,7 @@ import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.ZonePlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
-import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelFactory;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -111,7 +108,7 @@ public class ZoningTool extends BlockItem {
                 context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.failure_too_small")).withStyle(ChatFormatting.RED));
             }
 
-            ParcelFactory.create(ParcelType.ZONE, nationParcel.get().getNationId())
+            ParcelFactory.create(ParcelType.ZONE, (NationParcel) nationParcel.get())
                     .ifPresentOrElse(p -> {
                             p.setOwnerId(nationParcel.get().getOwnerId());
                             // ensure to have to use the min coords of the box
