@@ -5,7 +5,6 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
-import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraftforge.data.event.GatherDataEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -31,7 +30,7 @@ public class DataGenerators {
 			ModBlockTagsProvider blockTags = new ModBlockTagsProvider(output, lookupProvider, event.getExistingFileHelper());
 			generator.addProvider(true, blockTags);
 			generator.addProvider(true, new ModItemTagsProvider(output, lookupProvider, blockTags.contentsGetter(), event.getExistingFileHelper()));
-
+			generator.addProvider(true, ModLootTableProvider.create(output));
 		}
 		if (event.includeClient()) {
 			generator.addProvider(event.includeClient(), new BlockStates(output, event.getExistingFileHelper()));

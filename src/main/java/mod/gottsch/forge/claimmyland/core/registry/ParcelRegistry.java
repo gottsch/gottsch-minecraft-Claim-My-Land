@@ -862,7 +862,7 @@ public class ParcelRegistry {
     }
 
     /**
-     * returns the parcel with the least area all parcels at the given coords
+     * returns the parcel with the least area of all parcels at the given coords
      * @param coords
      * @return
      */

@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Zone parcel inherits Nation parcel's whitelists values
+- Border Stones now display horizontal area blocks/highlight along with the border blocks.
+
 
 ### Added
 - blockTag, block, itemTag, and item whitelists for parcels available from player command (/cml).
   - whitelists allow blocks and items to be used within claimed parcels.
 - Tag for Macaw's Furniture.
+- Horizontal Area blocks
 
 ## [1.2.0] - 2025-02-27
 

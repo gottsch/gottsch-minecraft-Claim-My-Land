@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.datagen;
 import com.mcwfurnitures.kikoz.MacawsFurnitures;
 import com.mcwfurnitures.kikoz.init.ItemInit;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.tags.ModTags;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.treasure2.core.block.TreasureBlocks;
@@ -48,6 +49,24 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
 
     @Override
     protected void addTags(Provider provider) {
+
+        // add to minecraft tags
+        tag(BlockTags.MINEABLE_WITH_PICKAXE)
+                .add(
+                        ModBlocks.BORDER_STONE.get(),
+                        ModBlocks.PLAYER_FOUNDATION_STONE.get(),
+                        ModBlocks.CITIZEN_FOUNDATION_STONE.get(),
+                        ModBlocks.NATION_FOUNDATION_STONE.get()
+                        );
+        tag(BlockTags.NEEDS_STONE_TOOL)
+                .add(
+                        ModBlocks.BORDER_STONE.get(),
+                        ModBlocks.PLAYER_FOUNDATION_STONE.get(),
+                        ModBlocks.CITIZEN_FOUNDATION_STONE.get(),
+                        ModBlocks.NATION_FOUNDATION_STONE.get()
+                );
+
+        // custom tags
         tag(ModTags.Blocks.DOOR_GATE_WHITELIST)
                 .addTags(
                         BlockTags.WOODEN_DOORS,

@@ -612,43 +612,51 @@ public class OpsCommand {
                                                                                 )
                                                                 )
                                                                 .then(Commands.literal(CommandHelper.FRIENDS)
-                                                                                ///// WHITELIST ADD /////
-//                                                                                .then(Commands.literal(CommandHelper.ADD)
-//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-//                                                                                                .suggests(OWNER_NAMES)
-//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//                                                                                                        .suggests(PARCEL_NAMES)
-//                                                                                                        .executes(source -> {
-//                                                                                                            return ParcelWhitelistCommandDelegate.addToWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-//                                                                                                        })
-//                                                                                                )
-//                                                                                        )
-//                                                                                )
-//                                                                                ///// WHITELIST LIST /////
-//                                                                                .then(Commands.literal(CommandHelper.LIST)
-//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-//                                                                                                .suggests(OWNER_NAMES)
-//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//                                                                                                        .suggests(PARCEL_NAMES)
-//                                                                                                        .executes(source -> {
-//                                                                                                            return ParcelWhitelistCommandDelegate.displayWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-//                                                                                                        })
-//                                                                                                )
-//                                                                                        )
-//                                                                                )
-                                                                        ///// TODO WHITELIST REMOVE /////
-                                                                        ///// PLAYER WHITELIST REMOVE /////
-//                                                                        .then(Commands.literal(CommandHelper.LIST)
-//                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-//                                                                                        .suggests(OWNER_NAMES)
-//                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//                                                                                                .suggests(PARCEL_NAMES)
-//                                                                                                .executes(source -> {
-//                                                                                                    return ParcelWhitelistCommandDelegate.removeFromWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-//                                                                                                })
-//                                                                                        )
-//                                                                                )
-//                                                                        )
+                                                                        ///// FRIENDS WHITELIST ADD /////
+                                                                        .then(Commands.literal(CommandHelper.ADD)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
+                                                                                                        .suggests(CommandHelper.PLAYER_NAMES)
+                                                                                                        .executes(source -> {
+                                                                                                            return FriendsWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
+                                                                                                                    StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// FRIENDS WHITELIST REMOVE /////
+                                                                        .then(Commands.literal(CommandHelper.REMOVE)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
+                                                                                                        .suggests(CommandHelper.CURRENT_FRIENDS_NAMES)
+                                                                                                        .executes(source -> {
+                                                                                                            return FriendsWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
+                                                                                                                    StringArgumentType.getString(source, CommandHelper.PARCEL_NAME), StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// FRIENDS WHITELIST LIST /////
+                                                                        .then(Commands.literal(CommandHelper.LIST)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .executes(source -> {
+                                                                                                    return FriendsWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+                                                                                                })
+                                                                                        )
+                                                                                )
+                                                                        )
                                                                 )
                                                 )
                                                 .then(Commands.literal(CommandHelper.BACKUP)

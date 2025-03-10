@@ -182,6 +182,43 @@ public class PlayerRegistry {
         }, EXECUTOR_SERVICE);
     }
 
+    public static Optional<String> getNameFromUUIDSynchronized(UUID uuid) {
+        try {
+            // mojang api requires uuid without dashes
+            URL url = new URL(MOJANG_API_URL + uuid.toString().replace("-", ""));
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+
+            if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder response = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    response.append(line);
+                }
+                reader.close();
+
+                Gson gson = new Gson();
+                JsonObject jsonObject = gson.fromJson(response.toString(), JsonObject.class);
+                if (jsonObject.has("name")) {
+                    String name = jsonObject.get("name").getAsString();
+                    return Optional.of(name);
+                } else {
+                    return Optional.empty();
+                }
+
+            } else if(connection.getResponseCode() == HttpURLConnection.HTTP_NO_CONTENT){
+                return Optional.empty(); //UUID not found
+            } else {
+                System.err.println("Error fetching name from UUID: " + connection.getResponseCode());
+                return Optional.empty();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
     public static CompletableFuture<UUID> getUUIDFromName(String playerName) {
         return CompletableFuture.supplyAsync(() -> {
             try {

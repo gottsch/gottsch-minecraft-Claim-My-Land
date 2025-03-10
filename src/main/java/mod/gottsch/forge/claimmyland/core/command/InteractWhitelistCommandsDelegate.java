@@ -48,7 +48,7 @@ public class InteractWhitelistCommandsDelegate {
         BLOCK_TAG,
         ITEM,
         ITEM_TAG,
-        PLAYER;
+        FRIENDS;
     }
 
     @Deprecated

@@ -43,6 +43,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -127,8 +128,11 @@ public class BorderStoneBlockEntity extends BlockEntity {
      *
      */
     public void selfDestruct() {
-        ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
-        this.getLevel().setBlock(this.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
+        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+            ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
+        }
+
+        this.getLevel().setBlockAndUpdate(this.getBlockPos(), Blocks.AIR.defaultBlockState());
         this.getLevel().removeBlockEntity(this.getBlockPos());
     }
 
@@ -150,9 +154,9 @@ public class BorderStoneBlockEntity extends BlockEntity {
         ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
         return switch (parcelType) {
             case PLAYER -> ModBlocks.PLAYER_HORIZONTAL_AREA.get();
-            case NATION -> ModBlocks.NATION_BORDER.get();
-            case CITIZEN -> ModBlocks.CITIZEN_BORDER.get();
-            case ZONE -> ModBlocks.ZONE_BORDER.get();
+            case NATION -> ModBlocks.NATION_HORIZONTAL_AREA.get();
+            case CITIZEN -> ModBlocks.CITIZEN_HORIZONTAL_AREA.get();
+            case ZONE -> ModBlocks.ZONE_HORIZONTAL_AREA.get();
         };
     }
 
@@ -175,7 +179,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
     }
 
     /**
-     * thus there is no need for check against overlaps etc.
+     * default implementation. meant to be overridden by concrete classes.
      * @param box
      * @return
      */
@@ -184,14 +188,18 @@ public class BorderStoneBlockEntity extends BlockEntity {
     }
 
     /**
-     *
+     * determines what state the buffer block is.
+     * default implementation. meant to be overridden by concrete classes.
      * @param box
      * @param bufferedBox
      * @return
      */
-    // determines what state the buffer block is
     protected BlockState getBufferBlockState(Box box, Box bufferedBox) {
         return ModBlocks.BUFFER.get().defaultBlockState().setValue(BorderBlock.INTERSECTS, BorderStatus.GOOD);
+    }
+
+    protected BlockState getHorizontalAreaBlockState(BorderStatus status) {
+        return getHorizontalAreaBlock().defaultBlockState().setValue(HorizontalAreaBlock.INTERSECTS, status);
     }
 
     /**
@@ -282,7 +290,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
     }
 
     /**
-    * intended to replace world block (ex Air) with a BorderBlock
+     * intended to replace world block (ex Air) with a BorderBlock
      * whose blockState will be modified for the specific position it is in.
      * therefor the BlockState must be of a Border/BufferBlock with only the
      * INTERSECTS state value set. the others (FACING, POSITION) will be set here.
@@ -309,11 +317,9 @@ public class BorderStoneBlockEntity extends BlockEntity {
             // north, top
             BlockPos pos2 = pos.offset(0, ModUtil.getSize(box).getY()-1, 0);
             replaceParcelBorderBlock(level, pos2, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.TOP));
-
             // south, bottom
             BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
             replaceParcelBorderBlock(level, pos3, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM));
-
             // south, top
             BlockPos pos4 = pos.offset(0, ModUtil.getSize(box).getY()-1, ModUtil.getSize(box).getZ()-1);
             replaceParcelBorderBlock(level, pos4, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.TOP));
@@ -338,14 +344,14 @@ public class BorderStoneBlockEntity extends BlockEntity {
             BlockPos pos = box.getMinCoords().toPos().offset(0, y, 0);
             replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.LEFT));
 
-            BlockPos pos2 = pos.offset(ModUtil.getSize(box).getX()-1, 0, 0);
+            BlockPos pos2 = pos.offset(ModUtil.getSize(box).getX() - 1, 0, 0);
             replaceParcelBorderBlock(level, pos2, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.NORTH).setValue(BorderBlock.POSITION, BorderPosition.RIGHT));
 
-            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ()-1);
+            BlockPos pos3 = pos.offset(0, 0, ModUtil.getSize(box).getZ() - 1);
             replaceParcelBorderBlock(level, pos3, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.RIGHT));
 
-            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX()-1, 0, ModUtil.getSize(box).getZ()-1);
-            replaceParcelBorderBlock(level, pos4, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH ).setValue(BorderBlock.POSITION, BorderPosition.LEFT));
+            BlockPos pos4 = pos.offset(ModUtil.getSize(box).getX() - 1, 0, ModUtil.getSize(box).getZ() - 1);
+            replaceParcelBorderBlock(level, pos4, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.LEFT));
         }
 
         // NOTE there is a mismatch of _LEFT | _RIGHT positions depending on your perspective.
@@ -378,7 +384,6 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
         pos = box.getMinCoords().toPos().offset(ModUtil.getSize(box).getX()-1, 0, ModUtil.getSize(box).getZ()-1);
         replaceParcelBorderBlock(level, pos, removeBlock, intersectsBlockState.setValue(FacingBlock.FACING, Direction.SOUTH).setValue(BorderBlock.POSITION, BorderPosition.BOTTOM_LEFT));
-
     }
 
     /**
@@ -490,8 +495,8 @@ public class BorderStoneBlockEntity extends BlockEntity {
         // add the border
         Box box = getAbsoluteBox(coords);
         Block horizontalAreaBlock = getHorizontalAreaBlock();
-
-        placeParcelHorizontalArea(box, horizontalAreaBlock.defaultBlockState());
+        BlockState borderState = getHorizontalAreaBlockState(getBorderBlockState(box).getValue(BorderBlock.INTERSECTS));
+        placeParcelHorizontalArea(box, borderState);
     }
 
     public void placeParcelHorizontalArea(Box box, BlockState state) {
@@ -523,7 +528,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
     public static void replaceParcelHorizontalAreaBlock(Level level, BlockPos pos, Block removeBlock, BlockState newState) {
         BlockState borderState = level.getBlockState(pos);
-        if (borderState.getBlock() instanceof  IBorderBlock) return;
+        if ((borderState.getBlock() instanceof  IBorderBlock) || borderState.liquid()) return;
         if (borderState.is(removeBlock) || borderState.canBeReplaced()) {
             level.setBlockAndUpdate(pos, newState);
         }

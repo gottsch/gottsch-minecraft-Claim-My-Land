@@ -19,6 +19,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.command;
 
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.core.config.Config;
@@ -110,6 +111,26 @@ public class CommandHelper {
 		return SharedSuggestionProvider.suggest(tags, builder);
 	};
 
+	static final SuggestionProvider<CommandSourceStack> PLAYER_NAMES = (source, builder) -> {
+		List<String> names = source.getSource().getLevel().getServer().getPlayerList().getPlayers().stream().map(p -> p.getName().getString()).toList();
+		return SharedSuggestionProvider.suggest(names, builder);
+	};
+
+	static final SuggestionProvider<CommandSourceStack> CURRENT_FRIENDS_NAMES = (source, builder) -> {
+		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+		List<String> list = new ArrayList<>();
+
+		if (ownerUuid.isPresent()) {
+			Optional<List<UUID>> friendsUuids = FriendsWhitelistCommandsDelegate.getFriendsWhitelist(source.getSource(), ownerUuid.get(), parcelName);
+			friendsUuids.ifPresent(uuids -> uuids.forEach(uuid -> {
+				Optional<String> name = CommandHelper.getPlayerName(source.getSource(), uuid);
+				name.ifPresent(list::add);
+			}));
+		}
+		return SharedSuggestionProvider.suggest(list, builder);
+	};
+
 	/**
 	 * marks persistent data as dirty so that minecraft will auto save it.
 	 * @param level
@@ -175,6 +196,25 @@ public class CommandHelper {
 //            }
 		}
 		return Optional.of(player.getUUID());
+	}
+
+	public static Optional<String> getPlayerName(CommandSourceStack source, UUID playerUuid) {
+		// get the online player
+		ServerPlayer player = source.getServer().getPlayerList().getPlayer(playerUuid);
+		if (player == null) {
+			// get the player from the player registry
+			return PlayerRegistry.get(playerUuid).or(() -> {
+				if (Config.SERVER.general.allowMojangNameCalls.get()) {
+					Optional<String> playerName = PlayerRegistry.getNameFromUUIDSynchronized(playerUuid);
+					// before returning, update PlayerRegistry with the UUID/name mapping
+					playerName.ifPresent(name -> PlayerRegistry.update(playerUuid, name));
+					return playerName;
+				} else {
+					return Optional.empty();
+				}
+			});
+		}
+		return Optional.of(player.getName().getString());
 	}
 
 	public static void sendNewLineMessage(CommandSourceStack source) {

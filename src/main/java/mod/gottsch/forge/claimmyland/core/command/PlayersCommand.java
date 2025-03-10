@@ -46,7 +46,6 @@ import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.*;
@@ -90,11 +89,6 @@ public class PlayersCommand {
 		ServerPlayer owner = source.getSource().getPlayerOrException();
 		List<String> names = ParcelRegistry.findByOwner(owner.getUUID()).stream()
 				.map((Parcel::getName)).toList();
-		return SharedSuggestionProvider.suggest(names, builder);
-	};
-
-	static final SuggestionProvider<CommandSourceStack> PLAYER_NAMES = (source, builder) -> {
-		List<String> names = source.getSource().getLevel().getServer().getPlayerList().getPlayers().stream().map(p -> p.getName().getString()).toList();
 		return SharedSuggestionProvider.suggest(names, builder);
 	};
 
@@ -250,7 +244,7 @@ public class PlayersCommand {
 														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
 																.suggests(OWNER_PARCEL_NAMES)
 																.then(Commands.argument(CommandHelper.NEW_OWNER_NAME, StringArgumentType.string())
-																		.suggests(PLAYER_NAMES)
+																		.suggests(CommandHelper.PLAYER_NAMES)
 																		.executes(source -> {
 																			return transferParcel(source.getSource(),
 																					StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
@@ -434,28 +428,49 @@ public class PlayersCommand {
 																									InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
 																						})
 																				)
-
 																		)
 																)
-												)
-												.then(Commands.literal(CommandHelper.FRIENDS)
-														///// FRIENDS WHITELIST ADD /////
-														.then(Commands.literal(CommandHelper.ADD)
-																.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-																		.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
-																				.suggests(PLAYER_NAMES)
-																				.executes(source -> {
-																					return FriendsWhitelistCommandDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-																							StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
-																				})
+																.then(Commands.literal(CommandHelper.FRIENDS)
+																		///// FRIENDS WHITELIST ADD /////
+																		.then(Commands.literal(CommandHelper.ADD)
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
+																								.suggests(CommandHelper.PLAYER_NAMES)
+																								.executes(source -> {
+																									return FriendsWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																											StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+																								})
+																						)
+																				)
+																		)
+																		///// FRIENDS WHITELIST REMOVE /////
+																		.then(Commands.literal(CommandHelper.REMOVE)
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
+																								.suggests(CommandHelper.CURRENT_FRIENDS_NAMES)
+																								.executes(source -> {
+																									return FriendsWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+																											StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+																								})
+																						)
+																				)
+																		)
+																		///// FRIENDS WHITELIST LIST /////
+																		.then(Commands.literal(CommandHelper.LIST)
+																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																						.suggests(OWNER_PARCEL_NAMES)
+																						.executes(source -> {
+																							return FriendsWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+																						})
+																				)
 																		)
 																)
 
-														)
 												)
-										// TODO FRIENDS WHITELIST
-
 								) // end of parcel
+
 								///// GIVE TOP-LEVEL OPTION /////
 								.then(Commands.literal(CommandHelper.GIVE)
 												.then(Commands.argument(CommandHelper.GIVE_ITEM, StringArgumentType.greedyString())

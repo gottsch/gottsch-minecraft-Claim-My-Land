@@ -50,8 +50,10 @@ public class LanguageGen extends LanguageProvider {
         add(ModItems.NATION_DEED_100.get(), "Nation Deed 100x100");
 
         // blocks
-        add(ModBlocks.PLAYER_FOUNDATION_STONE.get(), "Foundation Stone");
-//        add(ModBlocks.ZONE_PLACEMENT_BLOCK.get(), "Zoning Tool");
+        add(ModBlocks.PLAYER_FOUNDATION_STONE.get(), "Player Foundation Stone");
+        add(ModBlocks.CITIZEN_FOUNDATION_STONE.get(), "Citizen Foundation Stone");
+        add(ModBlocks.NATION_FOUNDATION_STONE.get(), "Nation Foundation Stone");
+
         add(ModItems.CITIZEN_PLACEMENT_TOOL.get(), "Citizen Parcel Tool");
         add(ModItems.ZONING_PLACEMENT_TOOL.get(), "Zoning Tool");
 
@@ -61,6 +63,11 @@ public class LanguageGen extends LanguageProvider {
         add(ModBlocks.NATION_BORDER.get(), "Nation Parcel Border");
         add(ModBlocks.ZONE_BORDER.get(), "Zone Parcel Border");
         add(ModBlocks.BUFFER.get(), "Parcel Buffer");
+
+        add(ModBlocks.PLAYER_HORIZONTAL_AREA.get(), "Player Parcel Area");
+        add(ModBlocks.CITIZEN_HORIZONTAL_AREA.get(), "Citizen Parcel Area");
+        add(ModBlocks.NATION_HORIZONTAL_AREA.get(), "Nation Parcel Area");
+        add(ModBlocks.ZONE_HORIZONTAL_AREA.get(), "Zone Parcel Area");
 
 //        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
 //
@@ -127,27 +134,29 @@ public class LanguageGen extends LanguageProvider {
 
         add(LangUtil.chat("parcel.whitelist.add.success"), "Friend was added to the whitelist.");
         add(LangUtil.chat("parcel.whitelist.add.failure"), "Unable to add friend to the whitelist.");
-        add(LangUtil.chat("parcel.whitelist.list"), "Friend Whitelist for parcel ");
+        add(LangUtil.chat("parcel.whitelist.remove.success"), "Friend was removed from the whitelist.");
+        add(LangUtil.chat("parcel.whitelist.remove.failure"), "Unable to remove friend from the whitelist.");
+        add(LangUtil.chat("parcel.whitelist.list"), "Friends Whitelist for parcel ");
 
         add(LangUtil.chat("parcel.block_tag.add.success"), "A block tag was added to the block tag whitelist.");
         add(LangUtil.chat("parcel.block_tag.add.failure"), "Unable to add block tag to the block tag whitelist.");
-        add(LangUtil.chat("parcel.block_tag.remove.success"), "A block tag was removed to the block tag whitelist.");
-        add(LangUtil.chat("parcel.block_tag.remove.failure"), "Unable to remove block tag to the block tag whitelist.");
+        add(LangUtil.chat("parcel.block_tag.remove.success"), "A block tag was removed from the block tag whitelist.");
+        add(LangUtil.chat("parcel.block_tag.remove.failure"), "Unable to remove block tag from the block tag whitelist.");
 
         add(LangUtil.chat("parcel.block.add.success"), "A block was added to the block whitelist.");
         add(LangUtil.chat("parcel.block.add.failure"), "Unable to add block to the block whitelist.");
-        add(LangUtil.chat("parcel.block.remove.success"), "A block was removed to the block whitelist.");
-        add(LangUtil.chat("parcel.block.remove.failure"), "Unable to remove block to the block whitelist.");
+        add(LangUtil.chat("parcel.block.remove.success"), "A block was removed from the block whitelist.");
+        add(LangUtil.chat("parcel.block.remove.failure"), "Unable to remove block from the block whitelist.");
 
         add(LangUtil.chat("parcel.item_tag.add.success"), "An item tag was added to the item tag whitelist.");
         add(LangUtil.chat("parcel.item_tag.add.failure"), "Unable to add item tag to the item tag whitelist.");
-        add(LangUtil.chat("parcel.item_tag.remove.success"), "An item tag was removed to the item tag whitelist.");
-        add(LangUtil.chat("parcel.item_tag.remove.failure"), "Unable to remove item tag to the item tag whitelist.");
+        add(LangUtil.chat("parcel.item_tag.remove.success"), "An item tag was removed from the item tag whitelist.");
+        add(LangUtil.chat("parcel.item_tag.remove.failure"), "Unable to remove item tag from the item tag whitelist.");
 
         add(LangUtil.chat("parcel.item.add.success"), "A item was added to the item whitelist.");
         add(LangUtil.chat("parcel.item.add.failure"), "Unable to add item to the item whitelist.");
-        add(LangUtil.chat("parcel.item.remove.success"), "A item was removed to the item whitelist.");
-        add(LangUtil.chat("parcel.item.remove.failure"), "Unable to remove item to the item whitelist.");
+        add(LangUtil.chat("parcel.item.remove.success"), "A item was removed from the item whitelist.");
+        add(LangUtil.chat("parcel.item.remove.failure"), "Unable to remove item from the item whitelist.");
 
         add(LangUtil.chat("parcel.block_tag.list"), "Block Tag Whitelist for parcel ");
         add(LangUtil.chat("parcel.block.list"), "Block Whitelist for parcel ");
