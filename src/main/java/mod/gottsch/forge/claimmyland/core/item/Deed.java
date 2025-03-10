@@ -241,10 +241,11 @@ public abstract class Deed extends Item {
 
                     // remove the border
                     ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder();
+                    ((FoundationStoneBlockEntity) blockEntity).removeHorizontalArea();
                     // remove the foundation stone
                     blockEntity.getLevel().setBlock(context.getClickedPos(), Blocks.AIR.defaultBlockState(), 3);
 
-                    // TODO add particle effects or place construction tap around border or border display blcok
+                    // TODO add particle effects or place construction tap around border or border display block
 
                     // send success message
                     context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.claim.success"),
@@ -379,6 +380,7 @@ public abstract class Deed extends Item {
              */
             // place border blocks
             blockEntity.placeParcelBorder();
+            blockEntity.placeParcelHorizontalArea();
         }
     }
 
