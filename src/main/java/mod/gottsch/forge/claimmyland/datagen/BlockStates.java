@@ -27,20 +27,19 @@ public class BlockStates extends BlockStateProvider {
 	@Override
 	protected void registerStatesAndModels() {
 
-//		simpleBlock(ModBlocks.NATION_FOUNDATION_STONE.get());
-//		simpleBlock(ModBlocks.CITIZEN_FOUNDATION_STONE.get());
-//		simpleBlock(ModBlocks.ZONE_PLACEMENT_BLOCK.get());
-
 		foundationStone(ModBlocks.PLAYER_FOUNDATION_STONE, mcLoc("block/polished_andesite"), mcLoc("block/andesite"));
 		foundationStone(ModBlocks.CITIZEN_FOUNDATION_STONE, mcLoc("block/polished_diorite"), mcLoc("block/diorite"));
 		foundationStone(ModBlocks.NATION_FOUNDATION_STONE, mcLoc("block/polished_granite"), mcLoc("block/granite"));
-////
-//		borderStone(ModBlocks.BORDER_STONE, mcLoc("block/polished_andesite"));
 
 		borderBlock(ModBlocks.PLAYER_BORDER, modLoc("block/green"), modLoc("block/red"));
 		borderBlock(ModBlocks.NATION_BORDER, modLoc("block/blue"), modLoc("block/red"));
 		borderBlock(ModBlocks.CITIZEN_BORDER, modLoc("block/purple"), modLoc("block/red"));
 		borderBlock(ModBlocks.ZONE_BORDER, modLoc("block/yellow"), modLoc("block/red"));
+
+		horizontalAreaBlock(ModBlocks.PLAYER_HORIZONTAL_AREA, modLoc("block/green_horizontal"));
+		horizontalAreaBlock(ModBlocks.NATION_HORIZONTAL_AREA, modLoc("block/blue_horizontal"));
+		horizontalAreaBlock(ModBlocks.CITIZEN_HORIZONTAL_AREA, modLoc("block/purple_horizontal"));
+		horizontalAreaBlock(ModBlocks.ZONE_HORIZONTAL_AREA, modLoc("block/yellow_horizontal"));
 
 		bufferBlock(ModBlocks.BUFFER, modLoc("block/buffer_block"), modLoc("block/bad_buffer_block"));
 	}
@@ -89,6 +88,21 @@ public class BlockStates extends BlockStateProvider {
 		String name = block.getId().getPath();
 
 		myBorderBlock(name, (BufferBlock)block.get(), "buffer", goodTexture, badTexture, "minecraft:translucent");
+	}
+
+	public void horizontalAreaBlock(RegistryObject<Block> block, ResourceLocation goodTexture) {
+		String name = block.getId().getPath();
+		horizontalAreaBlock(name, (Block)block.get(), goodTexture, "minecraft:translucent");
+	}
+
+	private void horizontalAreaBlock(String name, Block block, ResourceLocation texture, String renderType) {
+		ModelFile model = models().withExistingParent(name , modLoc(ModelProvider.BLOCK_FOLDER + "/horizontal_area_block")).texture("0", texture).renderType(renderType);
+		horizontalAreaBlock(block, new ConfiguredModel(model));
+	}
+
+	private void horizontalAreaBlock(Block block, ConfiguredModel... models) {
+		getVariantBuilder(block)
+				.partialState().setModels(models);
 	}
 
 	private void myFoundationStone(String name, FoundationStone block, ResourceLocation polished, ResourceLocation stone, String renderType) {

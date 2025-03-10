@@ -107,6 +107,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
             // determine if a parcel still exits at this location
             if (getParcelId() != null && ParcelRegistry.findByParcelId(getParcelId()).isPresent()) {
                 placeParcelBorder();
+                placeParcelHorizontalArea();
             } else {
                 setParcelId(null);
                 setExpireTime(0L);
@@ -116,6 +117,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
         if (getLevel().getGameTime() > getExpireTime()) {
             // remove border
             removeParcelBorder(getLevel(), getCoords());
+            removeHorizontalArea(getLevel(), getCoords());
             // self destruct
             selfDestruct();
         }
@@ -138,6 +140,16 @@ public class BorderStoneBlockEntity extends BlockEntity {
         ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
         return switch (parcelType) {
             case PLAYER -> ModBlocks.PLAYER_BORDER.get();
+            case NATION -> ModBlocks.NATION_BORDER.get();
+            case CITIZEN -> ModBlocks.CITIZEN_BORDER.get();
+            case ZONE -> ModBlocks.ZONE_BORDER.get();
+        };
+    }
+
+    public Block getHorizontalAreaBlock() {
+        ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
+        return switch (parcelType) {
+            case PLAYER -> ModBlocks.PLAYER_HORIZONTAL_AREA.get();
             case NATION -> ModBlocks.NATION_BORDER.get();
             case CITIZEN -> ModBlocks.CITIZEN_BORDER.get();
             case ZONE -> ModBlocks.ZONE_BORDER.get();
@@ -378,7 +390,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      */
     public static void replaceParcelBorderBlock(Level level, BlockPos pos, Block removeBlock, BlockState newState) {
         BlockState borderState = level.getBlockState(pos);
-        if ((borderState instanceof IBorderBlock) || borderState.is(removeBlock) || borderState.canBeReplaced()) {
+        if ((borderState.getBlock() instanceof IBorderBlock) || borderState.is(removeBlock) || borderState.canBeReplaced()) {
             level.setBlockAndUpdate(pos, newState);
         }
     }
@@ -467,6 +479,69 @@ public class BorderStoneBlockEntity extends BlockEntity {
         replaceParcelBorder(level, box, borderBlock, Blocks.AIR.defaultBlockState());
         box = ModUtil.inflate(box, bufferSize);
         replaceParcelBorder(level, box, ModBlocks.BUFFER.get(), Blocks.AIR.defaultBlockState());
+    }
+
+    public void placeParcelHorizontalArea() {
+        Level level = getLevel();
+        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+
+        ICoords coords = parcel.map(Parcel::getCoords).orElse(Coords.of(this.getBlockPos()));
+
+        // add the border
+        Box box = getAbsoluteBox(coords);
+        Block horizontalAreaBlock = getHorizontalAreaBlock();
+
+        placeParcelHorizontalArea(box, horizontalAreaBlock.defaultBlockState());
+    }
+
+    public void placeParcelHorizontalArea(Box box, BlockState state) {
+        replaceParcelHorizontalArea(box, Blocks.AIR, state);
+    }
+
+    public void replaceParcelHorizontalArea(Box box, Block removeBlock, BlockState state) {
+        replaceParcelHorizontalArea(getLevel(), this.getBlockPos(), box, removeBlock, state);
+    }
+
+    /**
+     * intended to replace world block (ex Air) with a HorizontalAreaBlock
+     * whose blockState will be modified for the specific position it is in.
+     * therefor the BlockState must be of a HorizontalAreaBlock.
+     * @param box
+     * @param removeBlock
+     * @param addBlockState
+     */
+    public static void replaceParcelHorizontalArea(Level level, BlockPos pos, Box box, Block removeBlock, BlockState addBlockState) {
+        int y = pos.getY();
+        // only iterate over the outline coords
+        for (int x = 0; x < ModUtil.getSize(box).getX(); x++) {
+            for (int z = 0; z < ModUtil.getSize(box).getZ(); z++) {
+                BlockPos newPos = box.getMinCoords().toPos().offset(x, 0, z).atY(y);
+                replaceParcelHorizontalAreaBlock(level, newPos, removeBlock, addBlockState);
+            }
+        }
+    }
+
+    public static void replaceParcelHorizontalAreaBlock(Level level, BlockPos pos, Block removeBlock, BlockState newState) {
+        BlockState borderState = level.getBlockState(pos);
+        if (borderState.getBlock() instanceof  IBorderBlock) return;
+        if (borderState.is(removeBlock) || borderState.canBeReplaced()) {
+            level.setBlockAndUpdate(pos, newState);
+        }
+    }
+
+    /**
+     * removes the border blocks from the border coords
+     */
+    public void removeHorizontalArea() {
+        Level level = getLevel();
+        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+        ICoords coords = parcel.map(p -> p.getCoords()).orElse(Coords.of(this.getBlockPos()));
+        removeHorizontalArea(getLevel(), coords);
+    }
+
+    public void removeHorizontalArea(Level level, ICoords coords) {
+        Box box = getAbsoluteBox(coords);
+        replaceParcelHorizontalArea(level, this.getBlockPos(), box, getHorizontalAreaBlock(), Blocks.AIR.defaultBlockState());
     }
 
     @Override

@@ -147,6 +147,7 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
              */
             // place border blocks
             blockEntity.placeParcelBorder();
+            blockEntity.placeParcelHorizontalArea();
         }
         super.onPlace(state, level, pos, oldState, isMoving);
     }
@@ -158,6 +159,7 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
             if (blockEntity != null) {
                 // remove any borders
                 blockEntity.removeParcelBorder();
+                blockEntity.removeHorizontalArea();
             }
         }
         super.onRemove(state, level, pos, state2, b);

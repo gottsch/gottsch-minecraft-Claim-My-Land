@@ -42,7 +42,6 @@ public class PlayerFoundationStoneBlockEntity extends FoundationStoneBlockEntity
 
     @Override
     public Block getBorderBlock() {
-        // TODO if embedded in a citizen parcel use the citizen border
         Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(this.getBlockPos()));
 
         if (registryParcel.isEmpty()) {
