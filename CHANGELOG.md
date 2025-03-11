@@ -8,15 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2025-
 
 ### Changed
-- Zone parcel inherits Nation parcel's whitelists values
-- Border Stones now display horizontal area blocks/highlight along with the border blocks.
-
+- Zone parcel inherits Nation parcel's whitelists (block/item tags, blocks/items, friends) values.
+- Border Stones now display horizontal area blocks/highlight along with the border blocks outline.
+- updated Player name/uuid check - first looks for online players, then in the PlayerRegistry, then from Mojang API.
+- update the /cml parcel list command to include parcels that the player is a friend of. these are shown in grey with an (*).
+- many commands were updated to use the new Player check.
+- re-enabled block placed denial message when attempting to place block on claimed area.
 
 ### Added
+- offline Player check from Mojang API
+- config option to enable/disable Mojang API check
+- friends whitelist - players that can access/use the owner's parcel just like the owners ie. break/place blocks, use blcoks/items etc.
 - blockTag, block, itemTag, and item whitelists for parcels available from player command (/cml).
   - whitelists allow blocks and items to be used within claimed parcels.
+- Horizontal Area blocks - displays parcel boundaries on the XZ plane.
 - Tag for Macaw's Furniture.
-- Horizontal Area blocks
 
 ## [1.2.0] - 2025-02-27
 

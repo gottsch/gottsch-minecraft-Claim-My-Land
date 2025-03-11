@@ -156,7 +156,7 @@ public class ParcelRegistry {
                     // add to byCoords map
                     PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
 
-                    // add to byOwner map
+                    // add to by Owner map
                     if (ObjectUtils.isNotEmpty(parcel.getOwnerId())) {
                         List<Parcel> parcelsByOwner = new ArrayList<>();
                         if (!PARCELS_BY_OWNER.containsKey(parcel.getOwnerId())) {
@@ -177,6 +177,7 @@ public class ParcelRegistry {
                                 parcels = PARCELS_BY_FRIENDS.get(friend);
                             }
                             parcels.add(parcel);
+                            ClaimMyLand.LOGGER.debug("loading/adding {} to friends list for parcel {}", friend, parcel.getName());
                         });
                     }
 

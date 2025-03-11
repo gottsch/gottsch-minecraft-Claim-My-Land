@@ -105,7 +105,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");
         add(LangUtil.chat("parcel.max_reached"), "You have already reached your max. number of parcels.");
         add(LangUtil.chat("parcel.unable_to_locate"), "Unable to find the parcel.");
-
+        add(LangUtil.chat("parcel.place_block.block_claimed"), "You cannot place a block there. It is already claimed.");
 
         add(LangUtil.chat("parcel.list"), "%s's Parcels");
         add(LangUtil.chat("parcel.list.abandoned"), "Abandoned Parcels");

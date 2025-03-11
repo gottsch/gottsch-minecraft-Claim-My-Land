@@ -73,6 +73,7 @@
   "chat.claimmyland.parcel.nation.not_owner": "You are not the owner of the nation.",
   "chat.claimmyland.parcel.nation.unable_to_locate": "A nation with that name does not exist.",
   "chat.claimmyland.parcel.outside_world_boundaries": "The parcel extends beyond the world boundaries.",
+  "chat.claimmyland.parcel.place_block.block_claimed": "You cannot place a block there. It is already claimed.",
   "chat.claimmyland.parcel.remove.failure": "Unable to remove the parcel.",
   "chat.claimmyland.parcel.remove.success": "The parcel has been removed.",
   "chat.claimmyland.parcel.rename.failure": "Unable to rename the parcel.",

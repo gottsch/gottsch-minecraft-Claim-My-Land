@@ -129,12 +129,14 @@ public class ModEvents {
 //            ClaimMyLand.LOGGER.debug("player is holding -> {}", ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
             if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND))) {
                 event.setCanceled(true);
-                if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+//                if (ClaimMyLand.LOGGER.isDebugEnabled()) {
 //                    ClaimMyLand.LOGGER.debug("denied block place -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
-                }
+//                }
 //                if (!event.getLevel().isClientSide()) {
 //                    sendProtectedMessage(event.getLevel(), (Player) event.getEntity());
 //                }
+                event.getEntity().sendSystemMessage((Component.translatable(LangUtil.chat("parcel.place_block.block_claimed")).withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.ITALIC})));
+
             }
         }
         else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {

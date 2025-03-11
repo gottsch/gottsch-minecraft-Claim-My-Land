@@ -299,6 +299,7 @@ public abstract class AbstractParcel implements Parcel {
             list.forEach(element -> {
                 CompoundTag uuidTag = ((CompoundTag)element);
                 if (uuidTag.contains(ID_KEY)) {
+                    ClaimMyLand.LOGGER.debug("loading {} to whitelist", uuidTag.getUUID(ID_KEY));
                     getWhitelist().add(uuidTag.getUUID(ID_KEY));
                 }
             });

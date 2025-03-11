@@ -78,20 +78,30 @@ public class ParcelCommandDelegate {
      * @return
      */
     public static int listParcelsByOwner(CommandSourceStack source, String ownerName) {
-        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
-        return listParcelsByOwner(source, player);
+//        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (playerUuid.isPresent()) {
+            return listParcelsByOwner(source, ownerName, playerUuid.get());
+    } else {
+            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+        }
+        return 1;
     }
 
-    // TODO mve to common class
     public static int listParcelsByOwner(CommandSourceStack source, ServerPlayer player) {
+        return listParcelsByOwner(source, player.getName().getString(), player.getUUID());
+    }
+
+    public static int listParcelsByOwner(CommandSourceStack source, String playerName, UUID playerUuid) {
         List<Component> messages = new ArrayList<>();
 //        messages.add(Component.literal(""));
 //        messages.add(Component.translatable(LangUtil.chat("parcel.list"), player.getName().getString()).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
 //        messages.add(Component.literal(""));
-        buildListTitle(messages, Component.translatable(LangUtil.chat("parcel.list"), player.getName().getString()));
+        buildListTitle(messages, Component.translatable(LangUtil.chat("parcel.list"), playerName));
 
 //        List<Component> components =
-        formatParcelList(messages, ParcelRegistry.findByOwner(player.getUUID()));
+        formatParcelList(messages, ParcelRegistry.findByOwner(playerUuid),
+                ParcelRegistry.findByFriend(playerUuid));
 //        appendFriendsParcelList(messages, ParcelRegistry.findByFriend(player.getUUID()));
 
         messages.forEach(component -> {
@@ -144,7 +154,7 @@ public class ParcelCommandDelegate {
             list.forEach(parcel -> {
                 messages.add(
                         Component.literal(parcel.getName().toUpperCase()).withStyle(ChatFormatting.AQUA)
-                                .append(Component.literal(String.format(" [ %s ]: ", parcel.getType().getSerializedName())).withStyle(ChatFormatting.WHITE))
+                                .append(Component.literal(String.format(" [%s]: ", parcel.getType().getSerializedName().charAt(0))).withStyle(ChatFormatting.WHITE))
                                 .append(Component.translatable(String.format("(%s) to (%s)",
                                         formatCoords(parcel.getMinCoords()),
                                         formatCoords(parcel.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
@@ -157,8 +167,8 @@ public class ParcelCommandDelegate {
             // append all friends parcels
             friendsList.forEach( parcel -> {
                 messages.add(
-                        Component.literal("(F) " + parcel.getName().toUpperCase()).withStyle(ChatFormatting.GRAY)
-                                .append(Component.literal(String.format(" [ %s ]: ", parcel.getType().getSerializedName())).withStyle(ChatFormatting.WHITE))
+                        Component.literal(parcel.getName().toUpperCase() + "*").withStyle(ChatFormatting.GRAY)
+                                .append(Component.literal(String.format(" [%s]: ", parcel.getType().getSerializedName().charAt(0))).withStyle(ChatFormatting.WHITE))
                                 .append(Component.translatable(String.format("(%s) to (%s)",
                                         formatCoords(parcel.getMinCoords()),
                                         formatCoords(parcel.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
