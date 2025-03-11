@@ -33,22 +33,16 @@ import net.minecraftforge.registries.RegistryObject;
  */
 public class ModBlocks {
     public static final RegistryObject<Block> BORDER_STONE = Registration.BLOCKS.register("border_stone",
-            () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
-
-//    public static final RegistryObject<Block> NATION_BORDER_STONE = Registration.BLOCKS.register("nation_border_stone",
-//            () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
-
-//    public static final RegistryObject<Block> FOUNDATION_STONE = Registration.BLOCKS.register("foundation_stone",
-//            () -> new FoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+            () -> new BorderStone(BlockBehaviour.Properties.copy(Blocks.COBBLESTONE)));
 
     public static final RegistryObject<Block> PLAYER_FOUNDATION_STONE = Registration.BLOCKS.register("player_foundation_stone",
-            () -> new PlayerFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+            () -> new PlayerFoundationStone(BlockBehaviour.Properties.copy(Blocks.COBBLESTONE)));
 
     public static final RegistryObject<Block> NATION_FOUNDATION_STONE = Registration.BLOCKS.register("nation_foundation_stone",
-            () -> new NationFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+            () -> new NationFoundationStone(BlockBehaviour.Properties.copy(Blocks.COBBLESTONE)));
 
     public static final RegistryObject<Block> CITIZEN_FOUNDATION_STONE = Registration.BLOCKS.register("citizen_foundation_stone",
-            () -> new CitizenFoundationStone(BlockBehaviour.Properties.copy(Blocks.STONE)));
+            () -> new CitizenFoundationStone(BlockBehaviour.Properties.copy(Blocks.COBBLESTONE)));
 
 
     public static final RegistryObject<Block> PLAYER_BORDER = Registration.BLOCKS.register("player_border",

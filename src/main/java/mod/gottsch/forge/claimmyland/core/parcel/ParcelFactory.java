@@ -52,7 +52,7 @@ public class ParcelFactory {
     }
 
     public static Optional<Parcel> create(ParcelType type) {
-        return create(type, null);
+        return create(type, (UUID)null);
     }
 
     /**
@@ -66,6 +66,16 @@ public class ParcelFactory {
             case NATION -> Optional.of(createNationParcel(nationId));
             case CITIZEN -> Optional.of(createCitizenParcel(nationId));
             case ZONE -> Optional.of(createZoneParcel(nationId));
+            default -> Optional.empty();
+        };
+    }
+
+    public static Optional<Parcel> create(ParcelType type, NationParcel nation) {
+        return switch (type) {
+            case PLAYER -> Optional.of(createPlayerParcel());
+            case NATION -> Optional.of(createNationParcel(nation.getNationId()));
+            case CITIZEN -> Optional.of(createCitizenParcel(nation.getNationId()));
+            case ZONE -> Optional.of(createZoneParcel(nation));
             default -> Optional.empty();
         };
     }
@@ -98,6 +108,16 @@ public class ParcelFactory {
         parcel.setId(UUID.randomUUID());
         parcel.setNationId(nationId);
         parcel.setName(parcel.randomName());
+        return parcel;
+    }
+
+    private static Parcel createZoneParcel(NationParcel nation) {
+        Parcel parcel = createZoneParcel(nation.getNationId());
+        parcel.setBlockTagWhitelist(nation.getBlockTagWhitelist());
+        parcel.setBlockWhitelist(nation.getBlockWhitelist());
+        parcel.setItemTagWhitelist(nation.getItemTagWhitelist());
+        parcel.setItemWhitelist(nation.getItemWhitelist());
+        parcel.setWhitelist(nation.getWhitelist());
         return parcel;
     }
 }

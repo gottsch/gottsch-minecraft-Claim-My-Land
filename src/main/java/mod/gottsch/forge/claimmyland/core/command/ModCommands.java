@@ -34,6 +34,6 @@ public class ModCommands {
 	@SubscribeEvent
 	public static void onServerStarting(RegisterCommandsEvent event) {
 		OpsCommand.register(event.getDispatcher(), event.getBuildContext());
-		PlayersCommand.register(event.getDispatcher());
+		PlayersCommand.register(event.getDispatcher(), event.getBuildContext());
 	}
 }

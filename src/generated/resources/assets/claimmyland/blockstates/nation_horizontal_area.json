@@ -1,7 +1,12 @@
 {
   "variants": {
-    "": {
-      "model": "claimmyland:block/nation_horizontal_area"
+    "intersects=bad": {
+      "model": "claimmyland:block/bad_nation_horizontal_area",
+      "uvlock": true
+    },
+    "intersects=good": {
+      "model": "claimmyland:block/nation_horizontal_area",
+      "uvlock": true
     }
   }
 }

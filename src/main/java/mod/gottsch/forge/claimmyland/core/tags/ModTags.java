@@ -45,15 +45,21 @@ public class ModTags {
 		// integration tags
 		public static final TagKey<Block> TREASURE2_CHEST_WHITELIST = mod(ClaimMyLand.MOD_ID, "treasure2_chest_whitelist");
 		public static final TagKey<Block> LEGACY_VAULT_WHITELIST = mod(ClaimMyLand.MOD_ID, "legacy_vault_whitelist");
+		public static final TagKey<Block> MACAWS_FURNITURE_WHITELIST = mod(ClaimMyLand.MOD_ID, "macaws_furniture_whitelist");
+
 
 		// TODO add an Api class that you can register tags to
+		/**
+		 * a convenience list for suggestions in commands
+		 */
 		public static final List<TagKey<Block>> BLOCK_TAG_WHITELISTS =
 				Arrays.asList(COMMON_NATION_WHITELIST,
 						CHEST_BARREL_WHITELIST,
 						CRAFTING_WHITELIST,
 						DOOR_GATE_WHITELIST,
 						TREASURE2_CHEST_WHITELIST,
-						LEGACY_VAULT_WHITELIST);
+						LEGACY_VAULT_WHITELIST,
+						MACAWS_FURNITURE_WHITELIST);
 
 		public static TagKey<Block> mod(String domain, String path) {
 			return BlockTags.create(new ResourceLocation(domain, path));

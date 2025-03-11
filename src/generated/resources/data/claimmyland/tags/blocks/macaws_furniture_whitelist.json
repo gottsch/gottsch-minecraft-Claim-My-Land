@@ -1,0 +1,72 @@
+{
+  "values": [
+    {
+      "id": "#mcwfurnitures:bookshelf",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:bookshelf_cupboard",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:bookshelf_drawer",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:cabinet",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:chair",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:cupboard_counter",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:double_drawer",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:double_drawer_counter",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:large_drawer",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:lower_bookshelf_drawer",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:lower_triple_drawer",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:modern_chair",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:modern_wardrobe",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:stool_chair",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:striped_chair",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:triple_drawer",
+      "required": false
+    },
+    {
+      "id": "#mcwfurnitures:wardrobe",
+      "required": false
+    }
+  ]
+}

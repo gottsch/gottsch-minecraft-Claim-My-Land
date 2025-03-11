@@ -83,7 +83,6 @@ public class BorderBlock extends FacingBlock implements IBorderBlock, SimpleWate
                 .setValue(WATERLOGGED, Boolean.valueOf(false))
                 .setValue(INTERSECTS, BorderStatus.GOOD)
                 .setValue(POSITION, BorderPosition.TOP));
-        StairBlock b;
     }
 
     @Override

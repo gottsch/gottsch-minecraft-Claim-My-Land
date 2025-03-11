@@ -71,6 +71,10 @@ public class ParcelRegistry {
      */
     private static final Map<UUID, List<Parcel>> PARCELS_BY_OWNER = new HashMap<>();
     /*
+     * map of parcels by friend's id. a friend is a player who is listed in a parcel's friends whitelist.
+     */
+    private static final Map<UUID, List<Parcel>> PARCELS_BY_FRIENDS = new HashMap<>();
+    /*
      * map of parcels by coords. main storage of parcels.
      * note - the min coords are used as the key.
      */
@@ -89,39 +93,12 @@ public class ParcelRegistry {
     // singleton
     private ParcelRegistry() {}
 
-//    /**
-//     * this is a helper method until added to GottschCore CoordsIntervalTree.
-//     * this is not really needed by Protect It. if wanting to make a backup/dump, just use BY_COORDS map.
-//     * @param interval
-//     * @param intervals
-//     */
-//    public synchronized void list(IInterval<UUID> interval, List<IInterval<UUID>> intervals) {
-//        if (interval == null) {
-//            return;
-//        }
-//
-//        if (interval.getLeft() != null) {
-//            list(interval.getLeft(), intervals);
-//        }
-//
-//        intervals.add(interval);
-//
-//        if (interval.getRight() != null) {
-//            list(interval.getRight(), intervals);
-//        }
-//    }
-//
-//    public synchronized List<IInterval<UUID>> list(IInterval<UUID> interval) {
-//        List<IInterval<UUID>> intervals = new ArrayList<>();
-//        list(TREE.getRoot(), intervals);
-//        return intervals;
-//    }
-
     /**
      *
      */
     public static synchronized void clear() {
         PARCELS_BY_OWNER.clear();
+        PARCELS_BY_FRIENDS.clear();
         PARCELS_BY_COORDS.clear();
         BUFFER_PARCELS_BY_COORDS.clear();
         TREE.clear();
@@ -179,7 +156,7 @@ public class ParcelRegistry {
                     // add to byCoords map
                     PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
 
-                    // add to byOwner map
+                    // add to by Owner map
                     if (ObjectUtils.isNotEmpty(parcel.getOwnerId())) {
                         List<Parcel> parcelsByOwner = new ArrayList<>();
                         if (!PARCELS_BY_OWNER.containsKey(parcel.getOwnerId())) {
@@ -189,6 +166,19 @@ public class ParcelRegistry {
                             parcelsByOwner = PARCELS_BY_OWNER.get(parcel.getOwnerId());
                         }
                         parcelsByOwner.add(parcel);
+                    }
+                    // add to by friends map
+                    if (ObjectUtils.isNotEmpty((parcel.getWhitelist()))) {
+                        parcel.getWhitelist().forEach(friend -> {
+                            List<Parcel> parcels = new ArrayList<>();
+                            if (!PARCELS_BY_FRIENDS.containsKey(friend)) {
+                                PARCELS_BY_FRIENDS.put(friend, parcels);
+                            } else {
+                                parcels = PARCELS_BY_FRIENDS.get(friend);
+                            }
+                            parcels.add(parcel);
+                            ClaimMyLand.LOGGER.debug("loading/adding {} to friends list for parcel {}", friend, parcel.getName());
+                        });
                     }
 
                     // add to tree
@@ -259,6 +249,14 @@ public class ParcelRegistry {
         parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
         parcels.add(parcel);
 
+        // add to parcels by friends
+        parcel.getWhitelist().forEach(friend -> {
+            if (!PARCELS_BY_FRIENDS.containsKey(friend)) {
+                PARCELS_BY_FRIENDS.put(friend, new ArrayList<>());
+            }
+            PARCELS_BY_FRIENDS.get(friend).add(parcel);
+        });
+
         // add to parcels by coords
         PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
 
@@ -270,7 +268,7 @@ public class ParcelRegistry {
 //        Box inflatedBox = inflateParcelBox(parcel);
 //        BUFFER_TREE.insert(new CoordsInterval<>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId()));
 //        BUFFER_PARCELS_BY_COORDS.put(inflatedBox.getMinCoords(), parcel);
-           addParcelToBufferTree(parcel);
+        addParcelToBufferTree(parcel);
 
         if (parcel.getType() == ParcelType.NATION) {
             NATIONS_BY_ID.put(((NationParcel)parcel).getNationId(), parcel);
@@ -291,6 +289,16 @@ public class ParcelRegistry {
         if (!parcels.isEmpty()) {
             parcels.removeIf(p -> p.getId().equals(parcel.getId()));
         }
+
+        // remove from friends
+        parcel.getWhitelist().forEach(friend -> {
+            List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
+            if (!parcelList.isEmpty()) {
+                parcelList.removeIf(p -> p.getId().equals(parcel.getId()));
+            }
+        });
+
+        // remove from coords
         PARCELS_BY_COORDS.remove(parcel.getMinCoords());
 
         // remove from buffer map
@@ -308,17 +316,17 @@ public class ParcelRegistry {
         if (parcel.getType() == ParcelType.NATION) {
             NATIONS_BY_ID.remove(((NationParcel)parcel).getNationId(), parcel);
 
-                ParcelRegistry.findChildrenByNationId(parcel.getNationId())
-                .forEach(p -> {
-                    // TODO calling this may cause Concurrent operation exceptions.
-                    if (p.getType() == ParcelType.ZONE) {
-                        ParcelRegistry.removeParcel(p);
-                    } else {
-                        p.setType(ParcelType.PLAYER);
-                        p.setNationId(null);
-                        // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
-                    }
-                });
+            ParcelRegistry.findChildrenByNationId(parcel.getNationId())
+                    .forEach(p -> {
+                        // TODO calling this may cause Concurrent operation exceptions.
+                        if (p.getType() == ParcelType.ZONE) {
+                            ParcelRegistry.removeParcel(p);
+                        } else {
+                            p.setType(ParcelType.PLAYER);
+                            p.setNationId(null);
+                            // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
+                        }
+                    });
 
         }
     }
@@ -346,6 +354,15 @@ public class ParcelRegistry {
                 // remove nations parcels (and zones)
                 removeFromNationsRegistry(p);
 
+                // remove from friends
+                p.getWhitelist().forEach(friend -> {
+                    List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
+                    if (!parcelList.isEmpty()) {
+                        parcelList.removeIf(fp -> fp.getId().equals(p.getId()));
+                    }
+                });
+
+                // remove from coords
                 PARCELS_BY_COORDS.remove(p.getMinCoords());
                 // remove from buffer map
                 Box inflatedBox = inflateParcelBox(p);
@@ -363,6 +380,16 @@ public class ParcelRegistry {
                 if (!parcels.isEmpty()) {
                     parcels.removeIf(p -> p.getId().equals(abandonedParcel.get().getId()));
                 }
+                // remove from friends
+                abandonedParcel.get().getWhitelist().forEach(friend -> {
+                    if (PARCELS_BY_FRIENDS.containsKey(friend)) {
+                        List<Parcel> friendsParcels = PARCELS_BY_FRIENDS.get(friend);
+                        if (!friendsParcels.isEmpty()) {
+                            friendsParcels.removeIf(p -> p.getId().equals(abandonedParcel.get().getId()));
+                        }
+                    }
+                });
+                // remove owner
                 abandonedParcel.get().setOwnerId(null);
                 return true;
             }
@@ -380,7 +407,7 @@ public class ParcelRegistry {
             case PLAYER, CITIZEN -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.parcelBufferRadius.get());
             case NATION -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.nationParcelBufferRadius.get());
             case ZONE -> parcel.getBox();
-          };
+        };
     }
 
     /**
@@ -394,6 +421,14 @@ public class ParcelRegistry {
             parcels = new ArrayList<>();
         }
         return parcels;
+    }
+
+    /**
+     * retrieves a list of all parcels by friend
+     */
+    public static List<Parcel> findByFriend(UUID id) {
+        List<Parcel> parcels = PARCELS_BY_FRIENDS.get(id);
+        return parcels == null ? new ArrayList<>() : parcels;
     }
 
     /**
@@ -645,15 +680,19 @@ public class ParcelRegistry {
         return hasAccess(coords, coords, entityId, stack);
     }
 
-    public static boolean hasAccess(ICoords coords, UUID entityId, BlockState state) {
-        return hasAccess(coords, coords, entityId, state, ItemStack.EMPTY);
+    public static boolean hasInteractAccess(ICoords coords, UUID entityId, ItemStack stack) {
+        return hasInteractAccess(coords, coords, entityId, stack);
     }
 
-    public static boolean hasAccess(ICoords coords, UUID entityId, BlockState state, ItemStack heldItem ) {
-        return hasAccess(coords, coords, entityId, state, heldItem);
+    @Deprecated
+    // TODO keep for now, might refactor
+    public static boolean hasInteractAccess(ICoords coords, UUID entityId, BlockState state) {
+        return hasInteractAccess(coords, entityId, state, ItemStack.EMPTY);
     }
 
-    // TODO add hasAccess(... BlockState, ItemStack stack) version
+    public static boolean hasInteractAccess(ICoords coords, UUID entityId, BlockState state, ItemStack heldItem ) {
+        return hasInteractAccess(coords, coords, entityId, state, heldItem);
+    }
 
     public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
         // this is the fastest lookup
@@ -689,6 +728,63 @@ public class ParcelRegistry {
         return true;
     }
 
+    /*
+     *
+     */
+    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
+        // this is the fastest lookup
+        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
+        if (!intervals.isEmpty()) {
+            Parcel parcel;
+            // convert to parcels
+            List<Parcel> parcels = getAsParcels(intervals);
+
+            if (parcels.isEmpty()) {
+                return true;
+            }
+            if (intervals.size() > 1) {
+                // find the least significant parcel
+                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
+                if (parcelOptional.isPresent()) {
+                    parcel = parcelOptional.get();
+                } else {
+                    // this is a case where the interval still exists but the parcel has been removed
+                    TREE.delete(intervals.get(0));
+                    return true;
+                }
+            } else {
+                parcel = parcels.get(0);
+            }
+
+            // if you have an item in your hand, do whitelist short-circuit tests
+            if (itemStack != null && !itemStack.isEmpty()) {
+                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", itemStack.getDisplayName().getString(), parcel);
+                // test the item against the whitelisted item tags for the parcel
+                for (String tagName : parcel.getItemTagWhitelist()) {
+                    ResourceLocation location = new ResourceLocation(tagName);
+                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
+                    // get the tag from the resource key
+                    if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) {
+                        return true;
+                    }
+                }
+
+                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
+                for (String itemName : parcel.getItemWhitelist()) {
+                    ResourceLocation location = new ResourceLocation(itemName);
+                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+                    if (ModUtil.getName(itemStack.getItem()).equals(location)) {
+                        return true;
+                    }
+                }
+            }
+
+            // check player's access
+            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
+        }
+        return true;
+    }
+
     public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
         // this is the fastest lookup
         List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
@@ -716,8 +812,40 @@ public class ParcelRegistry {
             } else {
                 parcel = parcels.get(0);
             }
+            return parcel.grantsAccess(entityId, heldItem);
+        }
+        return true;
+    }
 
-            // TODO move to AbstractParcel - shouldn't be globally controlled by registry
+    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
+        // TODO all this code getting the parcel is the same and can be extracted to its own method
+
+        // this is the fastest lookup
+        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
+        if (!intervals.isEmpty()) {
+            Parcel parcel;
+            // convert to parcels
+            List<Parcel> parcels = getAsParcels(intervals);
+
+            if (parcels.isEmpty()) {
+                return true;
+            }
+            if (intervals.size() > 1) {
+                // find the least significant parcel
+                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
+                if (parcelOptional.isPresent()) {
+                    parcel = parcelOptional.get();
+                } else {
+                    // this is a case where the interval still exists but the parcel has been removed
+                    TREE.delete(intervals.get(0));
+                    return true;
+                }
+            } else {
+                parcel = parcels.get(0);
+            }
+
+            // TODO move Item and Tag whitelist back here from Parcel - can't control interact permission from Parcels
+
             ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
             // TODO block tag and block could be merged into one list, where tags are prefixed with # and would have to be removed before checking
             // test the block against the whitelisted block tags for the parcel
@@ -740,13 +868,36 @@ public class ParcelRegistry {
                 }
             }
 
+            // if you have an item in your hand, do whitelist short-circuit tests
+            if (heldItem != null && !heldItem.isEmpty()) {
+                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
+                // test the item against the whitelisted item tags for the parcel
+                for (String tagName : parcel.getItemTagWhitelist()) {
+                    ResourceLocation location = new ResourceLocation(tagName);
+                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
+                    // get the tag from the resource key
+                    if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
+                        return true;
+                    }
+                }
+
+                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
+                for (String itemName : parcel.getItemWhitelist()) {
+                    ResourceLocation location = new ResourceLocation(itemName);
+                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+                    if (ModUtil.getName(heldItem.getItem()).equals(location)) {
+                        return true;
+                    }
+                }
+            }
+
             return parcel.grantsAccess(entityId, heldItem);
-         }
+        }
         return true;
     }
 
     /**
-     * returns the parcel with the least area all parcels at the given coords
+     * returns the parcel with the least area of all parcels at the given coords
      * @param coords
      * @return
      */
@@ -805,16 +956,16 @@ public class ParcelRegistry {
 //
 //
 //                // cycle through whitelist
-////                if (!parcel.getWhitelist().isEmpty()) {
-////                    ClaimMyLand.LOGGER.debug("isProtectedAgainst whitelist is not null");
-////
-////                    for (PlayerData id : parcel.getWhitelist()) {
-////                        ClaimMyLand.LOGGER.debug("isProtectedAgainst compare whitelist id -> {} to uuid -> {}", id.getUuid(), uuid);
-////                        if (id.getUuid().equalsIgnoreCase(uuid)) {
-////                            return false;
-////                        }
-////                    }
-////                }
+    ////                if (!parcel.getWhitelist().isEmpty()) {
+    ////                    ClaimMyLand.LOGGER.debug("isProtectedAgainst whitelist is not null");
+    ////
+    ////                    for (PlayerData id : parcel.getWhitelist()) {
+    ////                        ClaimMyLand.LOGGER.debug("isProtectedAgainst compare whitelist id -> {} to uuid -> {}", id.getUuid(), uuid);
+    ////                        if (id.getUuid().equalsIgnoreCase(uuid)) {
+    ////                            return false;
+    ////                        }
+    ////                    }
+    ////                }
 //                return true;
 //            }
 //        }

@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
@@ -34,7 +35,6 @@ import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import net.minecraft.ChatFormatting;
@@ -50,7 +50,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.Blocks;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
@@ -79,15 +78,19 @@ public class OpsCommand {
     private static final SuggestionProvider<CommandSourceStack> PARCEL_NAMES = (source, builder) -> {
         String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
         // get the UUID for the name
-        ServerPlayer player = source.getSource().getServer().getPlayerList().getPlayerByName(ownerName);
+//        ServerPlayer player = source.getSource().getServer().getPlayerList().getPlayerByName(ownerName);
+
         List<String> parcels = new ArrayList<>();
-        if (player != null) {
-            parcels = ParcelRegistry.findByOwner(player.getUUID()).stream().map(Parcel::getName).toList();
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (playerUuid.isPresent()) {
+//        if (player != null) {
+            parcels = ParcelRegistry.findByOwner(playerUuid.get()).stream().map(Parcel::getName).toList();
         }
         return SharedSuggestionProvider.suggest(parcels, builder);
     };
 
     private static final SuggestionProvider<CommandSourceStack> OWNER_NAMES = (source, builder) -> {
+        // TODO get every owner from the ParcelRegistry
         PlayerList playerList = source.getSource().getServer().getPlayerList();
         List<String> names = ParcelRegistry.getOwnerIds().stream().map(id -> {
             ServerPlayer player = playerList.getPlayer(id);
@@ -102,24 +105,24 @@ public class OpsCommand {
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
-    private static final SuggestionProvider<CommandSourceStack> BLOCKS = (source, builder) -> {
-        List<String> tags = List.of(
-                ModUtil.getName(Blocks.CHEST).toString(),
-                ModUtil.getName(Blocks.BARREL).toString()
-        );
-
-        return SharedSuggestionProvider.suggest(tags, builder);
-    };
+//    private static final SuggestionProvider<CommandSourceStack> BLOCKS = (source, builder) -> {
+//        List<String> tags = List.of(
+//                ModUtil.getName(Blocks.CHEST).toString(),
+//                ModUtil.getName(Blocks.BARREL).toString()
+//        );
+//
+//        return SharedSuggestionProvider.suggest(tags, builder);
+//    };
 
 
     private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCK_TAGS = (source, builder) -> {
         String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
         String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
         Optional<List<String>> list = Optional.empty();
-        try {
-            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-        } catch(Exception e){
-            // TODO add warning
+
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (ownerUuid.isPresent()) {
+            list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
         }
         return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
     };
@@ -128,10 +131,10 @@ public class OpsCommand {
         String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
         String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
         Optional<List<String>> list = Optional.empty();
-        try {
-            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
-        } catch(Exception e){
-            // TODO add warning
+
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (ownerUuid.isPresent()) {
+            list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
         }
         return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
     };
@@ -140,10 +143,9 @@ public class OpsCommand {
         String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
         String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
         Optional<List<String>> list = Optional.empty();
-        try {
-            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-        } catch(Exception e){
-            // TODO add warning
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (ownerUuid.isPresent()) {
+            list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
         }
         return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
     };
@@ -152,10 +154,9 @@ public class OpsCommand {
         String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
         String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
         Optional<List<String>> list = Optional.empty();
-        try {
-            list = ParcelWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerName, parcelName, ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
-        } catch(Exception e){
-            // TODO add warning
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (ownerUuid.isPresent()) {
+            list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
         }
         return SharedSuggestionProvider.suggest(list.orElse(new ArrayList<>()), builder);
     };
@@ -182,7 +183,7 @@ public class OpsCommand {
                                                                         .then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
                                                                                 .then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
                                                                                         .then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
-                                                                                                .executes(source -> {
+                                                                                             .executes(source -> {
                                                                                                     return generateDeed(source.getSource(),
                                                                                                             StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
                                                                                                             IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
@@ -237,32 +238,8 @@ public class OpsCommand {
                                                                                 )
                                                                         )
                                                                 )
-//                                                                )
                                                 )
-                                        // TODO deprecated
-//                                                        .then(Commands.literal("citizen_of_nation")
-//                                                                .then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
-//                                                                        .suggests(NATION_NAMES)
-//                                                                        .then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
-//                                                                                .then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
-//                                                                                        .then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
-//                                                                                                .then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
-//                                                                                                        .executes(source -> {
-//                                                                                                            return generateDeedFromNation(source.getSource(),
-//                                                                                                                    StringArgumentType.getString(source, CommandHelper.NATION_NAME),
-//                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
-//                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
-//                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
-//                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE)
-//                                                                                                                    );
-//                                                                                                         })
-//                                                                                                )
-//                                                                                        )
-//                                                                                )
-//                                                                        )
-//                                                                )
-//                                                        )
-//                                                )
+
                                 )
                                 ///// PARCEL TOP-LEVEL OPTION /////
                                 .then(Commands.literal(CommandHelper.PARCEL).requires(source -> {
@@ -442,7 +419,7 @@ public class OpsCommand {
                                                                 // TODO change to subcommand [PLAYER | BLOCK_TAG | BLOCK | etc]
                                                                 ///// BLOCK TAG WHITELIST OPTION /////
                                                                 .then(Commands.literal(CommandHelper.BLOCK_TAG)
-                                                                        ///// WHITELIST ADD /////
+                                                                        ///// BLOCK TAG WHITELIST ADD /////
                                                                         .then(Commands.literal(CommandHelper.ADD)
                                                                                 .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
                                                                                         .suggests(OWNER_NAMES)
@@ -451,8 +428,8 @@ public class OpsCommand {
                                                                                                 .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
                                                                                                         .suggests(CommandHelper.BLOCK_TAGS)
                                                                                                         .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+                                                                                                            return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
                                                                                                         })
                                                                                                 )
                                                                                         )
@@ -465,8 +442,8 @@ public class OpsCommand {
                                                                                         .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
                                                                                                 .suggests(PARCEL_NAMES)
                                                                                                 .executes(source -> {
-                                                                                                    return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+                                                                                                    return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                            InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
                                                                                                 })
                                                                                         )
                                                                                 )
@@ -480,8 +457,8 @@ public class OpsCommand {
                                                                                                 .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
                                                                                                         .suggests(CURRENT_BLOCK_TAGS)
                                                                                                         .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+                                                                                                            return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
                                                                                                         })
                                                                                                 )
                                                                                         )
@@ -500,10 +477,10 @@ public class OpsCommand {
 //                                                                                        .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
                                                                                                                                 .then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
                                                                                                                                                 .executes(source -> {
-                                                                                                                                                    return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                                                    return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
 //                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
                                                                                                                                                             ItemArgument.getItem(source, CommandHelper.ITEM),
-                                                                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
+                                                                                                                                                            InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
                                                                                                                                                 })
                                                                                                                                 )
                                                                                                                 )
@@ -518,8 +495,8 @@ public class OpsCommand {
                                                                                                         .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
                                                                                                                 .suggests(CURRENT_BLOCKS)
                                                                                                                 .executes(source -> {
-                                                                                                                    return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
+                                                                                                                    return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
                                                                                                                 })
                                                                                                         )
                                                                                                 )
@@ -532,8 +509,8 @@ public class OpsCommand {
                                                                                                 .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
                                                                                                         .suggests(PARCEL_NAMES)
                                                                                                         .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                    ParcelWhitelistCommandsDelegate.WhitelistType.BLOCK);
+                                                                                                            return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
                                                                                                         })
                                                                                                 )
                                                                                         )
@@ -550,8 +527,8 @@ public class OpsCommand {
                                                                                                 .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
                                                                                                         .suggests(CommandHelper.ITEM_TAGS)
                                                                                                         .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+                                                                                                            return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
                                                                                                         })
                                                                                                 )
                                                                                         )
@@ -564,13 +541,13 @@ public class OpsCommand {
                                                                                         .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
                                                                                                 .suggests(PARCEL_NAMES)
                                                                                                 .executes(source -> {
-                                                                                                    return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+                                                                                                    return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                            InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
                                                                                                 })
                                                                                         )
                                                                                 )
                                                                         )
-                                                                        ///// BLOCK TAGS WHITELIST REMOVE /////
+                                                                        ///// ITEM TAGS WHITELIST REMOVE /////
                                                                         .then(Commands.literal(CommandHelper.REMOVE)
                                                                                 .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
                                                                                         .suggests(OWNER_NAMES)
@@ -579,8 +556,8 @@ public class OpsCommand {
                                                                                                 .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
                                                                                                         .suggests(CURRENT_ITEM_TAGS)
                                                                                                         .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+                                                                                                            return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
                                                                                                         })
                                                                                                 )
                                                                                         )
@@ -589,7 +566,7 @@ public class OpsCommand {
                                                                 )
                                                                 ///// ITEM WHITELIST OPTION /////
                                                                 .then(Commands.literal(CommandHelper.ITEMS)
-                                                                                ///// BLOCK WHITELIST ADD /////
+                                                                                ///// ITEM WHITELIST ADD /////
                                                                                 .then(Commands.literal(CommandHelper.ADD)
                                                                                                 .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
                                                                                                                 .suggests(OWNER_NAMES)
@@ -597,9 +574,9 @@ public class OpsCommand {
                                                                                                                                 .suggests(PARCEL_NAMES)
                                                                                                                                           .then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
                                                                                                                                                 .executes(source -> {
-                                                                                                                                                    return ParcelWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                                                    return InteractWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
                                                                                                                                                             ItemArgument.getItem(source, CommandHelper.ITEM),
-                                                                                                                                                            ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
+                                                                                                                                                            InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
                                                                                                                                                 })
                                                                                                                                 )
                                                                                                                 )
@@ -614,8 +591,8 @@ public class OpsCommand {
                                                                                                         .then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
                                                                                                                 .suggests(CURRENT_ITEMS)
                                                                                                                 .executes(source -> {
-                                                                                                                    return ParcelWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
+                                                                                                                    return InteractWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                            ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
                                                                                                                 })
                                                                                                         )
                                                                                                 )
@@ -628,51 +605,59 @@ public class OpsCommand {
                                                                                                 .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
                                                                                                         .suggests(PARCEL_NAMES)
                                                                                                         .executes(source -> {
-                                                                                                            return ParcelWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-                                                                                                                    ParcelWhitelistCommandsDelegate.WhitelistType.ITEM);
+                                                                                                            return InteractWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
                                                                                                         })
                                                                                                 )
                                                                                         )
                                                                                 )
                                                                 )
-                                                                .then(Commands.literal(CommandHelper.PLAYERS)
-                                                                                ///// WHITELIST ADD /////
-//                                                                                .then(Commands.literal(CommandHelper.ADD)
-//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-//                                                                                                .suggests(OWNER_NAMES)
-//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//                                                                                                        .suggests(PARCEL_NAMES)
-//                                                                                                        .executes(source -> {
-//                                                                                                            return ParcelWhitelistCommandDelegate.addToWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-//                                                                                                        })
-//                                                                                                )
-//                                                                                        )
-//                                                                                )
-//                                                                                ///// WHITELIST LIST /////
-//                                                                                .then(Commands.literal(CommandHelper.LIST)
-//                                                                                        .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-//                                                                                                .suggests(OWNER_NAMES)
-//                                                                                                .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//                                                                                                        .suggests(PARCEL_NAMES)
-//                                                                                                        .executes(source -> {
-//                                                                                                            return ParcelWhitelistCommandDelegate.displayWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-//                                                                                                        })
-//                                                                                                )
-//                                                                                        )
-//                                                                                )
-                                                                        ///// TODO WHITELIST REMOVE /////
-                                                                        ///// PLAYER WHITELIST REMOVE /////
-//                                                                        .then(Commands.literal(CommandHelper.LIST)
-//                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
-//                                                                                        .suggests(OWNER_NAMES)
-//                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//                                                                                                .suggests(PARCEL_NAMES)
-//                                                                                                .executes(source -> {
-//                                                                                                    return ParcelWhitelistCommandDelegate.removeFromWhitelist(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-//                                                                                                })
-//                                                                                        )
-//                                                                                )
-//                                                                        )
+                                                                .then(Commands.literal(CommandHelper.FRIENDS)
+                                                                        ///// FRIENDS WHITELIST ADD /////
+                                                                        .then(Commands.literal(CommandHelper.ADD)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
+                                                                                                        .suggests(CommandHelper.PLAYER_NAMES)
+                                                                                                        .executes(source -> {
+                                                                                                            return FriendsWhitelistCommandsDelegate.add(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
+                                                                                                                    StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
+                                                                                                                    StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// FRIENDS WHITELIST REMOVE /////
+                                                                        .then(Commands.literal(CommandHelper.REMOVE)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
+                                                                                                        .suggests(CommandHelper.CURRENT_FRIENDS_NAMES)
+                                                                                                        .executes(source -> {
+                                                                                                            return FriendsWhitelistCommandsDelegate.remove(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME),
+                                                                                                                    StringArgumentType.getString(source, CommandHelper.PARCEL_NAME), StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+                                                                                                        })
+                                                                                                )
+                                                                                        )
+                                                                                )
+                                                                        )
+                                                                        ///// FRIENDS WHITELIST LIST /////
+                                                                        .then(Commands.literal(CommandHelper.LIST)
+                                                                                .then(Commands.argument(CommandHelper.OWNER_NAME, StringArgumentType.string())
+                                                                                        .suggests(OWNER_NAMES)
+                                                                                        .then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+                                                                                                .suggests(PARCEL_NAMES)
+                                                                                                .executes(source -> {
+                                                                                                    return FriendsWhitelistCommandsDelegate.list(source.getSource(), StringArgumentType.getString(source, CommandHelper.OWNER_NAME), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+                                                                                                })
+                                                                                        )
+                                                                                )
+                                                                        )
                                                                 )
                                                 )
                                                 .then(Commands.literal(CommandHelper.BACKUP)

@@ -13,15 +13,15 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 
 /**
- * 
+ *
  * @author Mark Gottschling on Sep 16, 2024
  *
  */
 public class BlockStates extends BlockStateProvider {
 
 	public BlockStates(PackOutput gen, ExistingFileHelper helper) {
-        super(gen, ClaimMyLand.MOD_ID, helper);
-    }
+		super(gen, ClaimMyLand.MOD_ID, helper);
+	}
 	private static final int DEFAULT_ANGLE_OFFSET = 180;
 
 	@Override
@@ -36,10 +36,10 @@ public class BlockStates extends BlockStateProvider {
 		borderBlock(ModBlocks.CITIZEN_BORDER, modLoc("block/purple"), modLoc("block/red"));
 		borderBlock(ModBlocks.ZONE_BORDER, modLoc("block/yellow"), modLoc("block/red"));
 
-		horizontalAreaBlock(ModBlocks.PLAYER_HORIZONTAL_AREA, modLoc("block/green_horizontal"));
-		horizontalAreaBlock(ModBlocks.NATION_HORIZONTAL_AREA, modLoc("block/blue_horizontal"));
-		horizontalAreaBlock(ModBlocks.CITIZEN_HORIZONTAL_AREA, modLoc("block/purple_horizontal"));
-		horizontalAreaBlock(ModBlocks.ZONE_HORIZONTAL_AREA, modLoc("block/yellow_horizontal"));
+		horizontalAreaBlock(ModBlocks.PLAYER_HORIZONTAL_AREA, modLoc("block/green_horizontal"), modLoc("block/bad_horizontal"));
+		horizontalAreaBlock(ModBlocks.NATION_HORIZONTAL_AREA, modLoc("block/blue_horizontal"), modLoc("block/bad_horizontal"));
+		horizontalAreaBlock(ModBlocks.CITIZEN_HORIZONTAL_AREA, modLoc("block/purple_horizontal"), modLoc("block/bad_horizontal"));
+		horizontalAreaBlock(ModBlocks.ZONE_HORIZONTAL_AREA, modLoc("block/yellow_horizontal"), modLoc("block/bad_horizontal"));
 
 		bufferBlock(ModBlocks.BUFFER, modLoc("block/buffer_block"), modLoc("block/bad_buffer_block"));
 	}
@@ -75,12 +75,6 @@ public class BlockStates extends BlockStateProvider {
 
 	public void borderBlock(RegistryObject<Block> block, ResourceLocation goodTexture, ResourceLocation badTexture) {
 		String name = block.getId().getPath();
-//		ModelFile goodTop = models().withExistingParent("good_top_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_border_block"))
-//				.texture("0", goodTexture);
-//
-//		ModelFile bottom = models().withExistingParent("good_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_border_block"))
-//				.texture("0", goodTexture);
-
 		myBorderBlock(name, (BorderBlock)block.get(), "border", goodTexture, badTexture, "minecraft:cutout");
 	}
 
@@ -90,16 +84,31 @@ public class BlockStates extends BlockStateProvider {
 		myBorderBlock(name, (BufferBlock)block.get(), "buffer", goodTexture, badTexture, "minecraft:translucent");
 	}
 
-	public void horizontalAreaBlock(RegistryObject<Block> block, ResourceLocation goodTexture) {
+	public void horizontalAreaBlock(RegistryObject<Block> block, ResourceLocation goodTexture, ResourceLocation badTexture) {
 		String name = block.getId().getPath();
-		horizontalAreaBlock(name, (Block)block.get(), goodTexture, "minecraft:translucent");
+		horizontalAreaBlock(name, (HorizontalAreaBlock)block.get(), goodTexture, badTexture,"minecraft:translucent");
 	}
 
-	private void horizontalAreaBlock(String name, Block block, ResourceLocation texture, String renderType) {
+	private void horizontalAreaBlock(String name, HorizontalAreaBlock block, ResourceLocation texture, ResourceLocation badTexture, String renderType) {
 		ModelFile model = models().withExistingParent(name , modLoc(ModelProvider.BLOCK_FOLDER + "/horizontal_area_block")).texture("0", texture).renderType(renderType);
-		horizontalAreaBlock(block, new ConfiguredModel(model));
+		ModelFile badModel = models().withExistingParent("bad_" + name , modLoc(ModelProvider.BLOCK_FOLDER + "/horizontal_area_block")).texture("0", badTexture).renderType(renderType);
+
+		getVariantBuilder(block).forAllStatesExcept(state -> {
+			ModelFile stateModel = model;
+			BorderStatus intersects = state.getValue(BorderBlock.INTERSECTS);
+			if (intersects != BorderStatus.GOOD) {
+				stateModel = badModel;
+			}
+			return ConfiguredModel.builder()
+					.modelFile(stateModel)
+					.uvLock(true)
+					.build();
+
+		}, BorderBlock.WATERLOGGED);
+//		horizontalAreaBlock(block, new ConfiguredModel(model), new ConfiguredModel(badModel));
 	}
 
+	@Deprecated
 	private void horizontalAreaBlock(Block block, ConfiguredModel... models) {
 		getVariantBuilder(block)
 				.partialState().setModels(models);

@@ -60,8 +60,8 @@ public class DeedFactory {
         CompoundTag tag = deed.getOrCreateTag();
         // add the ids
         // TODO this is probably going away in favor of deed id for the access checks
-        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
         // add the type
         tag.putString(Deed.PARCEL_TYPE, ParcelType.PLAYER.name());
         // add the size
@@ -94,8 +94,8 @@ public class DeedFactory {
         CompoundTag tag = deed.getOrCreateTag();
         tag.putUUID(NationDeed.NATION_ID, UUID.randomUUID());
         // TODO this should be refactored out
-        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
         tag.putString(Deed.PARCEL_TYPE, ParcelType.NATION.name());
         CompoundTag sizeTag = new CompoundTag();
         // modify size to max y limits
@@ -113,8 +113,8 @@ public class DeedFactory {
         // add the ids
         tag.putUUID(NationDeed.NATION_ID, nationId);
         // TODO this should be refactored out
-        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
         // add the type
         tag.putString(Deed.PARCEL_TYPE, ParcelType.CITIZEN.name());
         // add the size

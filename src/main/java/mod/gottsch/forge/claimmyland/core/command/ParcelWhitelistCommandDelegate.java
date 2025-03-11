@@ -22,6 +22,7 @@ public class ParcelWhitelistCommandDelegate {
     /*
      * this is Ops level command where you add any player to any parcel.
      */
+    @Deprecated
     public static int addToWhitelist(CommandSourceStack source, String ownerName, String parcelName) {
         ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         if (player != null) {
