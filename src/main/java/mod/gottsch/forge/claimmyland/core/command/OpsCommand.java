@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
@@ -182,7 +183,7 @@ public class OpsCommand {
                                                                         .then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
                                                                                 .then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
                                                                                         .then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
-                                                                                                .executes(source -> {
+                                                                                             .executes(source -> {
                                                                                                     return generateDeed(source.getSource(),
                                                                                                             StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
                                                                                                             IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),

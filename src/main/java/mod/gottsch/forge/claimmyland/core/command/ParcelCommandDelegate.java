@@ -48,6 +48,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Mark Gottschling on Mar 28, 2024
@@ -59,7 +60,7 @@ public class ParcelCommandDelegate {
             List<Component> messages = new ArrayList<>();
             buildListTitle(messages, Component.translatable(LangUtil.chat("parcel.list.abandoned")));
 
-            List<Component> components = formatList(messages, ParcelRegistry.findAbandoned());
+            List<Component> components = formatParcelList(messages, ParcelRegistry.findAbandoned());
             components.forEach(component -> {
                 source.sendSuccess(() -> component, false);
             });
@@ -89,8 +90,11 @@ public class ParcelCommandDelegate {
 //        messages.add(Component.literal(""));
         buildListTitle(messages, Component.translatable(LangUtil.chat("parcel.list"), player.getName().getString()));
 
-        List<Component> components = formatList(messages, ParcelRegistry.findByOwner(player.getUUID()));
-        components.forEach(component -> {
+//        List<Component> components =
+        formatParcelList(messages, ParcelRegistry.findByOwner(player.getUUID()));
+//        appendFriendsParcelList(messages, ParcelRegistry.findByFriend(player.getUUID()));
+
+        messages.forEach(component -> {
             source.sendSuccess(() -> component, false);
         });
         return 1;
@@ -108,7 +112,7 @@ public class ParcelCommandDelegate {
             messages.add(Component.translatable(LangUtil.chat("parcel.list"), nation.getName()).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
             messages.add(Component.literal(""));
 
-            List<Component> components = formatList(messages, ParcelRegistry.findChildrenByNationId(nation.getNationId()));
+            List<Component> components = formatParcelList(messages, ParcelRegistry.findChildrenByNationId(nation.getNationId()));
             components.forEach(component -> {
                 source.sendSuccess(() -> component, false);
             });
@@ -128,9 +132,13 @@ public class ParcelCommandDelegate {
         return messages;
     }
 
-    static List<Component> formatList(List<Component> messages, List<Parcel> list) {
+    static List<Component> formatParcelList(List<Component> messages, List<Parcel> list) {
+        return formatParcelList(messages, list, new ArrayList<>());
+    }
 
-        if (list.isEmpty()) {
+    static List<Component> formatParcelList(List<Component> messages, List<Parcel> list, List<Parcel> friendsList) {
+
+        if (list.isEmpty() && friendsList.isEmpty()) {
             messages.add(Component.translatable(LangUtil.chat("parcel.list.empty")).withStyle(ChatFormatting.AQUA));
         } else {
             list.forEach(parcel -> {
@@ -146,6 +154,18 @@ public class ParcelCommandDelegate {
 
 //				[STYLE].withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/tp @s " + blockpos.getX() + " " + s1 + " " + blockpos.getZ())).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("chat.coordinates.tooltip"))
             });
+            // append all friends parcels
+            friendsList.forEach( parcel -> {
+                messages.add(
+                        Component.literal("(F) " + parcel.getName().toUpperCase()).withStyle(ChatFormatting.GRAY)
+                                .append(Component.literal(String.format(" [ %s ]: ", parcel.getType().getSerializedName())).withStyle(ChatFormatting.WHITE))
+                                .append(Component.translatable(String.format("(%s) to (%s)",
+                                        formatCoords(parcel.getMinCoords()),
+                                        formatCoords(parcel.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
+                                )
+                                .append(Component.translatable(", [" + formatCoords(ModUtil.getSize(parcel.getSize())) + "]").withStyle(ChatFormatting.WHITE))
+                );
+            });
         }
         return messages;
     }
@@ -160,7 +180,8 @@ public class ParcelCommandDelegate {
     }
 
     public static int addParcel(CommandSourceStack source, String ownerName, BlockPos pos, int xSize, int ySizeUp, int ySizeDown, int zSize, String parcelType, String nationName) {
-        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+//        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
 
         // find the nation by name
 //        UUID nationId = ParcelRegistry.getNations().stream()
@@ -199,14 +220,15 @@ public class ParcelCommandDelegate {
             }
         }
 
-        if (player != null) {
+//        if (player != null) {
+        if (player.isPresent()) {
             // create a relative sized Box
             Box size = new Box(Coords.of(0, -ySizeDown, 0), Coords.of(xSize - 1, ySizeUp - 1, zSize - 1));
             ICoords coords = Coords.of(pos);
             Optional<Parcel> parcelOptional = ParcelFactory.create(type, (NationParcel) nation);
             if (parcelOptional.isPresent()) {
                 Parcel parcel = parcelOptional.get();
-                parcel.setOwnerId(player.getUUID());
+                parcel.setOwnerId(player.get());
                 parcel.setCoords(coords);
                 // TODO size should be supplied to the factory
                 parcel.setSize(size);
@@ -248,9 +270,12 @@ public class ParcelCommandDelegate {
     }
 
     public static int abandonParcel(CommandSourceStack source, String ownerName, String parcelName) {
-        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
-        if (player != null) {
-            List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
+//        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+
+        if (player.isPresent()) {
+//        if (player != null) {
+            List<Parcel> parcels = ParcelRegistry.findByOwner(player.get());
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
                 // abandon the parcel in the register
@@ -374,8 +399,8 @@ public class ParcelCommandDelegate {
 
                     // name line
                     messages.add(
-                       Component.translatable(LangUtil.chat("parcel.name"),
-                               Component.literal(p.getName()).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY)
+                            Component.translatable(LangUtil.chat("parcel.name"),
+                                    Component.literal(p.getName()).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY)
                     );
                     // type
                     messages.add(
@@ -453,56 +478,65 @@ public class ParcelCommandDelegate {
      */
     public static int demolishParcel (CommandSourceStack source, String ownerName, String parcelName){
         try {
-            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+            ServerPlayer player = CommandHelper.getPlayer(source);
+            Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+            // if the command-issuing player cannot be found, something is wrong
             if (player != null) {
-                List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
-                // get the parcel
-                Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
-                if (parcel.isPresent()) {
-                    // get the type
-                    ParcelType type = parcel.get().getType();
+                ClaimMyLand.LOGGER.debug("command player -> {}", player.getName().getString());
+                if (ownerUuid.isPresent()) {
+                    ClaimMyLand.LOGGER.debug("owner player uuid -> {}", ownerUuid.get());
+                    List<Parcel> parcels = ParcelRegistry.findByOwner(ownerUuid.get());
+                    // get the parcel
+                    Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
+                    if (parcel.isPresent()) {
+                        // get the type
+                        ParcelType type = parcel.get().getType();
 
-                    ItemStack deed = switch (type) {
-                        case PLAYER -> DeedFactory.createPlayerDeed(parcel.get().getSize());
-                        case NATION -> DeedFactory.createNationDeed(source.getLevel(), parcel.get().getSize());
-                        // requires the NATION_ID
-                        case CITIZEN ->
-                                DeedFactory.createCitizenDeed(parcel.get().getSize(), parcel.get().getNationId());
-                        case ZONE -> ItemStack.EMPTY;
-                    };
+                        ItemStack deed = switch (type) {
+                            case PLAYER -> DeedFactory.createPlayerDeed(parcel.get().getSize());
+                            case NATION -> DeedFactory.createNationDeed(source.getLevel(), parcel.get().getSize());
+                            // requires the NATION_ID
+                            case CITIZEN ->
+                                    DeedFactory.createCitizenDeed(parcel.get().getSize(), parcel.get().getNationId());
+                            case ZONE -> ItemStack.EMPTY;
+                        };
 
-                    // give parcel to player
-                    if (deed != ItemStack.EMPTY) {
-                        // copy props over
-                        CompoundTag tag = deed.getOrCreateTag();
-                        tag.putUUID(Deed.PARCEL_ID, parcel.get().getId());
-                        if (parcel.get().getNationId() != null) {
-                            tag.putUUID(NationDeed.NATION_ID, parcel.get().getNationId());
+                        // give parcel to player
+                        if (deed != ItemStack.EMPTY) {
+                            // copy props over
+                            CompoundTag tag = deed.getOrCreateTag();
+                            tag.putUUID(Deed.PARCEL_ID, parcel.get().getId());
+                            if (parcel.get().getNationId() != null) {
+                                tag.putUUID(NationDeed.NATION_ID, parcel.get().getNationId());
+                            }
+
+                            player.getInventory().add(deed);
+
+                            // remove the parcel
+                            ParcelRegistry.removeParcel(parcel.get());
+
+                            // TODO this will only work if the border stone is at coords
+                            // remove any borders
+                            ICoords coords = parcel.get().getCoords();
+                            // check if there is a border stone
+                            BlockEntity be = source.getLevel().getBlockEntity(coords.toPos());
+                            if (be instanceof BorderStoneBlockEntity) {
+                                ((BorderStoneBlockEntity) be).removeParcelBorder(source.getLevel(), coords);
+                            }
+                            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.success")).withStyle(ChatFormatting.GREEN), false);
+                        } else {
+                            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.zone_cannot_demolish")).withStyle(ChatFormatting.RED), false);
                         }
-
-                        player.getInventory().add(deed);
-
-                        // remove the parcel
-                        ParcelRegistry.removeParcel(parcel.get());
-
-                        // TODO this will only work if the border stone is at coords
-                        // remove any borders
-                        ICoords coords = parcel.get().getCoords();
-                        // check if there is a border stone
-                        BlockEntity be = source.getLevel().getBlockEntity(coords.toPos());
-                        if (be instanceof BorderStoneBlockEntity) {
-                            ((BorderStoneBlockEntity) be).removeParcelBorder(source.getLevel(), coords);
-                        }
-                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.success")).withStyle(ChatFormatting.GREEN), false);
                     } else {
-                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.zone_cannot_demolish")).withStyle(ChatFormatting.RED), false);
+                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.failure")).withStyle(ChatFormatting.RED), false);
                     }
                 } else {
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.failure")).withStyle(ChatFormatting.RED), false);
+                    CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
                 }
             } else {
-                CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+                CommandHelper.sendUnableToLocatePlayerMessage(source);
             }
+
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred demolishing a parcels:", e);
             source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
@@ -518,9 +552,12 @@ public class ParcelCommandDelegate {
      * @return
      */
     public static int removeParcel (CommandSourceStack source, String ownerName, String parcelName){
-        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
-        if (player != null) {
-            List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
+//        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+
+//        if (player != null) {
+        if (player.isPresent()) {
+            List<Parcel> parcels = ParcelRegistry.findByOwner(player.get());
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
                 // remove the border
@@ -543,9 +580,11 @@ public class ParcelCommandDelegate {
     }
 
     public static int renameParcel (CommandSourceStack source, String ownerName, String parcelName, String newName){
-        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
-        if (player != null) {
-            List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
+//        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+//        if (player != null) {
+        if (player.isPresent()) {
+            List<Parcel> parcels = ParcelRegistry.findByOwner(player.get());
             Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
             if (parcel.isPresent()) {
                 // TODO ensure that the new name is unique across ALL parcels
@@ -599,10 +638,13 @@ public class ParcelCommandDelegate {
     }
 
     public static int clearOwnerParcels (CommandSourceStack source, String ownerName){
-        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
-        if (player != null) {
+//        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
+        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+
+//        if (player != null) {
+        if (player.isPresent()) {
             // remove all properties from player
-            ParcelRegistry.removeParcel(source.getLevel(), player.getUUID());
+            ParcelRegistry.removeParcel(source.getLevel(), player.get());
             source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.remove.success")).withStyle(ChatFormatting.GREEN), false);
             CommandHelper.save(source.getLevel());
         } else {

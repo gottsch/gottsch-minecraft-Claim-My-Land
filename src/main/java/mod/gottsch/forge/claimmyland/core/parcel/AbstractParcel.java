@@ -207,7 +207,7 @@ public abstract class AbstractParcel implements Parcel {
         getSize().save(sizeTag);
         tag.put(SIZE_KEY, sizeTag);
 
-        // player whitelist
+        // friends whitelist
         if (getWhitelist() != null) {
             ListTag list = new ListTag();
             getWhitelist().forEach(data -> {

@@ -102,11 +102,20 @@ public abstract class Deed extends Item {
         if (tag.contains(PARCEL_ID)) {
             parcel.setId(tag.getUUID(PARCEL_ID));
         } else {
-            parcel.setId(UUID.randomUUID());
+            UUID uuid = UUID.randomUUID();
+            parcel.setId(uuid);
+            tag.putUUID(PARCEL_ID, uuid);
         }
         if (tag.contains(DEED_ID)) {
             parcel.setDeedId(tag.getUUID(DEED_ID));
         }
+        // 3/10/2025 added if deed id is blank
+        else {
+            UUID uuid = UUID.randomUUID();
+            parcel.setDeedId(uuid);
+            tag.putUUID(DEED_ID, uuid);
+        }
+
         if (tag.contains(OWNER_ID)) {
             parcel.setOwnerId(tag.getUUID(OWNER_ID));
         } else {
@@ -419,6 +428,15 @@ public abstract class Deed extends Item {
         CompoundTag tag = deed.getOrCreateTag();
         Box size = getSize(tag);
 
+        // create IDs on first use
+        if (!tag.contains(PARCEL_ID)) {
+            tag.putUUID(PARCEL_ID, UUID.randomUUID());
+        }
+        if (!tag.contains(DEED_ID)) {
+            tag.putUUID(DEED_ID, UUID.randomUUID());
+        }
+
+        // transfer properties to block entity
         blockEntity.setParcelId(tag.contains(PARCEL_ID) ? tag.getUUID(PARCEL_ID) : null);
         blockEntity.setDeedId(tag.contains(DEED_ID) ? tag.getUUID(DEED_ID) : null);
         blockEntity.setOwnerId(tag.contains(OWNER_ID) ? tag.getUUID(OWNER_ID) : player.getUUID());

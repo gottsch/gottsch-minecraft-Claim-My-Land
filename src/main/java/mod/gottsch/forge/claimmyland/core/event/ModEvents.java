@@ -116,7 +116,6 @@ public class ModEvents {
 
         if (!Config.SERVER.protection.enableEntityPlaceEvent.get()
 				|| (event.getEntity() instanceof Player && hasOpsPermission((Player)event.getEntity()))) {
-            ClaimMyLand.LOGGER.debug("block placement not enabled");
             return;
         }
 

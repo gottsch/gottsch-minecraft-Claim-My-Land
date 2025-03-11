@@ -71,6 +71,10 @@ public class ParcelRegistry {
      */
     private static final Map<UUID, List<Parcel>> PARCELS_BY_OWNER = new HashMap<>();
     /*
+     * map of parcels by friend's id. a friend is a player who is listed in a parcel's friends whitelist.
+     */
+    private static final Map<UUID, List<Parcel>> PARCELS_BY_FRIENDS = new HashMap<>();
+    /*
      * map of parcels by coords. main storage of parcels.
      * note - the min coords are used as the key.
      */
@@ -89,39 +93,12 @@ public class ParcelRegistry {
     // singleton
     private ParcelRegistry() {}
 
-//    /**
-//     * this is a helper method until added to GottschCore CoordsIntervalTree.
-//     * this is not really needed by Protect It. if wanting to make a backup/dump, just use BY_COORDS map.
-//     * @param interval
-//     * @param intervals
-//     */
-//    public synchronized void list(IInterval<UUID> interval, List<IInterval<UUID>> intervals) {
-//        if (interval == null) {
-//            return;
-//        }
-//
-//        if (interval.getLeft() != null) {
-//            list(interval.getLeft(), intervals);
-//        }
-//
-//        intervals.add(interval);
-//
-//        if (interval.getRight() != null) {
-//            list(interval.getRight(), intervals);
-//        }
-//    }
-//
-//    public synchronized List<IInterval<UUID>> list(IInterval<UUID> interval) {
-//        List<IInterval<UUID>> intervals = new ArrayList<>();
-//        list(TREE.getRoot(), intervals);
-//        return intervals;
-//    }
-
     /**
      *
      */
     public static synchronized void clear() {
         PARCELS_BY_OWNER.clear();
+        PARCELS_BY_FRIENDS.clear();
         PARCELS_BY_COORDS.clear();
         BUFFER_PARCELS_BY_COORDS.clear();
         TREE.clear();
@@ -189,6 +166,18 @@ public class ParcelRegistry {
                             parcelsByOwner = PARCELS_BY_OWNER.get(parcel.getOwnerId());
                         }
                         parcelsByOwner.add(parcel);
+                    }
+                    // add to by friends map
+                    if (ObjectUtils.isNotEmpty((parcel.getWhitelist()))) {
+                        parcel.getWhitelist().forEach(friend -> {
+                            List<Parcel> parcels = new ArrayList<>();
+                            if (!PARCELS_BY_FRIENDS.containsKey(friend)) {
+                                PARCELS_BY_FRIENDS.put(friend, parcels);
+                            } else {
+                                parcels = PARCELS_BY_FRIENDS.get(friend);
+                            }
+                            parcels.add(parcel);
+                        });
                     }
 
                     // add to tree
@@ -259,6 +248,14 @@ public class ParcelRegistry {
         parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
         parcels.add(parcel);
 
+        // add to parcels by friends
+        parcel.getWhitelist().forEach(friend -> {
+            if (!PARCELS_BY_FRIENDS.containsKey(friend)) {
+                PARCELS_BY_FRIENDS.put(friend, new ArrayList<>());
+            }
+            PARCELS_BY_FRIENDS.get(friend).add(parcel);
+        });
+
         // add to parcels by coords
         PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
 
@@ -291,6 +288,16 @@ public class ParcelRegistry {
         if (!parcels.isEmpty()) {
             parcels.removeIf(p -> p.getId().equals(parcel.getId()));
         }
+
+        // remove from friends
+        parcel.getWhitelist().forEach(friend -> {
+            List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
+            if (!parcelList.isEmpty()) {
+                parcelList.removeIf(p -> p.getId().equals(parcel.getId()));
+            }
+        });
+
+        // remove from coords
         PARCELS_BY_COORDS.remove(parcel.getMinCoords());
 
         // remove from buffer map
@@ -346,6 +353,15 @@ public class ParcelRegistry {
                 // remove nations parcels (and zones)
                 removeFromNationsRegistry(p);
 
+                // remove from friends
+                p.getWhitelist().forEach(friend -> {
+                    List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
+                    if (!parcelList.isEmpty()) {
+                        parcelList.removeIf(fp -> fp.getId().equals(p.getId()));
+                    }
+                });
+
+                // remove from coords
                 PARCELS_BY_COORDS.remove(p.getMinCoords());
                 // remove from buffer map
                 Box inflatedBox = inflateParcelBox(p);
@@ -363,6 +379,16 @@ public class ParcelRegistry {
                 if (!parcels.isEmpty()) {
                     parcels.removeIf(p -> p.getId().equals(abandonedParcel.get().getId()));
                 }
+                // remove from friends
+                abandonedParcel.get().getWhitelist().forEach(friend -> {
+                    if (PARCELS_BY_FRIENDS.containsKey(friend)) {
+                        List<Parcel> friendsParcels = PARCELS_BY_FRIENDS.get(friend);
+                        if (!friendsParcels.isEmpty()) {
+                            friendsParcels.removeIf(p -> p.getId().equals(abandonedParcel.get().getId()));
+                        }
+                    }
+                });
+                // remove owner
                 abandonedParcel.get().setOwnerId(null);
                 return true;
             }
@@ -394,6 +420,14 @@ public class ParcelRegistry {
             parcels = new ArrayList<>();
         }
         return parcels;
+    }
+
+    /**
+     * retrieves a list of all parcels by friend
+     */
+    public static List<Parcel> findByFriend(UUID id) {
+        List<Parcel> parcels = PARCELS_BY_FRIENDS.get(id);
+        return parcels == null ? new ArrayList<>() : parcels;
     }
 
     /**
