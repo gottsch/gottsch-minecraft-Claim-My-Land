@@ -925,53 +925,6 @@ public class ParcelRegistry {
         return Optional.ofNullable(parcel);
     }
 
-//    @Deprecated
-//    public static boolean isProtectedAgainst(ICoords coords, UUID entityId) {
-//        return isProtectedAgainst(coords, coords, entityId);
-//    }
-
-//    @Deprecated
-//    public static boolean isProtectedAgainst(ICoords coords1, ICoords coords2, UUID entityId) {
-//        List<IInterval<UUID>> intervals = TREE.getOverlapping(TREE.getRoot(), new CoordsInterval<>(coords1, coords2));
-//        if (intervals.isEmpty()) {
-//            return false;
-//        }
-//        else {
-//
-//            // interrogate each interval to determine if the uuid is the owner
-//            for (IInterval<UUID> interval : intervals) {
-//                // short circuit if owner or no owner
-//                ClaimMyLand.LOGGER.debug("isProtectedAgainst interval data -> {}", interval.getData());
-//                if (interval.getData() == null || interval.getData().equals(entityId)) {
-//                    break;
-//                }
-////                if (p.getData() == null) {
-////                    break; // was true. but if no owner, it is not protected against you? how does this work with CitizenParcels
-////                }
-//
-//                // get the parcel
-//                CoordsInterval<UUID> coordsInterval = (CoordsInterval<UUID>)interval;
-//                Parcel parcel = PARCELS_BY_COORDS.get(coordsInterval.getCoords1());
-//                ClaimMyLand.LOGGER.debug("isProtectedAgainst.parcelsByCoords -> {}, parcel -> {}", parcel.getMinCoords(), parcel);
-//
-//
-//                // cycle through whitelist
-    ////                if (!parcel.getWhitelist().isEmpty()) {
-    ////                    ClaimMyLand.LOGGER.debug("isProtectedAgainst whitelist is not null");
-    ////
-    ////                    for (PlayerData id : parcel.getWhitelist()) {
-    ////                        ClaimMyLand.LOGGER.debug("isProtectedAgainst compare whitelist id -> {} to uuid -> {}", id.getUuid(), uuid);
-    ////                        if (id.getUuid().equalsIgnoreCase(uuid)) {
-    ////                            return false;
-    ////                        }
-    ////                    }
-    ////                }
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
-
     public static List<UUID> getOwnerIds() {
         return PARCELS_BY_OWNER.keySet().stream().toList();
     }

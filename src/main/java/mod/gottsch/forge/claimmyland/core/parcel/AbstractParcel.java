@@ -69,7 +69,7 @@ public abstract class AbstractParcel implements Parcel {
 
     // TODO will need to create a NationRegistry that associates a nation id
     // to a name. that way instead of one parcel being a nation you can have
-    // muiltiple sharing the same name and id.
+    // multiple sharing the same name and id.
     // the unique id of a nation
     private UUID nationId;
 
