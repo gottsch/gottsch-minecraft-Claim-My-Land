@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -31,10 +32,7 @@ import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  *
@@ -47,6 +45,8 @@ public interface Parcel {
     public static final String OWNER_ID = "owner_id";
     public static final String PARCEL_TYPE = "parcel_type";
     public static final String SIZE = "size";
+
+    public static final String TYPE = "type";
 
     public static Comparator<Parcel> volumeComparator = new Comparator<Parcel>() {
         @Override
@@ -87,6 +87,14 @@ public interface Parcel {
         }
         return name;
     }
+
+//    default public Estate createEstate() {
+//        return new EstateContext();
+//    }
+//
+//    default public Estate createEstate(Player player) {
+//        return new EstateContext(player);
+//    }
 
     /**
      * determine if this parcel grants access to the given parcel
@@ -207,7 +215,7 @@ public interface Parcel {
         }
 
         // add to the registry
-        ParcelRegistry.add(this);
+        ParcelRegistry.register(this);
         CommandHelper.save(level);
 
         return ClaimResult.SUCCESS;
@@ -246,6 +254,10 @@ public interface Parcel {
 
 //    void populateBlockEntity(FoundationStoneBlockEntity entity);
 
+    boolean isValidClaim(Estate estate);
+
+    boolean isValid();
+
     Box getAbsoluteBox();
 
     Box getBox();
@@ -256,6 +268,9 @@ public interface Parcel {
     UUID getId();
 
     void setId(UUID id);
+
+    Estate getEstate();
+    void setEstate(Estate estate);
 
     UUID getNationId();
 
@@ -283,27 +298,42 @@ public interface Parcel {
 
     int getArea();
 
-    List<UUID> getWhitelist();
+    Set<UUID> getWhitelist();
+
+    /*
+     * convenience method
+     */
+    Set<UUID> getPlayerWhitelist();
 
     void setWhitelist(List<UUID> whitelist);
 
     int getBufferSize();
 
-    List<String> getBlockTagWhitelist();
+    void setPlayerWhitelist(Set<UUID> whitelist);
+
+    Set<String> getBlockTagWhitelist();
 
     void setBlockTagWhitelist(List<String> blockTagWhitelist);
 
-    List<String> getBlockWhitelist();
+    void setBlockTagWhitelist(Set<String> whitelist);
+
+    Set<String> getBlockWhitelist();
 
     void setBlockWhitelist(List<String> blockWhitelist);
 
-    List<String> getItemTagWhitelist();
+    void setBlockWhitelist(Set<String> whitelist);
+
+    Set<String> getItemTagWhitelist();
 
     void setItemTagWhitelist(List<String> itemTagWhitelist);
 
-    List<String> getItemWhitelist();
+    void setItemTagWhitelist(Set<String> whitelist);
+
+    Set<String> getItemWhitelist();
 
     void setItemWhitelist(List<String> itemWhitelist);
+
+    void setItemWhitelist(Set<String> whitelist);
 
     ParcelType getType();
 

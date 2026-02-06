@@ -21,25 +21,23 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
+import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
-import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 /**
  *
@@ -47,6 +45,7 @@ import java.util.UUID;
  *
  */
 public abstract class AbstractParcel implements Parcel {
+    public static final String ESTATE_KEY = "estate";
     public static final String NAME_KEY = "name";
     public static final String ID_KEY = "id";
     public static final String NATION_ID_KEY = "nation_id";
@@ -66,38 +65,47 @@ public abstract class AbstractParcel implements Parcel {
 
     // the unique id of the parcel
     private UUID id;
+    private String name;
+
+    // ownership token
+    private Estate estate;
 
     // TODO will need to create a NationRegistry that associates a nation id
     // to a name. that way instead of one parcel being a nation you can have
     // multiple sharing the same name and id.
     // the unique id of a nation
+    @Deprecated
     private UUID nationId;
 
-    private UUID ownerId;
     private UUID deedId;
-    private String name;
+
     private ICoords coords;
     // TODO rename to getPlacement or getBox()
     private Box size;
-    private List<UUID> whitelist;
     private ParcelType type;
 
     private long foundedTime;
     private long ownerTime;
     private long abandonedTime;
 
-    private List<String> blockWhitelist;
-    private List<String> blockTagWhitelist;
-    private List<String> itemWhitelist;
-    private List<String> itemTagWhitelist;
-
+    /*
+     * no-arg constructor
+     */
     public AbstractParcel() {
         setId(UUID.randomUUID());
-        blockWhitelist = new ArrayList<>();
-        blockTagWhitelist = new ArrayList<>();
-        itemWhitelist = new ArrayList<>();
-        itemTagWhitelist = new ArrayList<>();
+        this.estate = new EstateContext();
+        setName(randomName());
     }
+
+//    public AbstractParcel(Estate estate) {
+//        setId(UUID.randomUUID());
+//        this.estate = estate;
+//    }
+//
+//    public AbstractParcel(Player player) {
+//        setId(UUID.randomUUID());
+//        this.estate = createEstate(player);
+//    }
 
     @Override
     public abstract boolean grantsAccess(Parcel parcel);
@@ -159,16 +167,6 @@ public abstract class AbstractParcel implements Parcel {
         return grantsAccess(entityId);
     }
 
-    // TODO will have to be overridden by concrete parcel
-//    @Override
-//    public void populateBlockEntity(FoundationStoneBlockEntity entity) {
-//        entity.setParcelId(getId());
-//        entity.setDeedId(getDeedId());
-//        entity.setOwnerId(getOwnerId());
-//        entity.setCoords(getCoords());
-//        entity.setRelativeBox(getSize());
-//    }
-
     @Override
     public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
         return ClaimResult.FAILURE;
@@ -178,21 +176,27 @@ public abstract class AbstractParcel implements Parcel {
     public void save(CompoundTag tag) {
         ClaimMyLand.LOGGER.debug("saving parcel -> {}", this);
 
+        Estate estate = getEstate();
+        // TODO add isValidClaim() method
+        if (estate == null || estate.getId() == null) {// { || estate.getOwnerId() == null) { // TODO <-- if abandoned is removed, enfore this
+            ClaimMyLand.LOGGER.warn("Parcel {} is missing a valid Claim. This is an issue!", getId());
+            return;
+        }
+        tag.put(ESTATE_KEY, estate.save(new CompoundTag()));
+
         if (ObjectUtils.isNotEmpty(getId())) {
             tag.putUUID(ID_KEY, getId());
         } else {
             // TODO warn and skip save
         }
+        if (StringUtils.isNotBlank(getName())) {
+            tag.putString(NAME_KEY, getName());
+        }
+
         if (ObjectUtils.isNotEmpty(getNationId())) {
             tag.putUUID(NATION_ID_KEY, getNationId());
         }
 
-        if (StringUtils.isNotBlank(getName())) {
-            tag.putString(NAME_KEY, getName());
-        }
-        if (ObjectUtils.isNotEmpty(getOwnerId())) {
-            tag.putUUID(OWNER_KEY, getOwnerId());
-        }
         if (ObjectUtils.isNotEmpty(getDeedId())) {
             tag.putUUID(DEED_KEY, getDeedId());
         }
@@ -207,53 +211,6 @@ public abstract class AbstractParcel implements Parcel {
         getSize().save(sizeTag);
         tag.put(SIZE_KEY, sizeTag);
 
-        // friends whitelist
-        if (getWhitelist() != null) {
-            ListTag list = new ListTag();
-            getWhitelist().forEach(data -> {
-                CompoundTag uuidTag = new CompoundTag();
-                uuidTag.putUUID(ID_KEY, data);
-                list.add(uuidTag);
-            });
-            tag.put(WHITELIST_KEY, list);
-        }
-
-        if (getBlockTagWhitelist() != null) {
-            ListTag list = new ListTag();
-            getBlockTagWhitelist().forEach(data -> {
-                StringTag elementTag = StringTag.valueOf(data);
-                list.add(elementTag);
-            });
-            tag.put(BLOCK_TAG_WHITELIST_KEY, list);
-        }
-
-        if (getBlockWhitelist() != null) {
-            ListTag list = new ListTag();
-            getBlockWhitelist().forEach(data -> {
-                StringTag elementTag = StringTag.valueOf(data);
-                list.add(elementTag);
-            });
-            tag.put(BLOCK_WHITELIST_KEY, list);
-        }
-
-        if (getItemTagWhitelist() != null) {
-            ListTag list = new ListTag();
-            getItemTagWhitelist().forEach(data -> {
-                StringTag elementTag = StringTag.valueOf(data);
-                list.add(elementTag);
-            });
-            tag.put(ITEM_TAG_WHITELIST_KEY, list);
-        }
-
-        if (getItemWhitelist() != null) {
-            ListTag list = new ListTag();
-            getItemWhitelist().forEach(data -> {
-                StringTag elementTag = StringTag.valueOf(data);
-                list.add(elementTag);
-            });
-            tag.put(ITEM_WHITELIST_KEY, list);
-        }
-
         tag.putLong("foundedTime", getFoundedTime());
         tag.putLong("ownerTime", getOnwerTime());
         tag.putLong("abandonedTime", getAbandonedTime());
@@ -261,26 +218,44 @@ public abstract class AbstractParcel implements Parcel {
 
     @Override
     public Parcel load(CompoundTag tag) {
-        // clear the white lists
-        getWhitelist().clear();
-        getBlockTagWhitelist().clear();
-        getBlockWhitelist().clear();
-        getItemTagWhitelist().clear();
-        getItemWhitelist().clear();
-
         if (tag.contains(ID_KEY)) {
             setId(tag.getUUID(ID_KEY));
         } else if (this.getId() == null) {
             setId(UUID.randomUUID());
         }
-        if (tag.contains(NATION_ID_KEY)) {
-            setNationId(tag.getUUID(NATION_ID_KEY));
+
+        // load estate data
+//        Estate estate;
+        if (tag.contains(ESTATE_KEY)) {
+            CompoundTag estateTag = tag.getCompound(ESTATE_KEY);
+//            estate = EstateRegistry.get(estateTag.getUUID(Estate.ID_KEY))
+//                    .orElseGet(() -> {
+//                        // generate a new concrete claim
+//                        Estate newEstate = createEstate();
+//                        newEstate.load(estateTag);
+//                        return newEstate;
+//                    });
+            EstateRegistry.get(estateTag.getUUID(Estate.ID_KEY))
+                    .ifPresentOrElse(this::setEstate,
+                            () -> getEstate().load(estateTag));
+
+        } else {
+            loadLegacy(tag);
+        }
+//        setEstate(estate);
+
+        if (!isValidClaim(estate)) {
+            ClaimMyLand.LOGGER.warn("unable to load parcel {} - invalid claim data.", getId());
+            return this;
         }
         if (tag.contains(NAME_KEY)) {
             setName(tag.getString(NAME_KEY));
         }
-        if (tag.contains(OWNER_KEY)) {
-            setOwnerId(tag.getUUID(OWNER_KEY));
+        if (tag.contains(NATION_ID_KEY)) {
+            // legacy
+            setNationId(tag.getUUID(NATION_ID_KEY));
+            // new
+            getEstate().setId(getNationId());
         }
         if (tag.contains(DEED_KEY)) {
             setDeedId(tag.getUUID(DEED_KEY));
@@ -294,49 +269,6 @@ public abstract class AbstractParcel implements Parcel {
         if (tag.contains(SIZE_KEY)) {
             setSize(Box.load(tag.getCompound(SIZE_KEY)));
         }
-        if (tag.contains(WHITELIST_KEY)) {
-            ListTag list = tag.getList(WHITELIST_KEY, Tag.TAG_COMPOUND);
-            list.forEach(element -> {
-                CompoundTag uuidTag = ((CompoundTag)element);
-                if (uuidTag.contains(ID_KEY)) {
-                    ClaimMyLand.LOGGER.debug("loading {} to whitelist", uuidTag.getUUID(ID_KEY));
-                    getWhitelist().add(uuidTag.getUUID(ID_KEY));
-                }
-            });
-        }
-
-        if (tag.contains(BLOCK_TAG_WHITELIST_KEY)) {
-            ListTag list = tag.getList(BLOCK_TAG_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String blockTag = element.getAsString();
-                    getBlockTagWhitelist().add(blockTag);
-            });
-        }
-
-        if (tag.contains(BLOCK_WHITELIST_KEY)) {
-            ListTag list = tag.getList(BLOCK_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String block = element.getAsString();
-                getBlockWhitelist().add(block);
-            });
-        }
-
-        if (tag.contains(ITEM_TAG_WHITELIST_KEY)) {
-            ListTag list = tag.getList(ITEM_TAG_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String itemTag = element.getAsString();
-                getItemTagWhitelist().add(itemTag);
-            });
-        }
-
-        if (tag.contains(ITEM_WHITELIST_KEY)) {
-            ListTag list = tag.getList(ITEM_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String item = element.getAsString();
-                getItemWhitelist().add(item);
-            });
-        }
-
         if (tag.contains("foundedTime")) {
             setFoundedTime(tag.getLong("foundedTime"));
         }
@@ -348,6 +280,67 @@ public abstract class AbstractParcel implements Parcel {
         }
 
         return this;
+    }
+
+    @Override
+    public boolean isValidClaim(Estate estate) {
+        return estate != null && estate.getId() != null
+                && StringUtils.isNotBlank(estate.getName());
+    }
+
+    @Override
+    public boolean isValid() {
+        return isValidClaim(getEstate()) && getId() != null;
+    }
+
+    private Estate loadLegacy(CompoundTag tag) {
+        Estate estate = getEstate();
+
+        UUID ownerId;
+        if (!tag.contains(OWNER_KEY)) {
+            return estate;
+        }
+        estate.setOwnerId(tag.getUUID(OWNER_KEY));
+
+        if (tag.contains(NAME_KEY)) {
+            estate.setName(tag.getString(NAME_KEY));
+        } else {
+            estate.setName(estate.defaultName(estate.getOwnerId()));
+        }
+
+        if (tag.contains(BLOCK_TAG_WHITELIST_KEY)) {
+            ListTag list = tag.getList(BLOCK_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String blockTag = element.getAsString();
+                estate.getBlockTagWhitelist().add(blockTag);
+            });
+        }
+
+        if (tag.contains(BLOCK_WHITELIST_KEY)) {
+            ListTag list = tag.getList(BLOCK_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String block = element.getAsString();
+                estate.getBlockWhitelist().add(block);
+            });
+        }
+
+        if (tag.contains(ITEM_TAG_WHITELIST_KEY)) {
+            ListTag list = tag.getList(ITEM_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String itemTag = element.getAsString();
+                estate.getItemTagWhitelist().add(itemTag);
+            });
+        }
+
+        if (tag.contains(ITEM_WHITELIST_KEY)) {
+            ListTag list = tag.getList(ITEM_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String item = element.getAsString();
+                estate.getItemWhitelist().add(item);
+            });
+        }
+
+        return estate;
     }
 
     /**
@@ -398,22 +391,37 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     @Override
+    public Estate getEstate() {
+        return estate;
+    }
+
+    public void setEstate(Estate estate) {
+        this.estate = estate;
+    }
+
+    @Override
     public UUID getNationId() {
-        return nationId;
+//        return nationId;
+        return getEstate().getId();
     }
     @Override
     public void setNationId(UUID nationId) {
+        // legacy
         this.nationId = nationId;
+        // new way
+        getEstate().setId(nationId);
     }
 
     @Override
     public UUID getOwnerId() {
-        return ownerId;
+        return getEstate().getOwnerId();
+//        return ownerId;
     }
 
     @Override
     public void setOwnerId(UUID ownerId) {
-        this.ownerId = ownerId;
+        getEstate().setOwnerId(ownerId);
+//        this.ownerId = ownerId;
     }
 
     @Override
@@ -458,62 +466,91 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     @Override
-    public List<UUID> getWhitelist() {
-        if (whitelist == null) {
-            whitelist = new ArrayList<>();
-        }
-        return whitelist;
+    public Set<UUID> getWhitelist() {
+        return getEstate().getPlayerWhitelist();
     }
 
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setWhitelist(List<UUID> whitelist) {
-        this.whitelist = whitelist;
+        setPlayerWhitelist(new HashSet<>(whitelist));
+    }
+
+    /*
+     * convenience method
+     */
+    @Override
+    public Set<UUID> getPlayerWhitelist() {
+        return getEstate().getPlayerWhitelist();
     }
 
     @Override
-    public List<String> getBlockTagWhitelist() {
-        if (blockTagWhitelist == null) {
-            blockTagWhitelist = new ArrayList<>();
-        }
-        return blockTagWhitelist;
+    public void setPlayerWhitelist(Set<UUID> whitelist) {
+        getEstate().setPlayerWhitelist(whitelist);
     }
 
+    @Override
+    public Set<String> getBlockTagWhitelist() {
+        return getEstate().getBlockTagWhitelist();
+    }
+
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setBlockTagWhitelist(List<String> blockTagWhitelist) {
-        this.blockTagWhitelist = blockTagWhitelist;
+        setBlockTagWhitelist(new HashSet<>(blockTagWhitelist));
     }
 
     @Override
-    public List<String> getBlockWhitelist() {
-        if (blockWhitelist == null) {
-            blockWhitelist = new ArrayList<>();
-        }
-        return blockWhitelist;
+    public void setBlockTagWhitelist(Set<String> whitelist) {
+        getEstate().setBlockTagWhitelist(whitelist);
     }
 
+    @Override
+    public Set<String> getBlockWhitelist() {
+        return getEstate().getBlockWhitelist();
+    }
+
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setBlockWhitelist(List<String> blockWhitelist) {
-        this.blockWhitelist = blockWhitelist;
+        setBlockWhitelist(new HashSet<>(blockWhitelist));
     }
 
     @Override
-    public List<String> getItemTagWhitelist() {
-        return itemTagWhitelist;
+    public void setBlockWhitelist(Set<String> whitelist) {
+        getEstate().setBlockWhitelist(whitelist);
     }
 
+    @Override
+    public Set<String> getItemTagWhitelist() {
+        return getEstate().getItemTagWhitelist();
+    }
+
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setItemTagWhitelist(List<String> itemTagWhitelist) {
-        this.itemTagWhitelist = itemTagWhitelist;
+        setItemTagWhitelist(new HashSet<>(itemTagWhitelist));
     }
 
     @Override
-    public List<String> getItemWhitelist() {
-        return itemWhitelist;
+    public void setItemTagWhitelist(Set<String> whitelist) {
+        getEstate().setItemTagWhitelist(whitelist);
     }
 
+    @Override
+    public Set<String> getItemWhitelist() {
+        return getEstate().getItemWhitelist();
+    }
+
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setItemWhitelist(List<String> itemWhitelist) {
-        this.itemWhitelist = itemWhitelist;
+        setItemWhitelist(new HashSet<>(itemWhitelist));
+    }
+
+    @Override
+    public void setItemWhitelist(Set<String> whitelist) {
+        getEstate().setItemWhitelist(whitelist);
     }
 
     @Override
@@ -559,22 +596,17 @@ public abstract class AbstractParcel implements Parcel {
     @Override
     public String toString() {
         return "AbstractParcel{" +
-                "abandonedTime=" + abandonedTime +
                 ", id=" + id +
-                ", nationId=" + nationId +
-                ", ownerId=" + ownerId +
-                ", deedId=" + deedId +
                 ", name='" + name + '\'' +
+                ", estate=" + estate +
+                ", nationId=" + nationId +
+                ", deedId=" + deedId +
                 ", coords=" + coords +
                 ", size=" + size +
-                ", whitelist=" + whitelist +
                 ", type=" + type +
                 ", foundedTime=" + foundedTime +
                 ", ownerTime=" + ownerTime +
-                ", blockWhitelist=" + blockWhitelist +
-                ", blockTagWhitelist=" + blockTagWhitelist +
-                ", itemWhitelist=" + itemWhitelist +
-                ", itemTagWhitelist=" + itemTagWhitelist +
+                ", abandonedTime=" + abandonedTime +
                 '}';
     }
 }

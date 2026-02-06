@@ -26,6 +26,8 @@ import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.gui.chat.ChatMessages;
 import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
@@ -41,7 +43,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -54,9 +55,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
-import net.minecraftforge.common.capabilities.ICapabilityProvider;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -76,6 +75,7 @@ public abstract class Deed extends Item {
 
     // default size = 1 chunk (16x16), but it is not necessarily aligned with a chunk
     public static final Box DEFAULT_SIZE = new Box(Coords.of(0, -15, 0), Coords.of(16, 16, 16));
+    private ParcelType parcelType;
 
     /**
      *
@@ -86,8 +86,11 @@ public abstract class Deed extends Item {
         super(properties.stacksTo(1));
     }
 
-    public abstract Parcel createParcel();
+//    public abstract Parcel createParcel();
+//
+//    public abstract Parcel createParcel(Player player);
 
+    // TODO should return Optional<>
     /**
      * creates a parcel from an itemStack
      * @param deedStack
@@ -96,9 +99,23 @@ public abstract class Deed extends Item {
      * @return
      */
     public Parcel createParcel(ItemStack deedStack, ICoords coords, Player player) {
-        Parcel parcel = createParcel();
-
         CompoundTag tag = deedStack.getOrCreateTag();
+
+        // TODO DeedItem should have a PARCEL_TYPE property which can be fed to the ParcelTypeRegistry
+        // NOTE this is a guaranteed creation of a Parcel as the concrete Deed init a Parcel
+//        Parcel parcel = createParcel();
+        Optional<Parcel> optionalParcel = ParcelTypeRegistry.create(getParcelType());
+//                tag.contains(Deed.PARCEL_TYPE) ?
+//                        ParcelType.fromString(tag.getString(Deed.PARCEL_TYPE)) :
+//                        ParcelType.NONE);
+        // TODO if optional Parcel is not present, use backup by Deed class factory ??
+        // TODO instead return Optional.empty()
+        Parcel parcel = optionalParcel.orElseThrow(IllegalStateException::new);
+
+        // update the Estate name using the player
+        parcel.getEstate().setName(parcel.getEstate().defaultName(player));
+
+        // update parcel properties if deed contains them
         if (tag.contains(PARCEL_ID)) {
             parcel.setId(tag.getUUID(PARCEL_ID));
         } else {
@@ -440,6 +457,7 @@ public abstract class Deed extends Item {
         blockEntity.setParcelId(tag.contains(PARCEL_ID) ? tag.getUUID(PARCEL_ID) : null);
         blockEntity.setDeedId(tag.contains(DEED_ID) ? tag.getUUID(DEED_ID) : null);
         blockEntity.setOwnerId(tag.contains(OWNER_ID) ? tag.getUUID(OWNER_ID) : player.getUUID());
+        // TODO update to use getParcelType()
         blockEntity.setParcelType(tag.contains(PARCEL_TYPE) ? tag.getString(PARCEL_TYPE) : null);
         blockEntity.setCoords(new Coords(pos));
         blockEntity.setRelativeBox(size);
@@ -496,9 +514,10 @@ public abstract class Deed extends Item {
     }
 
     public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
-        }
+        // TODO update to use getParcelType()
+//        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
+//        }
 
         if (stack.getTag() != null && stack.getTag().contains(Deed.SIZE)) {
             appendSizeHoverText(stack, level, tooltip, flag);
@@ -525,4 +544,12 @@ public abstract class Deed extends Item {
         tooltip.add(Component.literal(LangUtil.NEWLINE));
     }
 
+
+    public ParcelType getParcelType() {
+        return parcelType;
+    }
+
+    public void setParcelType(ParcelType type) {
+        this.parcelType = type;
+    }
 }

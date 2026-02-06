@@ -5,7 +5,6 @@ import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntit
 import mod.gottsch.forge.claimmyland.core.parcel.CitizenParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
-import mod.gottsch.forge.claimmyland.core.parcel.PlayerParcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
@@ -31,13 +30,16 @@ public class PlayerDeed extends Deed {
 
     public PlayerDeed(Properties properties) {
         super(properties);
+        setParcelType(ParcelType.PLAYER);
     }
 
+    // TODO this should be deprecated in favor of the type factory methods
+    @Deprecated
     // TODO should these call the factory
-    @Override
-    public Parcel createParcel() {
-        return new PlayerParcel();
-    }
+//    @Override
+//    public Parcel createParcel() {
+//        return new PlayerParcel();
+//    }
 
     @Override
     protected void populateFoundationStone(FoundationStoneBlockEntity blockEntity, ItemStack deed, BlockPos pos, Player player) {

@@ -24,10 +24,7 @@ import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.CitizenPlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.ZonePlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
-import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelFactory;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -112,7 +109,7 @@ public class CitizenTool extends BlockItem {
                 context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.failure_too_small")).withStyle(ChatFormatting.RED));
             }
 
-            ParcelFactory.create(ParcelType.CITIZEN, parentParcel.get().getNationId())
+            ParcelTypeRegistry.create(ParcelType.CITIZEN, parentParcel.get().getNationId())
                     .ifPresentOrElse(p -> {
                                 p.setOwnerId(parentParcel.get().getOwnerId());
                                 // ensure to have to use the min coords of the box

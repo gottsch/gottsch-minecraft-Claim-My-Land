@@ -28,6 +28,7 @@ import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -45,7 +46,21 @@ public class PlayerParcel extends AbstractParcel {
      *
      */
     public PlayerParcel() {
+        super();
         setType(ParcelType.PLAYER);
+    }
+
+//    @Deprecated
+//    public PlayerParcel(Player player) {
+//        super(player);
+//        setType(ParcelType.PLAYER);
+//    }
+
+    /**
+     * public factory
+     */
+    public static PlayerParcel create() {
+        return new PlayerParcel();
     }
 
     @Override
@@ -130,7 +145,8 @@ public class PlayerParcel extends AbstractParcel {
             }
 
             // validate placement. transform personal into citizen parcel
-            Optional<Parcel> optionalCitizenParcel = ParcelFactory.create(ParcelType.CITIZEN);
+//            Optional<Parcel> optionalCitizenParcel = ParcelFactory.create(ParcelType.CITIZEN);
+            Optional<Parcel> optionalCitizenParcel = ParcelTypeRegistry.create(ParcelType.CITIZEN);
             if (optionalCitizenParcel.isPresent()) {
                 CitizenParcel citizenParcel = (CitizenParcel) optionalCitizenParcel.get();
                 citizenParcel.setNationId(((ZoneParcel) parentParcel).getNationId());
@@ -140,7 +156,7 @@ public class PlayerParcel extends AbstractParcel {
                 citizenParcel.setOwnerId(getOwnerId());
 
                 // add to the registry
-                ParcelRegistry.add(citizenParcel);
+                ParcelRegistry.register(citizenParcel);
                 CommandHelper.save(level);
                 // register the player
                 PlayerRegistry.register(level, getOwnerId());
@@ -157,14 +173,14 @@ public class PlayerParcel extends AbstractParcel {
         ClaimMyLand.LOGGER.debug("saved parcel -> {}", this);
     }
 
-    @Override
-    public Parcel load(CompoundTag tag) {
-        super.load(tag);
-        if (tag.contains(TYPE)) {
-            setType(ParcelType.valueOf(tag.getString(TYPE)));
-        }
-        return this;
-    }
+//    @Override
+//    public Parcel load(CompoundTag tag) {
+//        super.load(tag);
+//        if (tag.contains(TYPE)) {
+//            setType(ParcelType.valueOf(tag.getString(TYPE)));
+//        }
+//        return this;
+//    }
 
     @Override
     public int getBufferSize() {

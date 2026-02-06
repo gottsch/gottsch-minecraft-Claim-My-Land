@@ -29,95 +29,99 @@ import java.util.UUID;
  * @author Mark Gottschling on Sep 14, 2024
  *
  */
+@Deprecated
 public class ParcelFactory {
 
-    public static Optional<Parcel> create(CompoundTag tag) {
-        if (tag.contains(AbstractParcel.TYPE)) {
-            String type = tag.getString(AbstractParcel.TYPE);
-
-            if (type.equalsIgnoreCase(ParcelType.PLAYER.getSerializedName())) {
-                return Optional.of(new PlayerParcel());
-            }
-            else if (type.equalsIgnoreCase(ParcelType.CITIZEN.getSerializedName())) {
-                return Optional.of(new CitizenParcel());
-            }
-            else if (type.equalsIgnoreCase(ParcelType.NATION.getSerializedName())) {
-                return Optional.of(new NationParcel());
-            }
-            else if (type.equalsIgnoreCase(ParcelType.ZONE.getSerializedName())) {
-                return Optional.of(new ZoneParcel());
-            }
-        }
-        return Optional.empty();
-    }
-
-    public static Optional<Parcel> create(ParcelType type) {
-        return create(type, (UUID)null);
-    }
+    // helper method to interrogate the tag for the type and call the right factory
+//    @Deprecated
+//    public static Optional<Parcel> create(CompoundTag tag) {
+//        if (tag.contains(AbstractParcel.TYPE)) {
+//            String type = tag.getString(AbstractParcel.TYPE);
+//
+//            if (type.equalsIgnoreCase(ParcelType.PLAYER.getSerializedName())) {
+//                return Optional.of(new PlayerParcel());
+//            }
+//            else if (type.equalsIgnoreCase(ParcelType.CITIZEN.getSerializedName())) {
+//                return Optional.of(new CitizenParcel());
+//            }
+//            else if (type.equalsIgnoreCase(ParcelType.NATION.getSerializedName())) {
+//                return Optional.of(new NationParcel());
+//            }
+//            else if (type.equalsIgnoreCase(ParcelType.ZONE.getSerializedName())) {
+//                return Optional.of(new ZoneParcel());
+//            }
+//        }
+//        return Optional.empty();
+//    }
+//
+//        @Deprecated
+//    public static Optional<Parcel> create(ParcelType type) {
+//        return create(type, (UUID)null);
+//    }
 
     /**
      *
      * @param type
      * @return
      */
-    public static Optional<Parcel> create(ParcelType type, UUID nationId) {
-        return switch (type) {
-            case PLAYER -> Optional.of(createPlayerParcel());
-            case NATION -> Optional.of(createNationParcel(nationId));
-            case CITIZEN -> Optional.of(createCitizenParcel(nationId));
-            case ZONE -> Optional.of(createZoneParcel(nationId));
-            default -> Optional.empty();
-        };
-    }
+//    public static Optional<Parcel> create(ParcelType type, UUID nationId) {
+//        return switch (type) {
+//            case PLAYER -> Optional.of(createPlayerParcel());
+//            case NATION -> Optional.of(createNationParcel(nationId));
+//            case CITIZEN -> Optional.of(createCitizenParcel(nationId));
+//            case ZONE -> Optional.of(createZoneParcel(nationId));
+//            default -> Optional.empty();
+//        };
+//    }
 
-    public static Optional<Parcel> create(ParcelType type, NationParcel nation) {
-        return switch (type) {
-            case PLAYER -> Optional.of(createPlayerParcel());
-            case NATION -> Optional.of(createNationParcel(nation.getNationId()));
-            case CITIZEN -> Optional.of(createCitizenParcel(nation.getNationId()));
-            case ZONE -> Optional.of(createZoneParcel(nation));
-            default -> Optional.empty();
-        };
-    }
+//    public static Optional<Parcel> create(ParcelType type, NationParcel nation) {
+//        return switch (type) {
+//            case PLAYER -> Optional.of(createPlayerParcel());
+//            case NATION -> Optional.of(createNationParcel(nation.getNationId()));
+//            case CITIZEN -> Optional.of(createCitizenParcel(nation.getNationId()));
+//            case ZONE -> Optional.of(createZoneParcel(nation));
+//            default -> Optional.empty();
+//        };
+//    }
 
-    private static Parcel createPlayerParcel() {
-        Parcel parcel = new PlayerParcel();
-        parcel.setId(UUID.randomUUID());
-        parcel.setName(parcel.randomName());
-        return parcel;
-    }
-
-    private static Parcel createCitizenParcel(UUID nationId) {
-        CitizenParcel parcel = new CitizenParcel();
-        parcel.setId(UUID.randomUUID());
-        parcel.setNationId(nationId);
-        parcel.setName(parcel.randomName());
-        return parcel;
-    }
-
-    private static Parcel createNationParcel(UUID nationId) {
-        NationParcel parcel = new NationParcel();
-        parcel.setId(UUID.randomUUID());
-        parcel.setNationId(nationId != null ? nationId : UUID.randomUUID());
-        parcel.setName(parcel.randomName());
-        return parcel;
-    }
-
-    private static Parcel createZoneParcel(UUID nationId) {
-        ZoneParcel parcel = new ZoneParcel();
-        parcel.setId(UUID.randomUUID());
-        parcel.setNationId(nationId);
-        parcel.setName(parcel.randomName());
-        return parcel;
-    }
-
-    private static Parcel createZoneParcel(NationParcel nation) {
-        Parcel parcel = createZoneParcel(nation.getNationId());
-        parcel.setBlockTagWhitelist(nation.getBlockTagWhitelist());
-        parcel.setBlockWhitelist(nation.getBlockWhitelist());
-        parcel.setItemTagWhitelist(nation.getItemTagWhitelist());
-        parcel.setItemWhitelist(nation.getItemWhitelist());
-        parcel.setWhitelist(nation.getWhitelist());
-        return parcel;
-    }
+//    private static Parcel createPlayerParcel() {
+//        Parcel parcel = new PlayerParcel();
+//        parcel.setId(UUID.randomUUID());
+//        parcel.setName(parcel.randomName());
+//        return parcel;
+//    }
+//
+//    private static Parcel createCitizenParcel(UUID nationId) {
+//        CitizenParcel parcel = new CitizenParcel();
+//        parcel.setId(UUID.randomUUID());
+//        parcel.setNationId(nationId);
+//        parcel.setName(parcel.randomName());
+//        return parcel;
+//    }
+//
+//    private static Parcel createNationParcel(UUID nationId) {
+//        NationParcel parcel = new NationParcel();
+//        parcel.setId(UUID.randomUUID());
+//        parcel.setNationId(nationId != null ? nationId : UUID.randomUUID());
+//        parcel.setName(parcel.randomName());
+//        return parcel;
+//    }
+//
+//    private static Parcel createZoneParcel(UUID nationId) {
+//        ZoneParcel parcel = new ZoneParcel();
+//        parcel.setId(UUID.randomUUID());
+//        parcel.setNationId(nationId);
+//        parcel.setName(parcel.randomName());
+//        return parcel;
+//    }
+//
+//    private static Parcel createZoneParcel(NationParcel nation) {
+//        Parcel parcel = createZoneParcel(nation.getNationId());
+//        parcel.setBlockTagWhitelist(nation.getBlockTagWhitelist());
+//        parcel.setBlockWhitelist(nation.getBlockWhitelist());
+//        parcel.setItemTagWhitelist(nation.getItemTagWhitelist());
+//        parcel.setItemWhitelist(nation.getItemWhitelist());
+//        parcel.setWhitelist(nation.getWhitelist());
+//        return parcel;
+//    }
 }

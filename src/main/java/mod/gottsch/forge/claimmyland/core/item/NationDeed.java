@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.item;
 
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
@@ -32,11 +31,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
@@ -53,12 +50,17 @@ public class NationDeed extends Deed {
 
     public NationDeed(Properties properties) {
         super(properties);
+        setParcelType(ParcelType.NATION);
     }
 
-    @Override
-    public Parcel createParcel() {
-        return ParcelFactory.create(ParcelType.NATION).orElse(new NationParcel());
-    }
+//    @Override
+//    public Parcel createParcel() {
+//        return ParcelTypeRegistry.create(ParcelType.NATION).orElse(new NationParcel());
+//    }
+
+//    public Parcel createParcel(Player player) {
+//        return new NationParcel(player);
+//    }
 
     @Override
     public Parcel createParcel(ItemStack deedStack, ICoords coords, Player player) {
@@ -66,7 +68,6 @@ public class NationDeed extends Deed {
 
         CompoundTag tag = deedStack.getOrCreateTag();
 
-        // TODO this should be moot now.
         // add nation id
         if (tag.contains(NATION_ID)) {
             parcel.setNationId(tag.getUUID(NATION_ID));
@@ -129,9 +130,9 @@ public class NationDeed extends Deed {
 
     @Override
     public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
-        }
+//        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); // stack.getTag().getString(Deed.PARCEL_TYPE)));
+//        }
 
         // NOTE nation DEED does NOT have a nationId nor nationName as
         // a deed is a net new parcel to be used by anyone. the name would not be known

@@ -23,9 +23,11 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
+import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.tags.ModTags;
@@ -49,11 +51,15 @@ public class CommandHelper {
 	public static final String CML_OPS = "cml-ops";
 	public static final String DEED = "deed";
 	public static final String PARCEL = "parcel";
+	public static final String ESTATE = "estate";
 	public static final String ADD = "add";
 	public static final String REMOVE = "remove";
 	public static final String LIST = "list";
+	public static final String INFO = "info";
 	public static final String RENAME = "rename";
 	public static final String TRANSFER = "transfer";
+	public static final String JOIN = "join";
+	public static final String SPLIT = "split";
 	public static final String CLEAR = "clear";
 	public static final String GENERATE = "generate";
 	public static final String NEW = "new";
@@ -66,6 +72,8 @@ public class CommandHelper {
 	public static final String OWNER_NAME = "owner_name";
 	public static final String NEW_OWNER_NAME = "new_owner_name";
 	public static final String FRIEND_NAME = "friend_name";
+	public static final String ESTATE_NAME = "estate_name";
+	public static final String OTHER_ESTATE_NAME = "other_estate_name";
 	public static final String PARCEL_NAME = "parcel_name";
 	public static final String NEW_NAME = "new_name";
 	public static final String BACKUP = "backup";
@@ -117,12 +125,12 @@ public class CommandHelper {
 	};
 
 	static final SuggestionProvider<CommandSourceStack> CURRENT_FRIENDS_NAMES = (source, builder) -> {
-		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+		String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
 		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
 		List<String> list = new ArrayList<>();
 
 		if (ownerUuid.isPresent()) {
-			Optional<List<UUID>> friendsUuids = FriendsWhitelistCommandsDelegate.getFriendsWhitelist(source.getSource(), ownerUuid.get(), parcelName);
+			Optional<Set<UUID>> friendsUuids = FriendsWhitelistCommandsDelegate.getFriendsWhitelist(source.getSource(), ownerUuid.get(), estateName);
 			friendsUuids.ifPresent(uuids -> uuids.forEach(uuid -> {
 				Optional<String> name = CommandHelper.getPlayerName(source.getSource(), uuid);
 				name.ifPresent(list::add);
@@ -150,7 +158,12 @@ public class CommandHelper {
 	public static List<Parcel> getParcelsByOwner(CommandSourceStack source, UUID playerUuid) {
 		return ParcelRegistry.findByOwner(playerUuid);
 	}
-
+	public static Optional<Estate> getEstateByOwner(CommandSourceStack source, UUID ownerUuid, String estateName) {
+		return getEstatesByOwner(source, ownerUuid).stream().filter(e -> e.getName().equalsIgnoreCase(estateName)).findFirst();
+	}
+	public static Set<Estate> getEstatesByOwner(CommandSourceStack source, UUID playerUuid) {
+		return EstateRegistry.getByOwner(playerUuid);
+	}
 
 	/*
 	 * get command player

@@ -100,6 +100,64 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("unable_locate_player"), "Unable to locate the player -> %s");
         add(LangUtil.chat("unexpected_error"), "An unexpected error occurred.");
 
+        // estates
+        add(LangUtil.chat("estate.list"), "%s's Estates");
+        add(LangUtil.chat("estate.list.abandoned"), "Abandoned Estates");
+        add(LangUtil.chat("estate.list.empty"), "[Empty]");
+
+        add(LangUtil.chat("estate.join.success"), "Estates have been joined.");
+        add(LangUtil.chat("estate.join.failure"), "Unable to join estates.");
+        add(LangUtil.chat("estate.join.same_estate.failure"), "Cannot join estate to itself.");
+
+        add(LangUtil.chat("estate.split.success"), "Estate has been split.");
+        add(LangUtil.chat("estate.split.failure"), "Unable to split estate.");
+        add(LangUtil.chat("estate.split.single_parcel.failure"), "An estate with only one parcel cannot be split.");
+
+        add(LangUtil.chat("estate.demolish.success"), "The estate has been demolished.");
+        add(LangUtil.chat("estate.demolish.failure"), "Unable to demolish the estate.");
+        add(LangUtil.chat("estate.demolish.zone_cannot_demolish"), "A Zone parcel (in the estate) cannot be demolished. Use 'remove' instead.");
+
+        add(LangUtil.chat("estate.remove.success"), "The estate has been removed.");
+        add(LangUtil.chat("estate.remove.failure"), "Unable to remove the estate.");
+        
+        add(LangUtil.chat("estate.rename.success"), "The estate has been renamed.");
+        add(LangUtil.chat("estate.rename.failure"), "Unable to rename the estate.");
+
+        add(LangUtil.chat("estate.transfer.success"), "The estate has been transferred.");
+        add(LangUtil.chat("estate.transfer.failure"), "Unable to transfer the estate.");
+
+        add(LangUtil.chat("estate.whitelist.add.success"), "Friend was added to the whitelist.");
+        add(LangUtil.chat("estate.whitelist.add.failure"), "Unable to add friend to the whitelist.");
+        add(LangUtil.chat("estate.whitelist.add.same_name.failure"), "Cannot add owner as a friend.");
+        add(LangUtil.chat("estate.whitelist.remove.success"), "Friend was removed from the whitelist.");
+        add(LangUtil.chat("estate.whitelist.remove.failure"), "Unable to remove friend from the whitelist.");
+        add(LangUtil.chat("estate.whitelist.list"), "Friends Whitelist for estate ");
+
+        add(LangUtil.chat("estate.block_tag.add.success"), "A block tag was added to the block tag whitelist.");
+        add(LangUtil.chat("estate.block_tag.add.failure"), "Unable to add block tag to the block tag whitelist.");
+        add(LangUtil.chat("estate.block_tag.remove.success"), "A block tag was removed from the block tag whitelist.");
+        add(LangUtil.chat("estate.block_tag.remove.failure"), "Unable to remove block tag from the block tag whitelist.");
+
+        add(LangUtil.chat("estate.block.add.success"), "A block was added to the block whitelist.");
+        add(LangUtil.chat("estate.block.add.failure"), "Unable to add block to the block whitelist.");
+        add(LangUtil.chat("estate.block.remove.success"), "A block was removed from the block whitelist.");
+        add(LangUtil.chat("estate.block.remove.failure"), "Unable to remove block from the block whitelist.");
+
+        add(LangUtil.chat("estate.item_tag.add.success"), "An item tag was added to the item tag whitelist.");
+        add(LangUtil.chat("estate.item_tag.add.failure"), "Unable to add item tag to the item tag whitelist.");
+        add(LangUtil.chat("estate.item_tag.remove.success"), "An item tag was removed from the item tag whitelist.");
+        add(LangUtil.chat("estate.item_tag.remove.failure"), "Unable to remove item tag from the item tag whitelist.");
+
+        add(LangUtil.chat("estate.item.add.success"), "A item was added to the item whitelist.");
+        add(LangUtil.chat("estate.item.add.failure"), "Unable to add item to the item whitelist.");
+        add(LangUtil.chat("estate.item.remove.success"), "A item was removed from the item whitelist.");
+        add(LangUtil.chat("estate.item.remove.failure"), "Unable to remove item from the item whitelist.");
+
+        add(LangUtil.chat("estate.block_tag.list"), "Block Tag Whitelist for estate ");
+        add(LangUtil.chat("estate.block.list"), "Block Whitelist for estate ");
+        add(LangUtil.chat("estate.item_tag.list"), "Item Tag Whitelist for estate ");
+        add(LangUtil.chat("estate.item.list"), "Item Whitelist for estate ");
+        
         // parcels
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");
@@ -125,6 +183,8 @@ public class LanguageGen extends LanguageProvider {
 
         add(LangUtil.chat("parcel.remove.success"), "The parcel has been removed.");
         add(LangUtil.chat("parcel.remove.failure"), "Unable to remove the parcel.");
+
+        add(LangUtil.chat("parcel.clear.success"), "The estates/parcels have been removed.");
 
         add(LangUtil.chat("parcel.rename.success"), "The parcel has been renamed.");
         add(LangUtil.chat("parcel.rename.failure"), "Unable to rename the parcel.");

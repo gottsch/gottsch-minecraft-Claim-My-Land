@@ -54,12 +54,18 @@ public class CitizenDeed extends Deed {
 
     public CitizenDeed(Properties properties) {
         super(properties);
+        setParcelType(ParcelType.CITIZEN);
     }
 
-    @Override
-    public Parcel createParcel() {
-        return new CitizenParcel();
-    }
+//    @Override
+//    public Parcel createParcel() {
+//        return new CitizenParcel();
+//    }
+
+//    @Override
+//    public Parcel createParcel(Player player) {
+//        return new CitizenParcel(player);
+//    }
 
     @Override
     public Parcel createParcel(ItemStack deedStack, ICoords coords, Player player) {
@@ -131,9 +137,11 @@ public class CitizenDeed extends Deed {
 
     @Override
     public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + stack.getTag().getString(Deed.PARCEL_TYPE)));
-        }
+        // TODO update to use getParcelType()
+//        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
+//        }
+        // TODO update to get from Estate.getId() / Estage.getName()
         if (stack.getTag() != null && stack.getTag().contains(CitizenDeed.NATION_NAME)) {
             String nation_name = stack.getTag().getString(NATION_NAME);
             tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + nation_name));

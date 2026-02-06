@@ -108,7 +108,7 @@ public class ZoningTool extends BlockItem {
                 context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.failure_too_small")).withStyle(ChatFormatting.RED));
             }
 
-            ParcelFactory.create(ParcelType.ZONE, (NationParcel) nationParcel.get())
+            ParcelTypeRegistry.create(ParcelType.ZONE, (NationParcel) nationParcel.get())
                     .ifPresentOrElse(p -> {
                             p.setOwnerId(nationParcel.get().getOwnerId());
                             // ensure to have to use the min coords of the box

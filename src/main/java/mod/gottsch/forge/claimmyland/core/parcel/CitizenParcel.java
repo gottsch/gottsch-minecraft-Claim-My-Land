@@ -27,7 +27,7 @@ import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -40,8 +40,37 @@ import java.util.UUID;
  */
 public class CitizenParcel extends AbstractParcel {
 
+    /**
+     * no-arg constructor
+     */
     public CitizenParcel() {
+        super();
         setType(ParcelType.CITIZEN);
+    }
+
+//    public CitizenParcel(Player player) {
+//        super(player);
+//        setType(ParcelType.CITIZEN);
+//    }
+
+    /**
+     * nation ID constructor
+     * @param nationId
+     */
+    public CitizenParcel(UUID nationId) {
+        this();
+        setNationId(nationId);
+    }
+
+    /**
+     * public factories
+     */
+    public static CitizenParcel create() {
+        return new CitizenParcel();
+    }
+
+    public static CitizenParcel create(UUID nationId) {
+        return new CitizenParcel(nationId);
     }
 
     /**
@@ -150,7 +179,7 @@ public class CitizenParcel extends AbstractParcel {
             }
 
             // add to the registry
-            ParcelRegistry.add(this);
+            ParcelRegistry.register(this);
             CommandHelper.save(level);
 
         }

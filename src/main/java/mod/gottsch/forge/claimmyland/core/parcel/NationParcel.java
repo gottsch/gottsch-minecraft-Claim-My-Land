@@ -30,6 +30,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -56,8 +57,22 @@ public class NationParcel extends AbstractParcel implements INationParcel {
      *
      */
     public NationParcel() {
+        super();
         setType(ParcelType.NATION);
         setBorderType(NationBorderType.CLOSED);
+    }
+
+    public NationParcel(UUID nationId) {
+        this();
+        setNationId(nationId);
+    }
+
+    public static NationParcel create() {
+        return new NationParcel();
+    }
+
+    public static NationParcel create(UUID nationId) {
+        return new NationParcel(nationId);
     }
 
     @Override

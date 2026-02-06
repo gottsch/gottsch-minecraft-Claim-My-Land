@@ -62,8 +62,9 @@ public class DeedFactory {
         // TODO this is probably going away in favor of deed id for the access checks
 //        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
 //        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
+        // TODO no longer need - have Deed.parcelType
         // add the type
-        tag.putString(Deed.PARCEL_TYPE, ParcelType.PLAYER.name());
+//        tag.putString(Deed.PARCEL_TYPE, ParcelType.PLAYER.name());
         // add the size
         CompoundTag sizeTag = new CompoundTag();
         size.save(sizeTag);
@@ -96,7 +97,7 @@ public class DeedFactory {
         // TODO this should be refactored out
 //        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
 //        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
-        tag.putString(Deed.PARCEL_TYPE, ParcelType.NATION.name());
+//        tag.putString(Deed.PARCEL_TYPE, ParcelType.NATION.name());
         CompoundTag sizeTag = new CompoundTag();
         // modify size to max y limits
         size.setMinCoords(size.getMinCoords().withY(level.getMinBuildHeight()));
@@ -116,7 +117,7 @@ public class DeedFactory {
 //        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
 //        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
         // add the type
-        tag.putString(Deed.PARCEL_TYPE, ParcelType.CITIZEN.name());
+//        tag.putString(Deed.PARCEL_TYPE, ParcelType.CITIZEN.name());
         // add the size
         CompoundTag sizeTag = new CompoundTag();
         size.save(sizeTag);
@@ -131,6 +132,7 @@ public class DeedFactory {
             case NATION -> new ItemStack(ModItems.NATION_DEED.get());
             case CITIZEN -> new ItemStack(ModItems.CITIZEN_DEED.get());
             case ZONE -> null; //new ItemStack((ModItems.CITIZEN_DEED.get()));
+            default -> null;
         };
     }
 

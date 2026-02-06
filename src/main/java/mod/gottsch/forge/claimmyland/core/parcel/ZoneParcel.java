@@ -22,7 +22,6 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
-import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
 import mod.gottsch.forge.claimmyland.core.item.PlayerDeed;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -30,7 +29,6 @@ import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +40,34 @@ import java.util.UUID;
 public class ZoneParcel extends AbstractParcel {
 
     public ZoneParcel() {
+        super();
         setType(ParcelType.ZONE);
+    }
+
+    public ZoneParcel(UUID nationId) {
+        this();
+        setNationId(nationId);
+    }
+
+    public ZoneParcel(NationParcel nation) {
+        this(nation.getNationId());
+        setBlockTagWhitelist(nation.getBlockTagWhitelist());
+        setBlockWhitelist(nation.getBlockWhitelist());
+        setItemTagWhitelist(nation.getItemTagWhitelist());
+        setItemWhitelist(nation.getItemWhitelist());
+        setPlayerWhitelist(nation.getPlayerWhitelist());
+    }
+
+    public static ZoneParcel create() {
+        return new ZoneParcel();
+    }
+
+    public static ZoneParcel create(UUID nationId) {
+        return new ZoneParcel(nationId);
+    }
+
+    public static ZoneParcel create(NationParcel nation) {
+        return new ZoneParcel(nation);
     }
 
     @Override
@@ -133,7 +158,7 @@ public class ZoneParcel extends AbstractParcel {
             }
 
             // add to the registry
-            ParcelRegistry.add(this);
+            ParcelRegistry.register(this);
             CommandHelper.save(level);
             result = ClaimResult.SUCCESS;
         }

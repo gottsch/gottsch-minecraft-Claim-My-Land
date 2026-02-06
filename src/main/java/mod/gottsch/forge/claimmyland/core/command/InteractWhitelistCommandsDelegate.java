@@ -19,6 +19,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.command;
 
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.exception.PlayerNotFoundException;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -36,6 +37,7 @@ import net.minecraft.world.level.ItemLike;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -48,92 +50,72 @@ public class InteractWhitelistCommandsDelegate {
         BLOCK_TAG,
         ITEM,
         ITEM_TAG,
-        FRIENDS;
+        FRIENDS,
+        ENTITY,
+        ENTITY_TAG;
     }
 
-    @Deprecated
-    public static List<Parcel> getParcelsByOwner(CommandSourceStack source, String ownerName) throws PlayerNotFoundException {
-        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
-        if (player != null) {
-            return ParcelRegistry.findByOwner(player.getUUID());
-        }
-        throw new PlayerNotFoundException();
-    }
+    /*
+     * NOTE methods are return Optional<Set<String>> because the parcel may not exist and therefor the Set
+     *  will not exist.
+     */
 
-//    public static List<Parcel> getParcelsByOwner(CommandSourceStack source, UUID playerUuid) {
-//        return ParcelRegistry.findByOwner(playerUuid);
-//    }
-
-    @Deprecated
-    public static Optional<Parcel> getParcelByOwner(CommandSourceStack source, String ownerName, String parcelName) throws PlayerNotFoundException {
-        return getParcelsByOwner(source, ownerName).stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
-    }
-
-//    public static Optional<Parcel> getParcelByOwner(CommandSourceStack source, UUID ownerUuid, String parcelName) {
-//        return getParcelsByOwner(source, ownerUuid).stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
-//    }
-
-    @Deprecated
-    public static Optional<List<String>> getBlockTagWhitelist(CommandSourceStack source, String ownerName, String parcelName) throws PlayerNotFoundException {
-        Optional<Parcel> parcel = getParcelByOwner(source, ownerName, parcelName);
-        return parcel.map(Parcel::getBlockTagWhitelist);
-    }
-
-    public static Optional<List<String>> getBlockTagWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
+    public static Optional<Set<String>> getBlockTagWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
         Optional<Parcel> parcel = CommandHelper.getParcelByOwner(source, ownerUuid, parcelName);
         return parcel.map(Parcel::getBlockTagWhitelist);
     }
 
-    @Deprecated
-    public static Optional<List<String>> getBlockWhitelist(CommandSourceStack source, String ownerName, String parcelName) throws PlayerNotFoundException {
-        Optional<Parcel> parcel = getParcelByOwner(source, ownerName, parcelName);
-        return parcel.map(Parcel::getBlockWhitelist);
-    }
-
-    public static Optional<List<String>> getBlockWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
+    public static Optional<Set<String>> getBlockWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
         Optional<Parcel> parcel = CommandHelper.getParcelByOwner(source, ownerUuid, parcelName);
         return parcel.map(Parcel::getBlockWhitelist);
     }
 
-    @Deprecated
-    public static Optional<List<String>> getItemTagWhitelist(CommandSourceStack source, String ownerName, String parcelName) throws PlayerNotFoundException {
-        Optional<Parcel> parcel = getParcelByOwner(source, ownerName, parcelName);
-        return parcel.map(Parcel::getItemTagWhitelist);
-    }
-
-    public static Optional<List<String>> getItemTagWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
+    public static Optional<Set<String>> getItemTagWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
         Optional<Parcel> parcel = CommandHelper.getParcelByOwner(source, ownerUuid, parcelName);
         return parcel.map(Parcel::getItemTagWhitelist);
     }
 
-    @Deprecated
-    public static Optional<List<String>> getItemWhitelist(CommandSourceStack source, String ownerName, String parcelName) throws PlayerNotFoundException {
-        Optional<Parcel> parcel = getParcelByOwner(source, ownerName, parcelName);
-        return parcel.map(Parcel::getItemWhitelist);
-    }
-
-    public static Optional<List<String>> getItemWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
+    public static Optional<Set<String>> getItemWhitelist(CommandSourceStack source, UUID ownerUuid, String parcelName) {
         Optional<Parcel> parcel = CommandHelper.getParcelByOwner(source, ownerUuid, parcelName);
         return parcel.map(Parcel::getItemWhitelist);
     }
 
-    @Deprecated
-    public static Optional<List<String>> getWhitelistByType(CommandSourceStack source, String ownerName, String parcelName, WhitelistType type) throws PlayerNotFoundException {
-        return switch(type) {
-            case BLOCK -> getBlockWhitelist(source, ownerName, parcelName);
-            case BLOCK_TAG -> getBlockTagWhitelist(source, ownerName, parcelName);
-            case ITEM -> getItemWhitelist(source, ownerName, parcelName);
-            case ITEM_TAG -> getItemTagWhitelist(source, ownerName, parcelName);
-            default -> Optional.empty();
-        };
-    }
-
-    public static Optional<List<String>> getWhitelistByType(CommandSourceStack source, UUID ownerUuid, String parcelName, WhitelistType type) {
+    public static Optional<Set<String>> getWhitelistByType(CommandSourceStack source, UUID ownerUuid, String parcelName, WhitelistType type) {
         return switch(type) {
             case BLOCK -> getBlockWhitelist(source, ownerUuid, parcelName);
             case BLOCK_TAG -> getBlockTagWhitelist(source, ownerUuid, parcelName);
             case ITEM -> getItemWhitelist(source, ownerUuid, parcelName);
             case ITEM_TAG -> getItemTagWhitelist(source, ownerUuid, parcelName);
+            default -> Optional.empty();
+        };
+    }
+
+    public static Optional<Set<String>> getEstateBlockTagWhitelist(CommandSourceStack source, UUID ownerUuid, String estateName) {
+        Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
+        return estate.map(Estate::getBlockTagWhitelist);
+    }
+
+    public static Optional<Set<String>> getEstateBlockWhitelist(CommandSourceStack source, UUID ownerUuid, String estateName) {
+        Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
+        return estate.map(Estate::getBlockWhitelist);
+    }
+
+    public static Optional<Set<String>> getEstateItemTagWhitelist(CommandSourceStack source, UUID ownerUuid, String estateName) {
+        Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
+        return estate.map(Estate::getItemTagWhitelist);
+    }
+
+    public static Optional<Set<String>> getEstateItemWhitelist(CommandSourceStack source, UUID ownerUuid, String estateName) {
+        Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
+        return estate.map(Estate::getItemWhitelist);
+    }
+    
+    public static Optional<Set<String>> getEstateWhitelistByType(CommandSourceStack source, UUID ownerUuid, String estateName, WhitelistType type) {
+        return switch(type) {
+            case BLOCK -> getEstateBlockWhitelist(source, ownerUuid, estateName);
+            case BLOCK_TAG -> getEstateBlockTagWhitelist(source, ownerUuid, estateName);
+            case ITEM -> getEstateItemWhitelist(source, ownerUuid, estateName);
+            case ITEM_TAG -> getEstateItemTagWhitelist(source, ownerUuid, estateName);
             default -> Optional.empty();
         };
     }
@@ -159,6 +141,24 @@ public class InteractWhitelistCommandsDelegate {
     /**
      * player version
      */
+    public static int add(CommandSourceStack source, String parcelName,  ItemInput itemInput, WhitelistType type) {
+        try {
+            ItemStack itemStack = itemInput.createItemStack(1, false);
+            ItemLike item = itemStack.getItem();
+            if (type == WhitelistType.BLOCK && item instanceof BlockItem blockItem) {
+                return add(source,parcelName, ModUtil.getName(blockItem.getBlock()), WhitelistType.BLOCK);
+            } else {
+                return add(source, parcelName, ModUtil.getName(item.asItem()), WhitelistType.ITEM);
+            }
+        } catch(Exception e) {
+            CommandHelper.unexceptedError(source);
+        }
+        return 1;
+    }
+
+    /**
+     * player version
+     */
     public static int add(CommandSourceStack source, String parcelName, ResourceLocation value, WhitelistType type) {
         Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
         if (playerUuid.isPresent()) {
@@ -173,21 +173,6 @@ public class InteractWhitelistCommandsDelegate {
      * ops version
      */
     public static int add(CommandSourceStack source, String ownerName, String parcelName, ResourceLocation value, WhitelistType type) {
-//        try {
-//            Optional<List<String>> list = getWhitelistByType(source, ownerName, parcelName, type);
-//
-//            list.ifPresentOrElse(action -> {
-//                        action.add(value.toString());
-//                        CommandHelper.save(source.getLevel());
-//                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel." + type.name().toLowerCase() + ".add.success")).withStyle(ChatFormatting.GREEN), false);
-//                    }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel." + type.name().toLowerCase() + ".add.failure")).withStyle(ChatFormatting.RED), false)
-//            );
-//        } catch (PlayerNotFoundException e) {
-//            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
-//            return -1;
-//        }
-//        return 1;
-
         Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
         if (ownerUuid.isPresent()) {
             return add(source, ownerUuid.get(), parcelName, value, type);
@@ -201,9 +186,9 @@ public class InteractWhitelistCommandsDelegate {
      * common version
      */
     private static int add(CommandSourceStack source, UUID ownerUuid, String parcelName, ResourceLocation value, WhitelistType type) {
-        Optional<List<String>> list = getWhitelistByType(source, ownerUuid, parcelName, type);
+        Optional<Set<String>> whitelist = getWhitelistByType(source, ownerUuid, parcelName, type);
 
-        list.ifPresentOrElse(action -> {
+        whitelist.ifPresentOrElse(action -> {
                     action.add(value.toString());
                     CommandHelper.save(source.getLevel());
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel." + type.name().toLowerCase() + ".add.success")).withStyle(ChatFormatting.GREEN), false);
@@ -242,9 +227,9 @@ public class InteractWhitelistCommandsDelegate {
      * common version
      */
     public static int remove(CommandSourceStack source, UUID ownerUuid, String parcelName, ResourceLocation tagName, WhitelistType type) {
-        Optional<List<String>> list = getWhitelistByType(source, ownerUuid, parcelName, type);
+        Optional<Set<String>> whitelist = getWhitelistByType(source, ownerUuid, parcelName, type);
 
-        list.ifPresentOrElse(action -> {
+        whitelist.ifPresentOrElse(action -> {
                     if (action.remove(tagName.toString())) {
                         CommandHelper.save(source.getLevel());
                         source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel." + type.name().toLowerCase() + ".remove.success")).withStyle(ChatFormatting.GREEN), false);
@@ -288,9 +273,9 @@ public class InteractWhitelistCommandsDelegate {
      */
     public static int list(CommandSourceStack source, UUID ownerUuid, String parcelName, WhitelistType type) {
 
-        Optional<List<String>> list = getWhitelistByType(source, ownerUuid, parcelName, type);
+        Optional<Set<String>> whitelist = getWhitelistByType(source, ownerUuid, parcelName, type);
 
-        list.ifPresentOrElse(action -> {
+        whitelist.ifPresentOrElse(action -> {
 
                     CommandHelper.sendNewLineMessage(source);
                     source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel." + type.name().toLowerCase() + ".list"))
@@ -304,6 +289,179 @@ public class InteractWhitelistCommandsDelegate {
                         }
                     });
                 }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel." + type.name().toLowerCase() + ".list.failure")).withStyle(ChatFormatting.RED), false)
+        );
+        return 1;
+    }
+
+    /**
+     * estate ops version
+     */
+    public static int addToEstate(CommandSourceStack source, String ownerName, String estateName, ItemInput itemInput, WhitelistType type) {
+        try {
+            ItemStack itemStack = itemInput.createItemStack(1, false);
+            ItemLike item = itemStack.getItem();
+            if (type == WhitelistType.BLOCK && item instanceof BlockItem blockItem) {
+                return addToEstate(source, ownerName, estateName, ModUtil.getName(blockItem.getBlock()), WhitelistType.BLOCK);
+            } else {
+                return addToEstate(source, ownerName, estateName, ModUtil.getName(item.asItem()), WhitelistType.ITEM);
+            }
+        } catch(Exception e) {
+            CommandHelper.unexceptedError(source);
+        }
+        return 1;
+    }
+
+    /**
+     * estate ops version
+     */
+    public static int addToEstate(CommandSourceStack source, String ownerName, String estateName, ResourceLocation value, WhitelistType type) {
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (ownerUuid.isPresent()) {
+            return addToEstate(source, ownerUuid.get(), estateName, value, type);
+        } else {
+            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+        }
+        return -1;
+    }
+
+    /**
+     * estate player version
+     */
+    public static int addToEstate(CommandSourceStack source, String estateName,  ItemInput itemInput, WhitelistType type) {
+        try {
+            ItemStack itemStack = itemInput.createItemStack(1, false);
+            ItemLike item = itemStack.getItem();
+            if (type == WhitelistType.BLOCK && item instanceof BlockItem blockItem) {
+                return addToEstate(source,estateName, ModUtil.getName(blockItem.getBlock()), WhitelistType.BLOCK);
+            } else {
+                return addToEstate(source, estateName, ModUtil.getName(item.asItem()), WhitelistType.ITEM);
+            }
+        } catch(Exception e) {
+            CommandHelper.unexceptedError(source);
+        }
+        return 1;
+    }
+
+    /**
+     * estate player version
+     */
+    public static int addToEstate(CommandSourceStack source, String estateName, ResourceLocation value, WhitelistType type) {
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
+        if (playerUuid.isPresent()) {
+            return addToEstate(source, playerUuid.get(), estateName, value, type);
+        } else {
+            CommandHelper.sendUnableToLocatePlayerMessage(source);
+        }
+        return -1;
+    }
+
+    /**
+     * estate common version
+     */
+    private static int addToEstate(CommandSourceStack source, UUID ownerUuid, String estateName, ResourceLocation value, WhitelistType type) {
+        Optional<Set<String>> whitelist = getEstateWhitelistByType(source, ownerUuid, estateName, type);
+
+        whitelist.ifPresentOrElse(action -> {
+                    action.add(value.toString());
+                    CommandHelper.save(source.getLevel());
+                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".add.success")).withStyle(ChatFormatting.GREEN), false);
+                }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".add.failure")).withStyle(ChatFormatting.RED), false)
+        );
+        return 1;
+    }
+
+    /**
+     * estate player version
+     */
+    public static int removeFromEstate(CommandSourceStack source, String estateName, ResourceLocation tagName, WhitelistType type) {
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
+        if (playerUuid.isPresent()) {
+            return removeFromEstate(source, playerUuid.get(), estateName, tagName, type);
+        } else {
+            CommandHelper.sendUnableToLocatePlayerMessage(source);
+        }
+        return -1;
+    }
+
+    /**
+     * estate ops version
+     */
+    public static int removeFromEstate(CommandSourceStack source, String ownerName, String estateName, ResourceLocation tagName, WhitelistType type) {
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (ownerUuid.isPresent()) {
+            return removeFromEstate(source, ownerUuid.get(), estateName, tagName, type);
+        } else {
+            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+        }
+        return -1;
+    }
+
+    /**
+     * estate common version
+     */
+    public static int removeFromEstate(CommandSourceStack source, UUID ownerUuid, String estateName, ResourceLocation tagName, WhitelistType type) {
+        Optional<Set<String>> whitelist = getEstateWhitelistByType(source, ownerUuid, estateName, type);
+
+        whitelist.ifPresentOrElse(action -> {
+                    if (action.remove(tagName.toString())) {
+                        CommandHelper.save(source.getLevel());
+                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.success")).withStyle(ChatFormatting.GREEN), false);
+                    } else {
+                        // TODO could be specific that it didn't match
+                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.failure")).withStyle(ChatFormatting.RED), false);
+                    }
+                }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.failure")).withStyle(ChatFormatting.RED), false)
+        );
+        return 1;
+    }
+    
+    /**
+     * estate player version
+     */
+    public static int listFromEstate(CommandSourceStack source, String estateName, WhitelistType type) {
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
+        if (playerUuid.isPresent()) {
+            return listFromEstate(source, playerUuid.get(), estateName, type);
+        } else {
+            CommandHelper.sendUnableToLocatePlayerMessage(source);
+        }
+        return -1;
+    }
+
+    /*
+     * estate ops version
+     */
+    public static int listFromEstate(CommandSourceStack source, String ownerName, String estateName, WhitelistType type) {
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (ownerUuid.isPresent()) {
+            return listFromEstate(source, ownerUuid.get(), estateName, type);
+        } else {
+            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+        }
+        return -1;
+    }
+
+    /**
+     * estate common version
+     */
+    public static int listFromEstate(CommandSourceStack source, UUID ownerUuid, String estateName, WhitelistType type) {
+
+        Optional<Set<String>> whitelist = getEstateWhitelistByType(source, ownerUuid, estateName, type);
+
+        whitelist.ifPresentOrElse(action -> {
+
+                    CommandHelper.sendNewLineMessage(source);
+                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".list"))
+                            .withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD)
+                            .append(Component.translatable(estateName)
+                                    .withStyle(ChatFormatting.AQUA)), false);
+                    CommandHelper.sendNewLineMessage(source);
+                    action.forEach(blockTag -> {
+                        if (blockTag != null) {
+                            source.sendSuccess(() -> Component.literal(blockTag).withStyle(ChatFormatting.GREEN), false);
+                        }
+                    });
+                }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".list.failure")).withStyle(ChatFormatting.RED), false)
         );
         return 1;
     }
