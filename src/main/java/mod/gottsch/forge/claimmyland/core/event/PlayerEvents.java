@@ -24,12 +24,17 @@ import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
 import mod.gottsch.forge.claimmyland.core.item.PlayerDeed;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
+import mod.gottsch.forge.claimmyland.core.tags.ModTags;
+import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
@@ -44,6 +49,8 @@ import net.minecraftforge.eventbus.api.Event.Result;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -121,11 +128,43 @@ public class PlayerEvents {
     @SubscribeEvent
     public static void onSpawnEntity(MobSpawnEvent.FinalizeSpawn event) {
 
+        // get the parcel
+        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(event.getEntity().blockPosition()));
+        if (parcel.isEmpty()) {
+            return;
+        }
+
+        // process the entity spawn tag whitelist
+        boolean isInWhitelist = false;
+        for (String tagName : parcel.get().getEstate().getEntitySpawnTagWhitelist()) {
+            ResourceLocation location = new ResourceLocation(tagName);
+//            ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
+            // get the tag from the resource key
+            if (TagHelper.doesEntityBelongToTag(event.getEntity().getType(), location)) {
+                isInWhitelist = true;
+                break;
+            }
+        }
+        // check the spawn whitelist
+        if (!isInWhitelist) {
+            for (String entityName : parcel.get().getEstate().getEntitySpawnWhitelist()) {
+                ResourceLocation location = new ResourceLocation(entityName);
+                ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", entityName);
+                if (ModUtil.getName(event.getEntity().getType()).equals(location)) {
+                    isInWhitelist = true;
+                    break;
+                }
+            }
+        }
+
         if (ParcelRegistry.intersectsParcel(Coords.of(event.getEntity().blockPosition()))
-                && !event.getSpawnType().equals(MobSpawnType.SPAWN_EGG)) {
+         && !(event.getSpawnType().equals(MobSpawnType.SPAWN_EGG)
+                || event.getSpawnType().equals(MobSpawnType.BUCKET))
+                || isInWhitelist) {
             event.setResult(Result.DENY);
             event.setSpawnCancelled(true);
 //			ProtectIt.LOGGER.debug("denied mob spawn -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(event.getEntity().blockPosition()).toShortString());
         }
+
     }
 }

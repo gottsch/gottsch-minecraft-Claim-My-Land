@@ -5,6 +5,8 @@ import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
@@ -30,6 +32,12 @@ public class ModUtil {
     public static ResourceLocation getName(Item item) {
         // don't bother checking optional - if it is empty, then the block isn't registered and this shouldn't run anyway.
         ResourceLocation name = ForgeRegistries.ITEMS.getResourceKey(item).get().location();
+        return name;
+    }
+
+    public static ResourceLocation getName(EntityType<?> item) {
+        // don't bother checking optional - if it is empty, then the block isn't registered and this shouldn't run anyway.
+        ResourceLocation name = ForgeRegistries.ENTITY_TYPES.getResourceKey(item).get().location();
         return name;
     }
 

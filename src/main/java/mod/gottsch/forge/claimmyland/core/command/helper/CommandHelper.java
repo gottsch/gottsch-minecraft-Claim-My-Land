@@ -1,30 +1,28 @@
 /*
- * This file is part of  Protect It.
- * Copyright (c) 2023 Mark Gottschling (gottsch)
- * 
- * All rights reserved.
+ * This file is part of Claim My Land.
+ * Copyright (c) 2026 Mark Gottschling (gottsch)
  *
- * Protect It is free software: you can redistribute it and/or modify
+ * Claim My Land is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * Protect It is distributed in the hope that it will be useful,
+ * Claim My Land is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with Protect It.  If not, see <http://www.gnu.org/licenses/lgpl>.
+ * along with Claim My Land.  If not, see <http://www.gnu.org/licenses/lgpl>.
+ *
  */
-package mod.gottsch.forge.claimmyland.core.command;
+package mod.gottsch.forge.claimmyland.core.command.helper;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
+import mod.gottsch.forge.claimmyland.core.parcel.NationAccessType;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
@@ -48,14 +46,20 @@ import java.util.*;
  */
 public class CommandHelper {
 
+	@Deprecated
 	public static final String CML_OPS = "cml-ops";
 	public static final String DEED = "deed";
 	public static final String PARCEL = "parcel";
 	public static final String ESTATE = "estate";
+	@Deprecated
 	public static final String ADD = "add";
+	@Deprecated
 	public static final String REMOVE = "remove";
+	@Deprecated
 	public static final String LIST = "list";
-	public static final String INFO = "info";
+	@Deprecated
+	public static final String DETAILS = "details";
+	@Deprecated
 	public static final String RENAME = "rename";
 	public static final String TRANSFER = "transfer";
 	public static final String JOIN = "join";
@@ -69,38 +73,55 @@ public class CommandHelper {
 	public static final String Y_SIZE_UP = "y_size_up";
 	public static final String Y_SIZE_DOWN = "y_size_down";
 	public static final String Z_SIZE = "z_size";
+	@Deprecated
 	public static final String OWNER_NAME = "owner_name";
 	public static final String NEW_OWNER_NAME = "new_owner_name";
+	@Deprecated
 	public static final String FRIEND_NAME = "friend_name";
+	@Deprecated
 	public static final String ESTATE_NAME = "estate_name";
+	@Deprecated
 	public static final String OTHER_ESTATE_NAME = "other_estate_name";
+	@Deprecated
 	public static final String PARCEL_NAME = "parcel_name";
+	@Deprecated
 	public static final String NEW_NAME = "new_name";
 	public static final String BACKUP = "backup";
 	public static final String RESTORE = "restore";
 	public static final String WHITELIST = "whitelist";
+	@Deprecated
 	public static final String BLOCK_TAG = "block_tags";
+	@Deprecated
 	public static final String BLOCKS = "blocks";
+	@Deprecated
 	public static final String ITEM_TAG = "item_tags";
+	@Deprecated
 	public static final String ITEMS = "items";
+	@Deprecated
 	public static final String FRIENDS = "friends";
 	public static final String PLAYERS = "players";
+	@Deprecated
 	public static final String TAG_NAME = "tag_name";
+	@Deprecated
 	public static final String BY_OWNER = "by_owner";
 	public static final String BY_NATION = "by_nation";
+	@Deprecated
 	public static final String NATION_NAME = "nation_name";
+	@Deprecated
 	public static final String ABANDON = "abandon";
+	@Deprecated
 	public static final String BY_ABANDONED = "by_abandoned";
 	public static final String FROM_PARCEL = "from_parcel";
+	public static final String BY_RELINQUISHED = "by_relinquished";
 	public static final String DEMOLISH = "demolish";
-    public static final String BORDER_TYPE ="border_type" ;
+	@Deprecated
 	public static final String ITEM = "item";
 	public static final String GIVE = "give";
 	public static final String GIVE_ITEM = "give_item";
 	public static final String CLAIMED_BY = "claimed_by";
 
-	public static final SuggestionProvider<CommandSourceStack> BORDER_TYPES = (source, builder) -> {
-		return SharedSuggestionProvider.suggest(Arrays.stream(NationBorderType.values()).map(NationBorderType::getSerializedName), builder);
+	public static final SuggestionProvider<CommandSourceStack> ACCESS_TYPES = (source, builder) -> {
+		return SharedSuggestionProvider.suggest(Arrays.stream(NationAccessType.values()).map(NationAccessType::getSerializedName), builder);
 	};
 
 	public static final SuggestionProvider<CommandSourceStack> BLOCK_TAGS = (source, builder) -> {
@@ -119,25 +140,27 @@ public class CommandHelper {
 		return SharedSuggestionProvider.suggest(tags, builder);
 	};
 
-	static final SuggestionProvider<CommandSourceStack> PLAYER_NAMES = (source, builder) -> {
+	@Deprecated
+	public static final SuggestionProvider<CommandSourceStack> PLAYER_NAMES = (source, builder) -> {
 		List<String> names = source.getSource().getLevel().getServer().getPlayerList().getPlayers().stream().map(p -> p.getName().getString()).toList();
 		return SharedSuggestionProvider.suggest(names, builder);
 	};
 
-	static final SuggestionProvider<CommandSourceStack> CURRENT_FRIENDS_NAMES = (source, builder) -> {
-		String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
-		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-		List<String> list = new ArrayList<>();
-
-		if (ownerUuid.isPresent()) {
-			Optional<Set<UUID>> friendsUuids = FriendsWhitelistCommandsDelegate.getFriendsWhitelist(source.getSource(), ownerUuid.get(), estateName);
-			friendsUuids.ifPresent(uuids -> uuids.forEach(uuid -> {
-				Optional<String> name = CommandHelper.getPlayerName(source.getSource(), uuid);
-				name.ifPresent(list::add);
-			}));
-		}
-		return SharedSuggestionProvider.suggest(list, builder);
-	};
+//	@Deprecated
+//	public static final SuggestionProvider<CommandSourceStack> CURRENT_FRIENDS_NAMES = (source, builder) -> {
+//		String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
+//		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+//		List<String> list = new ArrayList<>();
+//
+//		if (ownerUuid.isPresent()) {
+//			Optional<Set<UUID>> friendsUuids = FriendsWhitelistCommandsDelegate.getFriendsWhitelist(source.getSource(), ownerUuid.get(), estateName);
+//			friendsUuids.ifPresent(uuids -> uuids.forEach(uuid -> {
+//				Optional<String> name = CommandHelper.getPlayerName(source.getSource(), uuid);
+//				name.ifPresent(list::add);
+//			}));
+//		}
+//		return SharedSuggestionProvider.suggest(list, builder);
+//	};
 
 	/**
 	 * marks persistent data as dirty so that minecraft will auto save it.
@@ -180,6 +203,7 @@ public class CommandHelper {
 		}
 	}
 
+	// TODO these should move to PlayerRegistry taking in SeverLevel.
 	/*
 	 * get player using extended search
 	 * 1. online
@@ -187,47 +211,43 @@ public class CommandHelper {
 	 * 3. offline
 	 */
 	public static Optional<UUID> getPlayerUuid(CommandSourceStack source, String playerName) {
-		// get the online player
-		ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(playerName);
-		if (player == null) {
-			// get the player from the player registry
-			return PlayerRegistry.get(playerName).or(() -> {
-				if (Config.SERVER.general.allowMojangNameCalls.get()) {
-					Optional<UUID> playerUuid = PlayerRegistry.getUUIDFromNameSynchronized(playerName);
-					// before returning, update PlayerRegistry with the UUID/name mapping
-					playerUuid.ifPresent(ownerUuid -> PlayerRegistry.update(ownerUuid, playerName));
-					return playerUuid;
-				} else {
-					return Optional.empty();
-				}
-			});
-
-//            if (playerUuid.isEmpty()) {
-//                return PlayerRegistry.getUUIDFromNameSynchronized(playerName);
-//            } else {
-//                return playerUuid;
-//            }
-		}
-		return Optional.of(player.getUUID());
+//		// get the online player
+//		ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(playerName);
+//		if (player == null) {
+//			// get the player from the player registry
+//			return PlayerRegistry.get(playerName).or(() -> {
+//				if (Config.SERVER.general.allowMojangNameCalls.get()) {
+//					Optional<UUID> playerUuid = PlayerRegistry.getUUIDFromNameSynchronized(playerName);
+//					// before returning, update PlayerRegistry with the UUID/name mapping
+//					playerUuid.ifPresent(ownerUuid -> PlayerRegistry.update(ownerUuid, playerName));
+//					return playerUuid;
+//				} else {
+//					return Optional.empty();
+//				}
+//			});
+//		}
+//		return Optional.of(player.getUUID());
+		return PlayerRegistry.getPlayerUuid(source.getLevel(), playerName);
 	}
 
 	public static Optional<String> getPlayerName(CommandSourceStack source, UUID playerUuid) {
-		// get the online player
-		ServerPlayer player = source.getServer().getPlayerList().getPlayer(playerUuid);
-		if (player == null) {
-			// get the player from the player registry
-			return PlayerRegistry.get(playerUuid).or(() -> {
-				if (Config.SERVER.general.allowMojangNameCalls.get()) {
-					Optional<String> playerName = PlayerRegistry.getNameFromUUIDSynchronized(playerUuid);
-					// before returning, update PlayerRegistry with the UUID/name mapping
-					playerName.ifPresent(name -> PlayerRegistry.update(playerUuid, name));
-					return playerName;
-				} else {
-					return Optional.empty();
-				}
-			});
-		}
-		return Optional.of(player.getName().getString());
+//		// get the online player
+//		ServerPlayer player = source.getServer().getPlayerList().getPlayer(playerUuid);
+//		if (player == null) {
+//			// get the player from the player registry
+//			return PlayerRegistry.get(playerUuid).or(() -> {
+//				if (Config.SERVER.general.allowMojangNameCalls.get()) {
+//					Optional<String> playerName = PlayerRegistry.getNameFromUUIDSynchronized(playerUuid);
+//					// before returning, update PlayerRegistry with the UUID/name mapping
+//					playerName.ifPresent(name -> PlayerRegistry.update(playerUuid, name));
+//					return playerName;
+//				} else {
+//					return Optional.empty();
+//				}
+//			});
+//		}
+//		return Optional.of(player.getName().getString());
+		return PlayerRegistry.getPlayerName(source.getLevel(), playerUuid);
 	}
 
 	public static void sendNewLineMessage(CommandSourceStack source) {

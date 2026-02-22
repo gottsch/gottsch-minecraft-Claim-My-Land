@@ -21,7 +21,9 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
 import mod.gottsch.forge.claimmyland.core.item.PlayerDeed;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -37,37 +39,59 @@ import java.util.UUID;
 /**
  * Created by Mark Gottschling on Sep 30, 2024
  */
-public class ZoneParcel extends AbstractParcel {
+public class ZoneParcel extends AbstractNationalizedParcel {
 
     public ZoneParcel() {
         super();
         setType(ParcelType.ZONE);
+        getEstate().setParcelType(getType());
     }
 
+    public ZoneParcel(NationEstate nationEstate) {
+        super(nationEstate);
+        setType(ParcelType.ZONE);
+
+        Estate estate = getEstate();
+        estate.setParcelType(getType());
+        estate.setName(estate.defaultName(getOwnerId()));
+        estate.setBlockWhitelist(nationEstate.getBlockWhitelist());
+        estate.setBlockTagWhitelist(nationEstate.getBlockTagWhitelist());
+        estate.setItemWhitelist(nationEstate.getItemWhitelist());
+        estate.setItemTagWhitelist(nationEstate.getItemTagWhitelist());
+        estate.setPlayerWhitelist(nationEstate.getPlayerWhitelist());
+        estate.setEntitySpawnTagWhitelist(nationEstate.getEntitySpawnTagWhitelist());
+        estate.setEntitySpawnWhitelist(nationEstate.getEntitySpawnWhitelist());
+    }
+
+    @Deprecated
     public ZoneParcel(UUID nationId) {
         this();
         setNationId(nationId);
     }
 
+    @Deprecated
     public ZoneParcel(NationParcel nation) {
-        this(nation.getNationId());
+        setNationEstate((NationEstate)nation.getEstate());
         setBlockTagWhitelist(nation.getBlockTagWhitelist());
         setBlockWhitelist(nation.getBlockWhitelist());
         setItemTagWhitelist(nation.getItemTagWhitelist());
         setItemWhitelist(nation.getItemWhitelist());
         setPlayerWhitelist(nation.getPlayerWhitelist());
+        getEstate().setEntitySpawnTagWhitelist(nation.getEstate().getEntitySpawnTagWhitelist());
+        getEstate().setEntitySpawnWhitelist(nation.getEstate().getEntitySpawnWhitelist());
     }
 
     public static ZoneParcel create() {
         return new ZoneParcel();
     }
 
+    @Deprecated
     public static ZoneParcel create(UUID nationId) {
         return new ZoneParcel(nationId);
     }
 
     public static ZoneParcel create(NationParcel nation) {
-        return new ZoneParcel(nation);
+        return new ZoneParcel((NationEstate) nation.getEstate());
     }
 
     @Override
@@ -77,33 +101,48 @@ public class ZoneParcel extends AbstractParcel {
 
     @Override
     public boolean grantsAccess(Parcel virtualParcel) {
-        // get the nation this belongs to
-        List<Parcel> nations = ParcelRegistry.findByNationId(getNationId());
-        if (!nations.isEmpty()) {
-            NationParcel nation;
-            if (nations.size() > 1) {
-                Optional<Parcel> optionalNation = nations.stream().filter(n -> ModUtil.contains(n.getAbsoluteBox(), virtualParcel.getAbsoluteBox())).findFirst();
-                if (optionalNation.isEmpty()) {return false;}
-                else {
-                    nation = (NationParcel) optionalNation.get();
-                }
-            } else {
-                nation = (NationParcel) nations.get(0);
-            }
+        NationAccessType accessType = Optional.ofNullable(getNationEstate())
+                .map(NationEstate::getAccessType)
+                .orElse(NationAccessType.CLOSED);
 
-            // a personal deed cannot be used in a closed-border nation
-            if (virtualParcel.getType() == ParcelType.PLAYER
-                    && nation.getBorderType() == NationBorderType.OPEN) {
-                return true;
-            } else {
-                if (virtualParcel.getType() == ParcelType.CITIZEN
-                        && virtualParcel.getNationId().equals(getNationId())) {
-                    return true;
-                }
-            }
+        if (virtualParcel instanceof PlayerParcel) {
+            return accessType == NationAccessType.OPEN;
         }
+
+        if (virtualParcel instanceof CitizenParcel citizenParcel) {
+            return accessType == NationAccessType.OPEN || isSameNation(citizenParcel);
+        }
+
         return false;
     }
+//    public boolean grantsAccess(Parcel virtualParcel) {
+//        // get the nation this belongs to
+//        List<Parcel> nations = ParcelRegistry.findByNationId(getNationId());
+//        if (!nations.isEmpty()) {
+//            NationParcel nation;
+//            if (nations.size() > 1) {
+//                Optional<Parcel> optionalNation = nations.stream().filter(n -> ModUtil.contains(n.getAbsoluteBox(), virtualParcel.getAbsoluteBox())).findFirst();
+//                if (optionalNation.isEmpty()) {return false;}
+//                else {
+//                    nation = (NationParcel) optionalNation.get();
+//                }
+//            } else {
+//                nation = (NationParcel) nations.get(0);
+//            }
+//
+//            // a personal deed cannot be used in a closed-border nation
+//            if (virtualParcel.getType() == ParcelType.PLAYER
+//                    && nation.getBorderType() == NationBorderType.OPEN) {
+//                return true;
+//            } else {
+//                if (virtualParcel.getType() == ParcelType.CITIZEN
+//                        && virtualParcel.getNationId().equals(getNationId())) {
+//                    return true;
+//                }
+//            }
+//        }
+//        return false;
+//    }
 
     @Override
     public boolean grantsAccess(UUID entityId, ItemStack stack) {

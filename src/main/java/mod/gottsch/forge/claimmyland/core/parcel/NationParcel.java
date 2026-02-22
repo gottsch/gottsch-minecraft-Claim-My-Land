@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
@@ -30,7 +31,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -45,12 +45,13 @@ import java.util.UUID;
  */
 public class NationParcel extends AbstractParcel implements INationParcel {
 
+    @Deprecated(forRemoval = true, since = "2.0")
     private static final String BORDER_TYPE_KEY = "border_type";
 
-    // TODO both of these values need to move the the nationRegistry
-    // because there is only 1 instance of the rules, not per nation parcel.
-    // NOTE remember multiple parcels can share the same nation id making up the 'Nation'
+    // deprecated - moved to Estate
+    @Deprecated(forRemoval = true, since = "2.0")
     private NationBorderType borderType;
+    @Deprecated(forRemoval = true, since = "2.0")
     private List<UUID> blacklist;
 
     /**
@@ -58,10 +59,13 @@ public class NationParcel extends AbstractParcel implements INationParcel {
      */
     public NationParcel() {
         super();
+        setEstate(EstateTypeRegistry.create(EstateTypeRegistry.NATION_ESTATE_TYPE));
         setType(ParcelType.NATION);
-        setBorderType(NationBorderType.CLOSED);
+//        setBorderType(NationBorderType.CLOSED);
+        getEstate().setParcelType(getType());
     }
 
+    @Deprecated
     public NationParcel(UUID nationId) {
         this();
         setNationId(nationId);
@@ -128,7 +132,7 @@ public class NationParcel extends AbstractParcel implements INationParcel {
             if (ModUtil.getVolume(parcelBox) >= parentParcel.getArea()) {
                 ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
                 // update owner of any zones
-                List<Parcel> zones = ParcelRegistry.findChildrenByNationId(getNationId()).stream()
+                List<Parcel> zones = ParcelRegistry.findChildrenByNationId(getEstate().getId()).stream()
                         .filter(p -> p.getType() == ParcelType.ZONE).toList();
                 zones.forEach(z -> {
                     ParcelRegistry.updateOwner(z.getId(), getOwnerId());
@@ -141,48 +145,50 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         return result;
     }
 
-    @Override
-    public void save(CompoundTag tag) {
-        super.save(tag);
-        tag.putString("borderType", getBorderType().getSerializedName());
+    // TODO update
+//    @Override
+//    public void save(CompoundTag tag) {
+//        super.save(tag);
+//        tag.putString("borderType", getBorderType().getSerializedName());
+//
+//        // TODO refactor this out to the Nation in the NationRegistry
+//        if (!getBlacklist().isEmpty()) {
+//            ListTag blacklist = new ListTag();
+//            getBlacklist().forEach(b -> {
+//                StringTag blackTag = StringTag.valueOf(b.toString());
+//                blacklist.add(blackTag);
+//            });
+//            tag.put("blacklist", blacklist);
+//        }
+//
+//        ClaimMyLand.LOGGER.debug("saved parcel -> {}", this);
+//    }
 
-        // TODO refactor this out to the Nation in the NationRegistry
-        if (!getBlacklist().isEmpty()) {
-            ListTag blacklist = new ListTag();
-            getBlacklist().forEach(b -> {
-                StringTag blackTag = StringTag.valueOf(b.toString());
-                blacklist.add(blackTag);
-            });
-            tag.put("blacklist", blacklist);
-        }
-
-        ClaimMyLand.LOGGER.debug("saved parcel -> {}", this);
-    }
-
-    @Override
-    public Parcel load(CompoundTag tag) {
-        super.load(tag);
-
-        // TODO refactor out to the Nation
-        if (tag.contains("borderType")) {
-            try {
-                setBorderType(NationBorderType.valueOf(tag.getString("borderType")));
-            } catch(Exception e) {
-                ClaimMyLand.LOGGER.warn("unable to parse and load borderType - using default CLOSED");
-                setBorderType(NationBorderType.CLOSED);
-            }
-        }
-
-        if (tag.contains("blacklist")) {
-            ListTag list = tag.getList("blacklist", Tag.TAG_STRING);
-            list.forEach(element -> {
-                StringTag uuidTag = ((StringTag)element);
-                getBlacklist().add(UUID.fromString(uuidTag.getAsString()));
-            });
-        }
-
-        return this;
-    }
+    // TODO update
+//    @Override
+//    public Parcel load(CompoundTag tag) {
+//        super.load(tag);
+//
+//        // TODO refactor out to the Nation
+//        if (tag.contains("borderType")) {
+//            try {
+//                setBorderType(NationBorderType.valueOf(tag.getString("borderType")));
+//            } catch(Exception e) {
+//                ClaimMyLand.LOGGER.warn("unable to parse and load borderType - using default CLOSED");
+//                setBorderType(NationBorderType.CLOSED);
+//            }
+//        }
+//
+//        if (tag.contains("blacklist")) {
+//            ListTag list = tag.getList("blacklist", Tag.TAG_STRING);
+//            list.forEach(element -> {
+//                StringTag uuidTag = ((StringTag)element);
+//                getBlacklist().add(UUID.fromString(uuidTag.getAsString()));
+//            });
+//        }
+//
+//        return this;
+//    }
 
     // TODO these need to use the level min and max build heights
     @Override
@@ -200,16 +206,19 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         return Config.SERVER.general.nationParcelBufferRadius.get();
     }
 
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public NationBorderType getBorderType() {
         return borderType;
     }
 
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setBorderType(NationBorderType borderType) {
         this.borderType = borderType;
     }
 
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public List<UUID> getBlacklist() {
         if (blacklist == null) {
@@ -218,6 +227,7 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         return blacklist;
     }
 
+    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setBlacklist(List<UUID> blacklist) {
         this.blacklist = blacklist;

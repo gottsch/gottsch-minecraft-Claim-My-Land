@@ -21,14 +21,13 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -48,6 +47,7 @@ public class PlayerParcel extends AbstractParcel {
     public PlayerParcel() {
         super();
         setType(ParcelType.PLAYER);
+        getEstate().setParcelType(getType());
     }
 
 //    @Deprecated
@@ -76,7 +76,7 @@ public class PlayerParcel extends AbstractParcel {
     @Override
     public boolean grantsAccess(Parcel otherParcel) {
         // if the other parcel/deed is type player and its area is bigger than this
-        // and this parcel is abandoned.
+        // and this parcel is .
         return otherParcel.getType() == ParcelType.PLAYER
                 && this.getOwnerId() == null
                 && ModUtil.getVolume(otherParcel.getBox()) >= ModUtil.getVolume(this.getBox());

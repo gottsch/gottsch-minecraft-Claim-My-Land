@@ -18,6 +18,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.estate;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
@@ -29,6 +30,9 @@ import java.util.Map;
  * @author by Mark Gottschling on 1/31/2026
  */
 public class EstateTypeRegistry {
+    public static final ResourceLocation ESTATE_TYPE = new ResourceLocation(ClaimMyLand.MOD_ID, "estate");
+    public static final ResourceLocation NATION_ESTATE_TYPE = new ResourceLocation(ClaimMyLand.MOD_ID, "nation_estate");
+
     @FunctionalInterface
     public interface NoArgFactory {
         Estate create();
@@ -67,7 +71,7 @@ public class EstateTypeRegistry {
     }
 
     static {
-        register(EstateContext.ESTATE_CONTEXT, () -> new EstateContext());
-//        register("playerEstate", (player) -> new EstateContext(player));
+        register(ESTATE_TYPE, () -> new EstateContext());
+        register(NATION_ESTATE_TYPE, () -> new NationEstateContext());
     }
 }

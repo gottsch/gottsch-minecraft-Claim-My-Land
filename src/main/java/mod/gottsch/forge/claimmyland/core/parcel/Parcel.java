@@ -21,12 +21,13 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -78,8 +79,9 @@ public interface Parcel {
         do {
             name = "Parcel" + String.valueOf(size);
             // check the registry
-            Optional<Parcel> namedParcel = ParcelRegistry.findByName(name);
-            if (namedParcel.isEmpty()) nameNotFound = true;
+//            Optional<Parcel> namedParcel = ParcelRegistry.findByName(name);
+//            if (namedParcel.isEmpty()) nameNotFound = true;
+            if (!ParcelRegistry.hasName(this, name)) nameNotFound = true;
         } while (iterations++ < 3 && !nameNotFound);
 
         if (!nameNotFound) {
@@ -95,6 +97,10 @@ public interface Parcel {
 //    default public Estate createEstate(Player player) {
 //        return new EstateContext(player);
 //    }
+
+    String defaultName(Player player);
+
+    String defaultName(UUID ownerId);
 
     /**
      * determine if this parcel grants access to the given parcel
@@ -272,8 +278,9 @@ public interface Parcel {
     Estate getEstate();
     void setEstate(Estate estate);
 
+    @Deprecated(forRemoval = true, since = "2.0")
     UUID getNationId();
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setNationId(UUID nationId);
 
     UUID getOwnerId();
@@ -298,56 +305,57 @@ public interface Parcel {
 
     int getArea();
 
-    Set<UUID> getWhitelist();
+    int getBufferSize();
 
     /*
      * convenience method
      */
     Set<UUID> getPlayerWhitelist();
-
-    void setWhitelist(List<UUID> whitelist);
-
-    int getBufferSize();
-
     void setPlayerWhitelist(Set<UUID> whitelist);
 
+    @Deprecated(forRemoval = true, since = "2.0")
+    Set<UUID> getWhitelist();
+    @Deprecated(forRemoval = true, since = "2.0")
+    void setWhitelist(List<UUID> whitelist);
+    @Deprecated(forRemoval = true, since = "2.0")
     Set<String> getBlockTagWhitelist();
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setBlockTagWhitelist(List<String> blockTagWhitelist);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setBlockTagWhitelist(Set<String> whitelist);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     Set<String> getBlockWhitelist();
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setBlockWhitelist(List<String> blockWhitelist);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setBlockWhitelist(Set<String> whitelist);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     Set<String> getItemTagWhitelist();
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setItemTagWhitelist(List<String> itemTagWhitelist);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setItemTagWhitelist(Set<String> whitelist);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     Set<String> getItemWhitelist();
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setItemWhitelist(List<String> itemWhitelist);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setItemWhitelist(Set<String> whitelist);
 
     ParcelType getType();
 
     void setType(ParcelType type);
 
+    @Deprecated(forRemoval = true, since = "2.0")
     Long getFoundedTime();
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setFoundedTime(Long foundedTime);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     Long getOnwerTime();
-
+    @Deprecated(forRemoval = true, since = "2.0")
     void setOwnerTime(Long occupiedTime);
-
+    @Deprecated(forRemoval = true, since = "2.0")
     Long getAbandonedTime();
-
-    void setAbandonedTime(Long abandonedTime);
+    @Deprecated(forRemoval = true, since = "2.0")
+    void setRelinquishedTime(Long time);
 }

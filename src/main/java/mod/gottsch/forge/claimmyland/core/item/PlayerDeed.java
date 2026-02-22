@@ -56,7 +56,9 @@ public class PlayerDeed extends Deed {
                 // update block entity with properties of that of the existing citizen parcel
                 blockEntity.setParcelId(registryParcel.get().getId());
                 if (registryParcel.get().getType() == ParcelType.CITIZEN) {
-                    blockEntity.setNationId(((CitizenParcel) registryParcel.get()).getNationId());
+                    CitizenParcel citizenParcel = (CitizenParcel) registryParcel.get();
+                    blockEntity.setNationId(citizenParcel.getNationEstate().getId());
+                    blockEntity.setNationEstateId(citizenParcel.getNationEstate().getId());
                 }
                 blockEntity.setRelativeBox(registryParcel.get().getSize());
                 blockEntity.setCoords(registryParcel.get().getCoords());

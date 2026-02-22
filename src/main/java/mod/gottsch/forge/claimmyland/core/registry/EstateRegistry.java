@@ -60,7 +60,7 @@ public class EstateRegistry {
         return Optional.ofNullable(ESTATES_BY_ID.get(claimId));
     }
 
-    public static void removeEstate(Estate estate) {
+    public static void unregister(Estate estate) {
         // remove estate from all registries
         Set<Estate> estates = ESTATES_BY_OWNER.get(estate.getOwnerId());
         if (!estates.isEmpty()) {
@@ -91,10 +91,10 @@ public class EstateRegistry {
 
     public static Estate transfer(Estate estate, UUID newOwnerUuid) {
         // remove estate from registry
-        EstateRegistry.removeEstate(estate);
+        EstateRegistry.unregister(estate);
 
         // save the parcels
-        Set<Parcel> parcels =  estate.getParcels();
+        Set<Parcel> parcels =  estate.findParcels();
 
         // remove parcels from registry
         parcels.forEach(ParcelRegistry::unregisterParcel);
@@ -114,4 +114,10 @@ public class EstateRegistry {
 
         return newEstate;
     }
+
+    public static boolean hasName(String newName) {
+        return ESTATES_BY_ID.values().stream()
+                .anyMatch(estate -> estate.getName().equalsIgnoreCase(newName));
+    }
+
 }

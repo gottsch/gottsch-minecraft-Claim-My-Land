@@ -20,16 +20,18 @@
 package mod.gottsch.forge.claimmyland.core.estate;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * @author by Mark Gottschling on 1/29/2026
  */
 public class EstateContext extends AbstractEstate {
-    public static final ResourceLocation ESTATE_CONTEXT = new ResourceLocation(ClaimMyLand.MOD_ID, "estate_context");
 
     public EstateContext() {
         super();
@@ -45,6 +47,36 @@ public class EstateContext extends AbstractEstate {
 
     @Override
     public ResourceLocation getType() {
-        return ESTATE_CONTEXT;
+        return EstateTypeRegistry.ESTATE_TYPE;
+    }
+
+//    @Override
+//    public boolean canJoin(Estate estate) {
+//        Parcel p1 = getParcels().iterator().next();
+//        Parcel p2 = estate.getParcels().iterator().next();
+//        return !getId().equals(estate.getId())
+//                && getOwnerId().equals(estate.getOwnerId())
+//                && p1.getType() == p2.getType()
+//                && !isRelinquished() && !estate.isRelinquished();
+//    }
+    @Override
+    public boolean canJoin(Estate estate) {
+        if (getId().equals(estate.getId()) || isRelinquished() || estate.isRelinquished()) {
+            return false;
+        }
+
+        if (!getOwnerId().equals(estate.getOwnerId())) {
+            return false;
+        }
+
+        Optional<Parcel> p1 = findParcels().stream().findFirst();
+        if (p1.isEmpty()) {
+            return false;
+        }
+
+        return estate.findParcels().stream()
+                .findFirst()
+                .map(p2 -> p1.get().getType() == p2.getType())
+                .orElse(false);
     }
 }

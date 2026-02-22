@@ -5,15 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2025-03-
+## [2.0.0] - 2025-02-
 
 ### Changed
 - Added Estate concept. Parcels represent the physical land/space, Estates represent the ownership & access. An estate can contain multiple parcels.
 - Removed all whitelist sub-commands from parcel sub-command, and moved to estate sub-command.
 - Fixed *cml* whitelist command structure.
+- Renamed "abandon" command to "relinquish".
+- Only Citizen estates and parcels can be relinquished. Ex. this is meant for nation owners to setup preset citizen parcels that players can claim.
+- 
 
 ### Added
-
+- Entity Spawn Whitelist
+- Entity Spawn Tag Whitelist - populated with default value of allowable spawns (cows, eggs, buckets, etc). This fixes the bug of neutral entities not spawning in parcels.
 
 ## [1.3.0] - 2025-03-11
 

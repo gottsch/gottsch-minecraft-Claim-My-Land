@@ -1,6 +1,8 @@
 package mod.gottsch.forge.claimmyland.core.estate;
 
+import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
@@ -14,7 +16,31 @@ import java.util.UUID;
 public interface Estate {
     public static final String ID_KEY = "id";
 
+    boolean isRelinquished();
+
+    void setRelinquished(boolean relinquished);
+
+    default boolean canRelinquish() {
+        // only citizen parcels can be relinquished
+        // NOTE should work as only like parcels can be joined.
+        Parcel parcel = findParcels().iterator().next();
+        return parcel.getType() == ParcelType.CITIZEN
+                && !parcel.getEstate().isRelinquished();
+    }
+
+    default boolean canRelinquish(Parcel parcel) {
+
+        return (parcel instanceof NationalizedParcel)
+                && parcel.getType() == ParcelType.CITIZEN              // is it a citizen parcel
+                && !parcel.getEstate().isRelinquished()                     // its not relinquished already
+                && this.getId().equals(parcel.getEstate().getId());    // the estate == parcel's estate
+    }
+
     ResourceLocation getType();
+    void setType(ResourceLocation resourceLocation);
+
+    ParcelType getParcelType();
+    void setParcelType(ParcelType type);
 
     UUID getId();
 
@@ -57,5 +83,20 @@ public interface Estate {
 
     void setItemTagWhitelist(Set<String> itemTagWhitelist);
 
-    Set<Parcel> getParcels();
+    Set<Parcel> findParcels();
+
+    boolean canJoin(Estate estate);
+
+//    boolean isRelinquished();
+//
+//    boolean canRelinquish();
+
+    Set<String> getEntitySpawnTagWhitelist();
+
+    void setEntitySpawnTagWhitelist(Set<String> entitySpawnTagWhitelist);
+
+    Set<String> getEntitySpawnWhitelist();
+
+    void setEntitySpawnWhitelist(Set<String> entitySpawnWhitelist);
+
 }

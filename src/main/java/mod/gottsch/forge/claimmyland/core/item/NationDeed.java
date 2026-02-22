@@ -46,37 +46,35 @@ import java.util.Optional;
  *
  */
 public class NationDeed extends Deed {
-    public static final String NATION_ID = "nation_id";
+//    @Deprecated
+//    public static final String NATION_ID = "nation_id";
 
     public NationDeed(Properties properties) {
         super(properties);
         setParcelType(ParcelType.NATION);
     }
 
-//    @Override
-//    public Parcel createParcel() {
-//        return ParcelTypeRegistry.create(ParcelType.NATION).orElse(new NationParcel());
-//    }
-
-//    public Parcel createParcel(Player player) {
-//        return new NationParcel(player);
-//    }
-
     @Override
-    public Parcel createParcel(ItemStack deedStack, ICoords coords, Player player) {
-        NationParcel parcel = (NationParcel)super.createParcel(deedStack, coords, player);
+    public Optional<Parcel> createParcel(ItemStack deedStack, ICoords coords, Player player) {
+        Optional<Parcel> optionalParcel = super.createParcel(deedStack, coords, player);
 
+        if (optionalParcel.isEmpty()) {
+            player.sendSystemMessage(Component.translatable(LangUtil.chat("nation_deed.unable_create")).withStyle(ChatFormatting.RED));
+            return optionalParcel;
+        }
+
+        NationParcel parcel = (NationParcel) optionalParcel.get();
         CompoundTag tag = deedStack.getOrCreateTag();
 
         // add nation id
-        if (tag.contains(NATION_ID)) {
-            parcel.setNationId(tag.getUUID(NATION_ID));
+        if (tag.contains(Deed.ESTATE_ID)) {
+            parcel.getEstate().setId(tag.getUUID(Deed.ESTATE_ID));
         }
 
         // override coords
         parcel.setCoords(parcel.getCoords().withY(0));
 
-        return parcel;
+        return optionalParcel;
     }
 
     @Override
@@ -104,7 +102,7 @@ public class NationDeed extends Deed {
         CompoundTag tag = deed.getOrCreateTag();
         Box size = getSize(tag);
 
-        blockEntity.setNationId(tag.contains(NATION_ID) ? tag.getUUID(NATION_ID) : null);
+//        blockEntity.setNationId(tag.contains(NATION_ID) ? tag.getUUID(NATION_ID) : null);
 
         // check if parcel is within another nation parcel ie it was abandoned
         Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos));
@@ -115,7 +113,7 @@ public class NationDeed extends Deed {
                 // update block entity with properties of that of the existing citizen parcel
                 blockEntity.setParcelId(registryParcel.get().getId());
 //                blockEntity.setDeedId(registryParcel.get().getDeedId());
-                blockEntity.setNationId(((NationParcel) registryParcel.get()).getNationId());
+//                blockEntity.setNationId(((NationParcel) registryParcel.get()).getNationId());
                 blockEntity.setRelativeBox(registryParcel.get().getSize());
                 blockEntity.setCoords(registryParcel.get().getCoords());
             }

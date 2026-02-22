@@ -22,10 +22,10 @@ package mod.gottsch.forge.claimmyland.core.item;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.parcel.CitizenParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
+import mod.gottsch.forge.claimmyland.core.parcel.*;
+import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
@@ -43,6 +43,7 @@ import net.minecraft.world.level.block.Block;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  *
@@ -50,35 +51,42 @@ import java.util.Optional;
  *
  */
 public class CitizenDeed extends Deed {
-    public static final String NATION_NAME = "nation_name";
+    @Deprecated
+//    public static final String NATION_NAME = "nation_name";
 
     public CitizenDeed(Properties properties) {
         super(properties);
         setParcelType(ParcelType.CITIZEN);
     }
 
-//    @Override
-//    public Parcel createParcel() {
-//        return new CitizenParcel();
-//    }
-
-//    @Override
-//    public Parcel createParcel(Player player) {
-//        return new CitizenParcel(player);
-//    }
-
     @Override
-    public Parcel createParcel(ItemStack deedStack, ICoords coords, Player player) {
-        CitizenParcel parcel = (CitizenParcel) super.createParcel(deedStack, coords, player);
+    public Optional<Parcel> createParcel(ItemStack deedStack, ICoords coords, Player player) {
+        Optional<Parcel> optionalParcel = super.createParcel(deedStack, coords, player);
+
+        if (optionalParcel.isEmpty()) {
+            player.sendSystemMessage(Component.translatable(LangUtil.chat("citizen_deed.unable_create")).withStyle(ChatFormatting.RED));
+            return optionalParcel;
+        }
+
+        // unwrap
+        CitizenParcel parcel = (CitizenParcel) optionalParcel.get();
 
         CompoundTag tag = deedStack.getOrCreateTag();
 
-        // add nation id
-        if (tag.contains(NationDeed.NATION_ID)) {
-            parcel.setNationId(tag.getUUID(NationDeed.NATION_ID));
+        if (!tag.contains(Deed.NATION_ESTATE_ID)) {
+            player.sendSystemMessage(Component.translatable(LangUtil.chat("citizen_deed.invalid")).withStyle(ChatFormatting.RED));
+            return null;
         }
 
-        return parcel;
+        Optional<Estate> nationEstate = EstateRegistry.get(tag.getUUID(Deed.NATION_ESTATE_ID));
+        if (nationEstate.isEmpty()) {
+            player.sendSystemMessage(Component.translatable(LangUtil.chat("citizen_deed.invalid")).withStyle(ChatFormatting.RED));
+            return null;
+        }
+
+        parcel.setNationEstate((NationEstate) nationEstate.get());
+
+        return optionalParcel;
     }
 
     @Override
@@ -94,29 +102,18 @@ public class CitizenDeed extends Deed {
         // if claiming an existing citizen parcel
         if (registryParcel.isPresent()) {
             if (registryParcel.get().getType() == ParcelType.CITIZEN) {
+                // unwrap
+                CitizenParcel citizenParcel = (CitizenParcel) registryParcel.get();
                 // update block entity with properties of that of the existing citizen parcel
                 blockEntity.setParcelId(registryParcel.get().getId());
-                blockEntity.setNationId(((CitizenParcel) registryParcel.get()).getNationId());
+//                blockEntity.setNationId(((CitizenParcel) registryParcel.get()).getNationId());
+                blockEntity.setNationId(citizenParcel.getNationEstate().getId());
+                blockEntity.setNationEstateId(citizenParcel.getNationEstate().getId());
                 blockEntity.setRelativeBox(registryParcel.get().getSize());
                 blockEntity.setCoords(registryParcel.get().getCoords());
             }
         }
     }
-//    protected boolean canPlaceBlock(Level level, ICoords coords, Parcel parcel) {
-//        // test if a parcel already exists for the deed id
-//        boolean canPlace = false;
-//        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords);
-//
-//        /*
-//         * inside a parcel.
-//         */
-//        if (registryParcel.isPresent()) {
-//            if (parcel.hasAccessTo(registryParcel.get())) {
-//                canPlace = true;
-//            }
-//        }
-//        return canPlace;
-//    }
 
     @Override
     protected boolean validateWorldPlacement(Level level, BlockPos pos, Box size, Player player) {
@@ -139,12 +136,14 @@ public class CitizenDeed extends Deed {
     public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
         // TODO update to use getParcelType()
 //        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
+        tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
 //        }
         // TODO update to get from Estate.getId() / Estage.getName()
-        if (stack.getTag() != null && stack.getTag().contains(CitizenDeed.NATION_NAME)) {
-            String nation_name = stack.getTag().getString(NATION_NAME);
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + nation_name));
+        if (stack.getTag() != null && stack.getTag().contains(Deed.NATION_ESTATE_ID)) {
+            UUID nationEstateId = stack.getTag().getUUID(Deed.NATION_ESTATE_ID);
+            EstateRegistry.get(nationEstateId).ifPresent(estate ->
+                tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + estate.getName()))
+            );
         } else {
             ClaimMyLand.LOGGER.debug("Citizen Deed doesn't have a Nation ID");
         }

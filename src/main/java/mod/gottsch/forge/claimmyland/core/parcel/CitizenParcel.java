@@ -19,15 +19,15 @@
  */
 package mod.gottsch.forge.claimmyland.core.parcel;
 
-import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -38,7 +38,7 @@ import java.util.UUID;
 /**
  * Created by Mark Gottschling on Sep 14, 2024
  */
-public class CitizenParcel extends AbstractParcel {
+public class CitizenParcel extends AbstractNationalizedParcel {
 
     /**
      * no-arg constructor
@@ -46,17 +46,29 @@ public class CitizenParcel extends AbstractParcel {
     public CitizenParcel() {
         super();
         setType(ParcelType.CITIZEN);
+        getEstate().setParcelType(getType());
     }
 
-//    public CitizenParcel(Player player) {
-//        super(player);
-//        setType(ParcelType.CITIZEN);
-//    }
+    public CitizenParcel(NationEstate nationEstate) {
+        super(nationEstate);
+        setType(ParcelType.CITIZEN);
+        Estate estate = getEstate();
+        estate.setParcelType(getType());
+        estate.setName(estate.defaultName(getOwnerId()));
+        estate.setBlockWhitelist(nationEstate.getBlockWhitelist());
+        estate.setBlockTagWhitelist(nationEstate.getBlockTagWhitelist());
+        estate.setItemWhitelist(nationEstate.getItemWhitelist());
+        estate.setItemTagWhitelist(nationEstate.getItemTagWhitelist());
+        estate.setPlayerWhitelist(nationEstate.getPlayerWhitelist());
+        estate.setEntitySpawnTagWhitelist(nationEstate.getEntitySpawnTagWhitelist());
+        estate.setEntitySpawnWhitelist(nationEstate.getEntitySpawnWhitelist());
+    }
 
     /**
      * nation ID constructor
      * @param nationId
      */
+    @Deprecated
     public CitizenParcel(UUID nationId) {
         this();
         setNationId(nationId);
@@ -69,6 +81,7 @@ public class CitizenParcel extends AbstractParcel {
         return new CitizenParcel();
     }
 
+    @Deprecated
     public static CitizenParcel create(UUID nationId) {
         return new CitizenParcel(nationId);
     }
@@ -78,30 +91,109 @@ public class CitizenParcel extends AbstractParcel {
      * @param virtualParcel
      * @return
      */
-    @Override
     public boolean grantsAccess(Parcel virtualParcel) {
-        return switch (virtualParcel.getType()) {
-            case PLAYER -> {
-                // TODO check parent Nation is open
-//                NationParcel nation = ParcelRegistry.findByNationId(getNationId());
+        if (!getEstate().isRelinquished() || virtualParcel.getArea() < getArea()) {
+            return false;
+        }
 
-                yield getOwnerId() == null && virtualParcel.getArea() >= getArea();
-            }
-            case CITIZEN -> {
-                // TODO add lots of debugging logs here
-                ClaimMyLand.LOGGER.debug("this.nationID ->{}, virtual -> {}", getNationId(), virtualParcel.getNationId());
-                ClaimMyLand.LOGGER.debug("this.ownerID -> {}", getOwnerId());
-                ClaimMyLand.LOGGER.debug("this.area ->{}, virtual -> {}", getArea(), virtualParcel.getArea());
+        NationAccessType accessType = Optional.ofNullable(getNationEstate())
+                .map(NationEstate::getAccessType)
+                .orElse(NationAccessType.CLOSED);
 
-                yield getNationId() != null && getNationId().equals(virtualParcel.getNationId())
-                        && getOwnerId() == null
-                        && virtualParcel.getArea() >= getArea();
-
-                // TODO check parent nation is open then dont' need nation id matching
-            }
+        /*
+         // IF using Java 21+
+        return switch (virtualParcel) {
+            case PlayerParcel p -> accessType == NationAccessType.OPEN;
+            case CitizenParcel cp -> accessType == NationAccessType.OPEN
+                    || isSameNation(cp);
             default -> false;
         };
+         */
+        if (virtualParcel instanceof PlayerParcel) {
+            return accessType == NationAccessType.OPEN;
+        }
+
+        if (virtualParcel instanceof CitizenParcel citizenParcel) {
+            return accessType == NationAccessType.OPEN || isSameNation(citizenParcel);
+        }
+
+        return false;
     }
+
+//    @Override
+//    public boolean grantsAccess(Parcel virtualParcel) {
+//        // NOTE new state
+//        NationAccessType accessType = Optional.ofNullable(getNationEstate())
+//                .map(NationEstate::getAccessType)
+//                .orElse(NationAccessType.CLOSED);
+//
+//        if (virtualParcel instanceof PlayerParcel) {
+//            return accessType == NationAccessType.OPEN
+//                    && getEstate().isRelinquished()
+//                    && virtualParcel.getArea() >= getArea();
+//        } else if (virtualParcel instanceof CitizenParcel virtualCitizenParcel) {
+//            // open-border type doesn't required same nation
+//            return (accessType == NationAccessType.OPEN
+//                    // closed-border type requires same nation
+//                    || getNationEstate().getId().equals(virtualCitizenParcel.getNationEstate().getId())
+//                )
+//                        && getEstate().isRelinquished()
+//                    && virtualParcel.getArea() >= getArea();
+//        }
+//        return false;
+//
+//        return switch (virtualParcel.getType()) {
+//            case PLAYER -> {
+//                // TEMP check if nation has open-border type
+////                Optional<NationBorderType> nationType = getNationEstate().findParcels().stream()
+////                        .findFirst()
+////                        .map(parcel -> ((NationParcel) parcel).getBorderType());
+//
+//                // NOTE old state
+////                yield nationType.isPresent()
+////                        && nationType.get() == NationBorderType.OPEN
+////                        && getOwnerId() == null
+////                        && virtualParcel.getArea() >= getArea();
+//
+//                // NOTE new state when border type is moved to nation estate
+//                yield accessType == NationAccessType.OPEN
+//                        && getEstate().isRelinquished()
+//                        && virtualParcel.getArea() >= getArea();
+//            }
+//            case CITIZEN -> {
+//                // TODO add lots of debugging logs here
+//                ClaimMyLand.LOGGER.debug("this.nationID ->{}, virtual -> {}", getNationId(), virtualParcel.getNationId());
+//                ClaimMyLand.LOGGER.debug("this.ownerID -> {}", getOwnerId());
+//                ClaimMyLand.LOGGER.debug("this.area ->{}, virtual -> {}", getArea(), virtualParcel.getArea());
+//
+//                CitizenParcel virtualCitizenParcel = (CitizenParcel)virtualParcel;
+//
+//                // TEMP check if nation has open-border type
+////                Optional<NationBorderType> nationType = getNationEstate().findParcels().stream()
+////                        .findFirst()
+////                        .map(parcel -> ((NationParcel) parcel).getBorderType());
+//
+////                yield (
+////                        // open-border type doesn't required same nation
+////                        (nationType.isPresent() && nationType.get() == NationBorderType.OPEN)
+////                                // closed-border type requires same nation
+////                                || (getNationId() != null && getNationId().equals(virtualParcel.getNationId()))
+////                )
+////                        && getOwnerId() == null
+////                        && virtualParcel.getArea() >= getArea();
+//
+//                yield (
+//                        // open-border type doesn't required same nation
+//                        accessType == NationAccessType.OPEN
+//                                // closed-border type requires same nation
+//                                || getNationEstate().getId().equals(virtualCitizenParcel.getNationEstate().getId())
+//                )
+//                        && getEstate().isRelinquished()
+//                        && virtualParcel.getArea() >= getArea();
+//            }
+//            default -> false;
+//        };
+//    }
 
     @Override
     public boolean hasAccessTo(Parcel existingParcel) {
@@ -143,7 +235,7 @@ public class CitizenParcel extends AbstractParcel {
         if (parentParcel.getType() == ParcelType.CITIZEN
                 // if the owner id is empty, it is claimable
                 && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
-                // check that this parcel is bigger than the existing parcel
+            // check that this parcel is bigger than the existing parcel
             if (ModUtil.getVolume(parcelBox) >= parentParcel.getArea()) {
 //                parentParcel.setOwnerId(getOwnerId());
                 ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());

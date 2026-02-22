@@ -73,6 +73,9 @@ public abstract class Deed extends Item {
     public static final String PARCEL_TYPE = "parcel_type";
     public static final String SIZE = "size";
 
+    public static final String ESTATE_ID = "estate_id";
+    public static final String NATION_ESTATE_ID = "nation_state_id";
+
     // default size = 1 chunk (16x16), but it is not necessarily aligned with a chunk
     public static final Box DEFAULT_SIZE = new Box(Coords.of(0, -15, 0), Coords.of(16, 16, 16));
     private ParcelType parcelType;
@@ -93,12 +96,13 @@ public abstract class Deed extends Item {
     // TODO should return Optional<>
     /**
      * creates a parcel from an itemStack
+     *
      * @param deedStack
      * @param coords
      * @param player
      * @return
      */
-    public Parcel createParcel(ItemStack deedStack, ICoords coords, Player player) {
+    public Optional<Parcel> createParcel(ItemStack deedStack, ICoords coords, Player player) {
         CompoundTag tag = deedStack.getOrCreateTag();
 
         // TODO DeedItem should have a PARCEL_TYPE property which can be fed to the ParcelTypeRegistry
@@ -109,7 +113,9 @@ public abstract class Deed extends Item {
 //                        ParcelType.fromString(tag.getString(Deed.PARCEL_TYPE)) :
 //                        ParcelType.NONE);
         // TODO if optional Parcel is not present, use backup by Deed class factory ??
-        // TODO instead return Optional.empty()
+        if (optionalParcel.isEmpty()) {
+            return optionalParcel;
+        }
         Parcel parcel = optionalParcel.orElseThrow(IllegalStateException::new);
 
         // update the Estate name using the player
@@ -141,9 +147,9 @@ public abstract class Deed extends Item {
 
         parcel.setSize(getSize(tag));
         parcel.setCoords(coords);
-        parcel.setName(parcel.randomName());
+        parcel.setName(parcel.defaultName(player));
 
-        return parcel;
+        return optionalParcel;
     }
 
     /**
@@ -208,7 +214,13 @@ public abstract class Deed extends Item {
         ICoords targetCoords = Coords.of(context.getClickedPos());
 
         // create a parcel object from the deed itemStack and context info
-        Parcel parcel = createParcel(context.getItemInHand(), targetCoords, context.getPlayer());
+        Optional<Parcel> optionalParcel = createParcel(context.getItemInHand(), targetCoords, context.getPlayer());
+        if (optionalParcel.isEmpty()) {
+            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.invalid")).withStyle(ChatFormatting.RED));
+            return InteractionResult.FAIL;
+        }
+
+        Parcel parcel = optionalParcel.get();
 
         // validate that the parcel's owner id == player id
         if (!parcel.isOwner(context.getPlayer().getUUID())) {
@@ -246,7 +258,7 @@ public abstract class Deed extends Item {
                     }
                     parcel.setOwnerTime(context.getLevel().getGameTime());
                     // clear abandonedTime (if any)
-                    parcel.setAbandonedTime(0L);
+                    parcel.setRelinquishedTime(0L);
 
                     // register user name
                     PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());

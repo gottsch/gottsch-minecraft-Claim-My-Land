@@ -24,14 +24,14 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.WhitelistType;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstateContext;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
-import mod.gottsch.forge.claimmyland.core.parcel.NationBorderType;
-import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
@@ -42,9 +42,7 @@ import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
-import net.minecraft.commands.arguments.item.ItemArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -86,7 +84,9 @@ public class PlayersCommand {
 		return SharedSuggestionProvider.suggest(names, builder);
 	};
 
-	private static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_NAMES = (source, builder) -> {
+	@Deprecated
+	public static final SuggestionProvider<CommandSourceStack>
+			OWNER_ESTATE_NAMES = (source, builder) -> {
 		ServerPlayer owner = source.getSource().getPlayerOrException();
 		List<String> names = EstateRegistry.getByOwner(owner.getUUID()).stream()
 				.map((Estate::getName)).toList();
@@ -105,7 +105,8 @@ public class PlayersCommand {
 		return SharedSuggestionProvider.suggest(estates, builder);
 	};
 
-	private static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_PARCEL_NAMES = (source, builder) -> {
+	@Deprecated
+	public static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_PARCEL_NAMES = (source, builder) -> {
 		ServerPlayer owner = source.getSource().getPlayerOrException();
 		String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
 		Optional<Estate> estate = CommandHelper.getEstateByOwner(source.getSource(), owner.getUUID(), estateName);
@@ -117,6 +118,7 @@ public class PlayersCommand {
 		return SharedSuggestionProvider.suggest(names, builder);
 	};
 
+	@Deprecated
 	private static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_PARCEL_NAMES_MORE_THAN_ONE = (source, builder) -> {
 		ServerPlayer owner = source.getSource().getPlayerOrException();
 		String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
@@ -134,7 +136,18 @@ public class PlayersCommand {
 		return SharedSuggestionProvider.suggest(names, builder);
 	};
 
-	private static final SuggestionProvider<CommandSourceStack> OWNER_PARCEL_NAMES = (source, builder) -> {
+	@Deprecated
+	public static final SuggestionProvider<CommandSourceStack>
+			OWNER_NATION_ESTATE_NAMES = (source, builder) -> {
+		ServerPlayer owner = source.getSource().getPlayerOrException();
+		List<String> names = EstateRegistry.getByOwner(owner.getUUID()).stream()
+				.filter(estate -> estate instanceof NationEstate)
+				.map((Estate::getName)).toList();
+		return SharedSuggestionProvider.suggest(names, builder);
+	};
+
+	// TODO move to CommandHelper
+	public static final SuggestionProvider<CommandSourceStack> OWNER_PARCEL_NAMES = (source, builder) -> {
 		ServerPlayer owner = source.getSource().getPlayerOrException();
 		List<String> names = ParcelRegistry.findByOwner(owner.getUUID()).stream()
 				.map((Parcel::getName)).toList();
@@ -145,46 +158,46 @@ public class PlayersCommand {
 		return SharedSuggestionProvider.suggest(Stream.of("border_stone", "citizen_tool", "zoning_tool"), builder);
 	};
 
-	private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCK_TAGS = (source, builder) -> {
-		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
-		Optional<Set<String>> list = Optional.empty();
-		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-		if (ownerUuid.isPresent()) {
-			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-		}
-		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
-	};
-
-	private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCKS = (source, builder) -> {
-		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
-		Optional<Set<String>> list = Optional.empty();
-
-		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-		if (ownerUuid.isPresent()) {
-			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
-		}
-		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
-	};
-
-	private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEM_TAGS = (source, builder) -> {
-		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
-		Optional<Set<String>> list = Optional.empty();
-		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-		if (ownerUuid.isPresent()) {
-			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-		}
-		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
-	};
-
-	private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEMS = (source, builder) -> {
-		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
-		Optional<Set<String>> list = Optional.empty();
-		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-		if (ownerUuid.isPresent()) {
-			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
-		}
-		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
-	};
+//	private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCK_TAGS = (source, builder) -> {
+//		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+//		Optional<Set<String>> list = Optional.empty();
+//		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+//		if (ownerUuid.isPresent()) {
+//			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
+//		}
+//		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
+//	};
+//
+//	private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCKS = (source, builder) -> {
+//		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+//		Optional<Set<String>> list = Optional.empty();
+//
+//		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+//		if (ownerUuid.isPresent()) {
+//			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
+//		}
+//		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
+//	};
+//
+//	private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEM_TAGS = (source, builder) -> {
+//		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+//		Optional<Set<String>> list = Optional.empty();
+//		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+//		if (ownerUuid.isPresent()) {
+//			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
+//		}
+//		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
+//	};
+//
+//	private static final SuggestionProvider<CommandSourceStack> CURRENT_ITEMS = (source, builder) -> {
+//		String parcelName = StringArgumentType.getString(source, CommandHelper.PARCEL_NAME);
+//		Optional<Set<String>> list = Optional.empty();
+//		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
+//		if (ownerUuid.isPresent()) {
+//			list = InteractWhitelistCommandsDelegate.getWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
+//		}
+//		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
+//	};
 
 	/**
 	 *
@@ -198,37 +211,34 @@ public class PlayersCommand {
 								})
 								///// DEED TOP-LEVEL OPTION /////
 								.then(Commands.literal(CommandHelper.DEED)
-//								.requires(source -> {
-//											return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
-//										})
-												.then(Commands.literal(CommandHelper.NEW)
-														.then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
-																.suggests(DEED_TYPES)
-																.then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
-																		.then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
-																				.then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
-																						.then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
-																								.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
-																										.suggests(OWNER_NATION_PARCEL_NAMES)
-																										.executes(source -> {
-																											return generateDeed(source.getSource(),
-																													StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
-																													IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
-																													IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
-																													IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
-																													IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE),
-																													StringArgumentType.getString(source, CommandHelper.NATION_NAME)
-																											);
-																											// TODO need to supply the owner name
-																										})
-																								)
+										.then(Commands.literal(CommandHelper.NEW)
+												.then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
+														.suggests(DEED_TYPES)
+														.then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
+																.then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
+																		.then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
+																				.then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
+																						.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
+																								.suggests(OWNER_NATION_ESTATE_NAMES)
+																								.executes(source -> {
+																									return generateDeed(source.getSource(),
+																											StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
+																											IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
+																											IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
+																											IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
+																											IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE),
+																											StringArgumentType.getString(source, CommandHelper.NATION_NAME)
+																									);
+																									// TODO need to supply the owner name
+																								})
 																						)
-
 																				)
+
 																		)
 																)
 														)
 												)
+										)
 								)
 								///// PARCEL TOP-LEVEL OPTION /////
 								.then(Commands.literal(CommandHelper.PARCEL)
@@ -236,32 +246,11 @@ public class PlayersCommand {
 //											return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
 //										})
 												///// LIST OPTION /////
-												.then(Commands.literal(CommandHelper.LIST)
-														.executes(source -> {
-															return listParcels(source.getSource());
-														})
-												)
-												///// ABANDON OPTION /////
-												.then(Commands.literal(CommandHelper.ABANDON)
-														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-																.suggests(OWNER_PARCEL_NAMES)
-																.executes(source -> {
-																	return abandonParcel(source.getSource(), StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-																})
-														)
-												)
-												///// BORDER TYPE /////
-												.then(Commands.literal(CommandHelper.BORDER_TYPE)
-														.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
-																.suggests(OWNER_NATION_PARCEL_NAMES)
-																.then(Commands.argument(CommandHelper.BORDER_TYPE, StringArgumentType.string())
-																		.suggests(CommandHelper.BORDER_TYPES)
-																		.executes(source -> {
-																			return borderType(source.getSource(), StringArgumentType.getString(source, CommandHelper.NATION_NAME), StringArgumentType.getString(source, CommandHelper.BORDER_TYPE));
-																		})
-																)
-														)
-												)
+												.then(new ListParcelsSubCommand().build())
+
+												///// RELINQUISH OPTION /////
+												.then(new RelinquishParcelSubCommand().build())
+
 												///// DEMOLISH /////
 												.then(Commands.literal(CommandHelper.DEMOLISH)
 														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
@@ -273,20 +262,8 @@ public class PlayersCommand {
 
 												)
 												///// RENAME PARCEL /////
-												.then(Commands.literal(CommandHelper.RENAME)
-														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-																.suggests(OWNER_PARCEL_NAMES)
-																.then(Commands.argument(CommandHelper.NEW_NAME, StringArgumentType.string())
-																		.executes(source -> {
-																			return renameParcel(source.getSource(),
-																					StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-																					StringArgumentType.getString(source, CommandHelper.NEW_NAME));
-																		})
-																)
-														)
+												.then(new RenameParcelSubCommand().build())
 
-
-												)
 												///// TRANSFER /////
 												.then(Commands.literal(CommandHelper.TRANSFER)
 														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
@@ -302,549 +279,103 @@ public class PlayersCommand {
 														)
 
 												)
-												///// WHITELIST OPTION /////
-//												.then(Commands.literal(CommandHelper.WHITELIST)
-//																///// BLOCK TAG WHITELIST OPTION /////
-//																.then(Commands.literal(CommandHelper.BLOCK_TAG)
-//																				///// WHITELIST ADD /////
-//																				.then(Commands.literal(CommandHelper.ADD)
-//																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																								.suggests(OWNER_PARCEL_NAMES)
-//																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-//																										.suggests(CommandHelper.BLOCK_TAGS)
-//																										.executes(source -> {
-//																											return InteractWhitelistCommandsDelegate.add(source.getSource(),
-//																													StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
-//																													InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-//																										})
-//																								)
-//																						)
-//																				)
-//
-//																				///// BLOCK TAGS WHITELIST LIST /////
-//																				.then(Commands.literal(CommandHelper.LIST)
-//																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																								.suggests(OWNER_PARCEL_NAMES)
-//																								.executes(source -> {
-//																									return InteractWhitelistCommandsDelegate.list(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-//																								})
-//																						)
-//																				)
-//
-////																				///// BLOCK TAGS WHITELIST REMOVE /////
-//																				.then(Commands.literal(CommandHelper.REMOVE)
-//																						.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																								.suggests(OWNER_PARCEL_NAMES)
-//																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-//																										.suggests(CURRENT_BLOCK_TAGS)
-//																										.executes(source -> {
-//																											return InteractWhitelistCommandsDelegate.remove(source.getSource(),
-//																													StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-//																										})
-//																								)
-//																						)
-//																				)
-//																)
-//																.then(Commands.literal(CommandHelper.BLOCKS)
-//																		///// WHITELIST ADD /////
-//																		.then(Commands.literal(CommandHelper.ADD)
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
-//																								.executes(source -> {
-//																									return InteractWhitelistCommandsDelegate.add(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											ItemArgument.getItem(source, CommandHelper.ITEM),
-//																											InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
-//																								})
-//																						)
-//																				)
-//																		)
-//
-//																		///// BLOCK WHITELIST REMOVE /////
-//																		.then(Commands.literal(CommandHelper.REMOVE)
-//
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-//																								.suggests(CURRENT_BLOCKS)
-//																								.executes(source -> {
-//																									return InteractWhitelistCommandsDelegate.remove(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
-//																								})
-//																						)
-//
-//																				)
-//																		)
-//																		///// BLOCK WHITELIST LIST /////
-//																		.then(Commands.literal(CommandHelper.LIST)
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.executes(source -> {
-//																							return InteractWhitelistCommandsDelegate.list(source.getSource(),
-//																									StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																									InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
-//																						})
-//																				)
-//																		)
-//																)
-//
-//																///// ITEM TAG WHITELIST OPTION /////
-//																.then(Commands.literal(CommandHelper.ITEM_TAG)
-//																		///// WHITELIST ADD /////
-//																		.then(Commands.literal(CommandHelper.ADD)
-//
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-//																								.suggests(CommandHelper.ITEM_TAGS)
-//																								.executes(source -> {
-//																									return InteractWhitelistCommandsDelegate.add(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-//																								})
-//																						)
-//
-//																				)
-//																		)
-//																		///// ITEM TAGS WHITELIST LIST /////
-//																		.then(Commands.literal(CommandHelper.LIST)
-//
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.executes(source -> {
-//																							return InteractWhitelistCommandsDelegate.list(source.getSource(),
-//																									StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																									InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-//																						})
-//
-//																				)
-//																		)
-//																		///// ITEM TAGS WHITELIST REMOVE /////
-//																		.then(Commands.literal(CommandHelper.REMOVE)
-//
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-//																								.suggests(CURRENT_ITEM_TAGS)
-//																								.executes(source -> {
-//																									return InteractWhitelistCommandsDelegate.remove(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-//																								})
-//																						)
-//																				)
-//
-//																		)
-//																)
-//																///// ITEM WHITELIST OPTION /////
-//																.then(Commands.literal(CommandHelper.ITEMS)
-//																		///// ITEM WHITELIST ADD /////
-//																		.then(Commands.literal(CommandHelper.ADD)
-//
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
-//																								.executes(source -> {
-//																									return InteractWhitelistCommandsDelegate.add(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											ItemArgument.getItem(source, CommandHelper.ITEM),
-//																											InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
-//																								})
-//																						)
-//																				)
-//
-//																		)
-//																		///// ITEM WHITELIST REMOVE /////
-//																		.then(Commands.literal(CommandHelper.REMOVE)
-//
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-//																								.suggests(CURRENT_ITEMS)
-//																								.executes(source -> {
-//																									return InteractWhitelistCommandsDelegate.remove(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME), InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
-//																								})
-//																						)
-//
-//																				)
-//																		)
-//																		///// ITEM WHITELIST LIST /////
-//																		.then(Commands.literal(CommandHelper.LIST)
-//
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.executes(source -> {
-//																							return InteractWhitelistCommandsDelegate.list(source.getSource(),
-//																									StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																									InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
-//																						})
-//																				)
-//																		)
-//																)
-//																.then(Commands.literal(CommandHelper.FRIENDS)
-//																		///// FRIENDS WHITELIST ADD /////
-//																		.then(Commands.literal(CommandHelper.ADD)
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
-//																								.suggests(CommandHelper.PLAYER_NAMES)
-//																								.executes(source -> {
-//																									return FriendsWhitelistCommandsDelegate.add(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
-//																								})
-//																						)
-//																				)
-//																		)
-//																		///// FRIENDS WHITELIST REMOVE /////
-//																		.then(Commands.literal(CommandHelper.REMOVE)
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
-//																								.suggests(CommandHelper.CURRENT_FRIENDS_NAMES)
-//																								.executes(source -> {
-//																									return FriendsWhitelistCommandsDelegate.remove(source.getSource(),
-//																											StringArgumentType.getString(source, CommandHelper.PARCEL_NAME),
-//																											StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
-//																								})
-//																						)
-//																				)
-//																		)
-//																		///// FRIENDS WHITELIST LIST /////
-//																		.then(Commands.literal(CommandHelper.LIST)
-//																				.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-//																						.suggests(OWNER_PARCEL_NAMES)
-//																						.executes(source -> {
-//																							return FriendsWhitelistCommandsDelegate.list(source.getSource(),
-//																									StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-//																						})
-//																				)
-//																		)
-//																)
-
-//												)
 								) // end of parcel
 
 								///// ESTATE TOP-LEVEL OPTION /////
 								.then(Commands.literal(CommandHelper.ESTATE)
-												///// LIST OPTION /////
-												.then(Commands.literal(CommandHelper.LIST)
-														.executes(source -> {
-															return listEstates(source.getSource());
-														})
-												)
-												///// INFO OPTION /////
-												.then(Commands.literal(CommandHelper.INFO)
-														.executes(source -> {
-															return listEstates(source.getSource());
-														})
-												)
-												///// JOIN (ANNEX) OPTION /////
-												.then(Commands.literal(CommandHelper.JOIN)
-														.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																.suggests(OWNER_ESTATE_NAMES)
-																.then(Commands.argument(CommandHelper.OTHER_ESTATE_NAME, StringArgumentType.string())
-																		.suggests(OWNER_ESTATE_NAMES_MINUS_SELF)
-																		.executes(source -> {
-																			return joinEstates(source.getSource(),
-																					StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																					StringArgumentType.getString(source, CommandHelper.OTHER_ESTATE_NAME));
-																		})
-																)
-														)
-												)
-												///// SPLIT (CEDE) OPTION /////
-												.then(Commands.literal(CommandHelper.SPLIT)
-														.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																.suggests(OWNER_ESTATE_NAMES)
-																.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
-																		.suggests(OWNER_ESTATE_PARCEL_NAMES_MORE_THAN_ONE)
-																		.executes(source -> {
-																			return splitEstate(source.getSource(),
-																					StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																					StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
-																		})
-																)
-														)
-												)
-												///// RENAME OPTION /////
-												.then(Commands.literal(CommandHelper.RENAME)
-														.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																.suggests(OWNER_ESTATE_NAMES)
-																.then(Commands.argument(CommandHelper.NEW_NAME, StringArgumentType.string())
-																		.executes(source -> {
-																			return renameEstate(source.getSource(),
-																					StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																					StringArgumentType.getString(source, CommandHelper.NEW_NAME));
-																		})
-																)
-														)
-												)
-												///// TRANSFER /////
-												.then(Commands.literal(CommandHelper.TRANSFER)
-														.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																.suggests(OWNER_ESTATE_NAMES)
-																.then(Commands.argument(CommandHelper.NEW_OWNER_NAME, StringArgumentType.string())
-																		.suggests(CommandHelper.PLAYER_NAMES)
-																		.executes(source -> {
-																			return EstateCommandDelegate.transfer(source.getSource(),
-																					StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																					StringArgumentType.getString(source, CommandHelper.NEW_OWNER_NAME));
-																		})
-																)
-														)
-
-												)
-												///// WHITELIST OPTION /////
-												.then(Commands.literal(CommandHelper.WHITELIST)
-																///// BLOCK TAG WHITELIST OPTION /////
-																.then(Commands.literal(CommandHelper.BLOCK_TAG)
-																				///// WHITELIST ADD /////
-																				.then(Commands.literal(CommandHelper.ADD)
-																						.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																								.suggests(OWNER_ESTATE_NAMES)
-																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-																										.suggests(CommandHelper.BLOCK_TAGS)
-																										.executes(source -> {
-																											return InteractWhitelistCommandsDelegate.addToEstate(source.getSource(),
-																													StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
-																													InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-																										})
-																								)
-																						)
-																				)
-
-																				///// BLOCK TAGS WHITELIST LIST /////
-																				.then(Commands.literal(CommandHelper.LIST)
-																						.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																								.suggests(OWNER_ESTATE_NAMES)
-																								.executes(source -> {
-																									return InteractWhitelistCommandsDelegate.listFromEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-
-																								})
-																						)
-																				)
-
-//																				///// BLOCK TAGS WHITELIST REMOVE /////
-																				.then(Commands.literal(CommandHelper.REMOVE)
-																						.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																								.suggests(OWNER_ESTATE_NAMES)
-																								.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-																										.suggests(CURRENT_BLOCK_TAGS)
-																										.executes(source -> {
-																											return InteractWhitelistCommandsDelegate.removeFromEstate(source.getSource(),
-																													StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																													ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
-																													InteractWhitelistCommandsDelegate.WhitelistType.BLOCK_TAG);
-																										})
-																								)
-																						)
-																				)
-																)
-																.then(Commands.literal(CommandHelper.BLOCKS)
-																		///// WHITELIST ADD /////
-																		.then(Commands.literal(CommandHelper.ADD)
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
-																								.executes(source -> {
-																									return InteractWhitelistCommandsDelegate.addToEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											ItemArgument.getItem(source, CommandHelper.ITEM),
-																											InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
-																								})
-																						)
-																				)
-																		)
-
-																		///// BLOCK WHITELIST REMOVE /////
-																		.then(Commands.literal(CommandHelper.REMOVE)
-
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-																								.suggests(CURRENT_BLOCKS)
-																								.executes(source -> {
-																									return InteractWhitelistCommandsDelegate.removeFromEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
-																											InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
-																								})
-																						)
-
-																				)
-																		)
-																		///// BLOCK WHITELIST LIST /////
-																		.then(Commands.literal(CommandHelper.LIST)
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.executes(source -> {
-																							return InteractWhitelistCommandsDelegate.listFromEstate(source.getSource(),
-																									StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																									InteractWhitelistCommandsDelegate.WhitelistType.BLOCK);
-																						})
-																				)
-																		)
-																)
-
-																///// ITEM TAG WHITELIST OPTION /////
-																.then(Commands.literal(CommandHelper.ITEM_TAG)
-																		///// WHITELIST ADD /////
-																		.then(Commands.literal(CommandHelper.ADD)
-
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-																								.suggests(CommandHelper.ITEM_TAGS)
-																								.executes(source -> {
-																									return InteractWhitelistCommandsDelegate.addToEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
-																											InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-																								})
-																						)
-
-																				)
-																		)
-																		///// ITEM TAGS WHITELIST LIST /////
-																		.then(Commands.literal(CommandHelper.LIST)
-
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.executes(source -> {
-																							return InteractWhitelistCommandsDelegate.listFromEstate(source.getSource(),
-																									StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																									InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-																						})
-
-																				)
-																		)
-																		///// ITEM TAGS WHITELIST REMOVE /////
-																		.then(Commands.literal(CommandHelper.REMOVE)
-
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-																								.suggests(CURRENT_ITEM_TAGS)
-																								.executes(source -> {
-																									return InteractWhitelistCommandsDelegate.removeFromEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
-																											InteractWhitelistCommandsDelegate.WhitelistType.ITEM_TAG);
-																								})
-																						)
-																				)
-
-																		)
-																)
-																///// ITEM WHITELIST OPTION /////
-																.then(Commands.literal(CommandHelper.ITEMS)
-																		///// ITEM WHITELIST ADD /////
-																		.then(Commands.literal(CommandHelper.ADD)
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.ITEM, ItemArgument.item(buildContext))
-																								.executes(source -> {
-																									return InteractWhitelistCommandsDelegate.addToEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											ItemArgument.getItem(source, CommandHelper.ITEM),
-																											InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
-																								})
-																						)
-																				)
-
-																		)
-																		///// ITEM WHITELIST REMOVE /////
-																		.then(Commands.literal(CommandHelper.REMOVE)
-
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.TAG_NAME, ResourceLocationArgument.id())
-																								.suggests(CURRENT_ITEMS)
-																								.executes(source -> {
-																									return InteractWhitelistCommandsDelegate.removeFromEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											ResourceLocationArgument.getId(source, CommandHelper.TAG_NAME),
-																											InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
-																								})
-																						)
-																				)
-																		)
-																		///// ITEM WHITELIST LIST /////
-																		.then(Commands.literal(CommandHelper.LIST)
-
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.executes(source -> {
-																							return InteractWhitelistCommandsDelegate.listFromEstate(source.getSource(),
-																									StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																									InteractWhitelistCommandsDelegate.WhitelistType.ITEM);
-																						})
-																				)
-																		)
-																)
-																.then(Commands.literal(CommandHelper.FRIENDS)
-																		///// FRIENDS WHITELIST ADD /////
-																		.then(Commands.literal(CommandHelper.ADD)
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
-																								.suggests(CommandHelper.PLAYER_NAMES)
-																								.executes(source -> {
-																									return FriendsWhitelistCommandsDelegate.addToEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
-																								})
-																						)
-																				)
-																		)
-																		///// FRIENDS WHITELIST REMOVE /////
-																		.then(Commands.literal(CommandHelper.REMOVE)
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.then(Commands.argument(CommandHelper.FRIEND_NAME, StringArgumentType.string())
-																								.suggests(CommandHelper.CURRENT_FRIENDS_NAMES)
-																								.executes(source -> {
-																									return FriendsWhitelistCommandsDelegate.removeFromEstate(source.getSource(),
-																											StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
-																											StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
-																								})
-																						)
-																				)
-																		)
-																		///// FRIENDS WHITELIST LIST /////
-																		.then(Commands.literal(CommandHelper.LIST)
-																				.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																						.suggests(OWNER_ESTATE_NAMES)
-																						.executes(source -> {
-																							return FriendsWhitelistCommandsDelegate.listFromEstate(source.getSource(),
-																									StringArgumentType.getString(source, CommandHelper.ESTATE_NAME));
-																						})
-																				)
-																		)
-																)
-												) // end of whitelist
-												///// DEMOLISH /////
-												.then(Commands.literal(CommandHelper.DEMOLISH)
-														.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
-																.suggests(OWNER_ESTATE_NAMES)
+										///// ACCESS TYPE /////
+										.then(Commands.literal("access_type")
+												.then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
+														.suggests(OWNER_NATION_ESTATE_NAMES)
+														.then(Commands.argument("access_type", StringArgumentType.string())
+																.suggests(CommandHelper.ACCESS_TYPES)
 																.executes(source -> {
-																	return demolishEstate(source.getSource(), StringArgumentType.getString(source, CommandHelper.ESTATE_NAME));
+																	return accessType(source.getSource(), StringArgumentType.getString(source, CommandHelper.NATION_NAME), StringArgumentType.getString(source, "access_type"));
 																})
 														)
-
 												)
+										)
+										///// LIST OPTION /////
+										.then(new ListEstateSubCommand().build())
+										///// DETAILS OPTION /////
+										.then(new EstateDetailsSubCommand().build())
+										///// RELINQUISH OPTION /////
+										.then(new RelinquishEstateSubCommand().build())
+
+										///// JOIN (ANNEX) OPTION /////
+										.then(Commands.literal(CommandHelper.JOIN)
+												.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
+														.suggests(OWNER_ESTATE_NAMES)
+														.then(Commands.argument(CommandHelper.OTHER_ESTATE_NAME, StringArgumentType.string())
+																.suggests(OWNER_ESTATE_NAMES_MINUS_SELF)
+																.executes(source -> {
+																	return joinEstates(source.getSource(),
+																			StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
+																			StringArgumentType.getString(source, CommandHelper.OTHER_ESTATE_NAME));
+																})
+														)
+												)
+										)
+										///// SPLIT (CEDE) OPTION /////
+										.then(Commands.literal(CommandHelper.SPLIT)
+												.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
+														.suggests(OWNER_ESTATE_NAMES)
+														.then(Commands.argument(CommandHelper.PARCEL_NAME, StringArgumentType.string())
+																.suggests(OWNER_ESTATE_PARCEL_NAMES_MORE_THAN_ONE)
+																.executes(source -> {
+																	return splitEstate(source.getSource(),
+																			StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
+																			StringArgumentType.getString(source, CommandHelper.PARCEL_NAME));
+																})
+														)
+												)
+										)
+										///// RENAME OPTION /////
+										.then(new RenameEstateSubCommand().build())
+
+										///// TRANSFER /////
+										.then(Commands.literal(CommandHelper.TRANSFER)
+												.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
+														.suggests(OWNER_ESTATE_NAMES)
+														.then(Commands.argument(CommandHelper.NEW_OWNER_NAME, StringArgumentType.string())
+																.suggests(CommandHelper.PLAYER_NAMES)
+																.executes(source -> {
+																	return EstateCommandDelegate.transfer(source.getSource(),
+																			StringArgumentType.getString(source, CommandHelper.ESTATE_NAME),
+																			StringArgumentType.getString(source, CommandHelper.NEW_OWNER_NAME));
+																})
+														)
+												)
+
+										)
+										///// WHITELIST OPTION /////
+										.then(Commands.literal(CommandHelper.WHITELIST)
+												///// BLOCK WHITELIST OPTION /////
+												.then(new BlockWhitelistSubCommand().build(buildContext, WhitelistType.BLOCK))
+												///// BLOCK TAG WHITELIST OPTION /////
+												.then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.BLOCK_TAG))
+												///// ITEM WHITELIST REMOVE /////
+												.then(new ItemWhitelistSubCommand().build(buildContext, WhitelistType.ITEM))
+												///// ITEM TAG WHITELIST OPTION /////
+												.then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.ITEM_TAG))
+												/// // ENTITY SPAWN /////
+												.then(new EntitySpawnWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY))
+												/// // ENTITY SPAWN TAG /////
+												.then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY_TAG))
+												///// FRIENDS WHITELIST ADD /////
+												.then(new FriendsWhitelistSubCommand().build())
+
+										) // end of whitelist
+										///// DEMOLISH /////
+										.then(Commands.literal(CommandHelper.DEMOLISH)
+												.then(Commands.argument(CommandHelper.ESTATE_NAME, StringArgumentType.string())
+														.suggests(OWNER_ESTATE_NAMES)
+														.executes(source -> {
+															return demolishEstate(source.getSource(), StringArgumentType.getString(source, CommandHelper.ESTATE_NAME));
+														})
+												)
+
+										)
 								) // end of estate
 
 								///// GIVE TOP-LEVEL OPTION /////
@@ -868,39 +399,17 @@ public class PlayersCommand {
 												})
 										)
 								) // end of CLAIMED_BY
-
 				); // end of register
-
 	}
 
-	/**
-	 *
-	 * @param source
-	 * @return
-	 */
-	public static int listParcels(CommandSourceStack source) {
-		try {
-			ServerPlayer player = source.getPlayerOrException();
-			return ParcelCommandDelegate.listParcelsByOwner(source, player);
-		} catch(Exception e) {
-			ClaimMyLand.LOGGER.error("an error occurred listing parcels:", e);
-			CommandHelper.failure(source, "unexpected_error");
-		}
-		return 1;
-	}
-
-	public static int abandonParcel(CommandSourceStack source, String parcelName) {
-		ServerPlayer player = source.getPlayer();
-		return ParcelCommandDelegate.abandonParcel(source, player.getScoreboardName(), parcelName);
-	}
-
-	public static int borderType(CommandSourceStack source, String nationName, String borderType) {
+	public static int accessType(CommandSourceStack source, String nationName, String accessTypeName) {
 		try {
 			ServerPlayer player = source.getPlayerOrException();
 
 			// get the border type
-			NationBorderType type = NationBorderType.valueOf(borderType.toUpperCase());
+			NationAccessType accessType = NationAccessType.fromString(accessTypeName.toUpperCase());
 
+			// TODO EstateRegistry needs getNations()
 			// find the nation by name
 			Optional<Parcel> nation = ParcelRegistry.getNations().stream()
 					.filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getName()))
@@ -917,7 +426,7 @@ public class PlayersCommand {
 				return 0;
 			}
 
-			((NationParcel)nation.get()).setBorderType(type);
+			((NationEstateContext)nation.get().getEstate()).setAccessType(accessType);;
 			CommandHelper.save(source.getLevel());
 
 		} catch(Exception e) {
@@ -938,45 +447,12 @@ public class PlayersCommand {
 		}
 	}
 
-	public static int renameParcel(CommandSourceStack source, String parcelName, String newName) {
-		try {
-			ServerPlayer player = source.getPlayerOrException();
-			return ParcelCommandDelegate.renameParcel(source, player.getScoreboardName(), parcelName, newName);
-		} catch(Exception e) {
-			ClaimMyLand.LOGGER.error("an error occurred renaming parcel:", e);
-			CommandHelper.unexceptedError(source);
-			return 0;
-		}
-	}
-
 	public static int transferParcel(CommandSourceStack source, String parcelName, String newOwnerName) {
 		try {
 			ServerPlayer player = source.getPlayerOrException();
 			return ParcelCommandDelegate.transferParcel(source, player.getScoreboardName(), parcelName, newOwnerName);
 		} catch(Exception e) {
 			ClaimMyLand.LOGGER.error("an error occurred transferring parcel:", e);
-			CommandHelper.unexceptedError(source);
-			return 0;
-		}
-	}
-
-	public static int listEstates(CommandSourceStack source) {
-		try {
-			ServerPlayer player = source.getPlayerOrException();
-			return EstateCommandDelegate.listEstatesByOwner(source, player);
-		} catch(Exception e) {
-			ClaimMyLand.LOGGER.error("an error occurred listing estates:", e);
-			CommandHelper.failure(source, "unexpected_error");
-		}
-		return 1;
-	}
-
-	public static int renameEstate(CommandSourceStack source, String estateName, String newName) {
-		try {
-			ServerPlayer player = source.getPlayerOrException();
-			return EstateCommandDelegate.rename(source, player.getScoreboardName(), estateName, newName);
-		} catch(Exception e) {
-			ClaimMyLand.LOGGER.error("an error occurred renaming estate:", e);
 			CommandHelper.unexceptedError(source);
 			return 0;
 		}
@@ -1015,17 +491,6 @@ public class PlayersCommand {
 		}
 	}
 
-//	public static int transferEstate(CommandSourceStack source, String parcelName, String newOwnerName) {
-//		try {
-//			ServerPlayer player = source.getPlayerOrException();
-//			return EstateCommandDelegate.transfer(source, player.getScoreboardName(), parcelName, newOwnerName);
-//		} catch(Exception e) {
-//			ClaimMyLand.LOGGER.error("an error occurred transferring parcel:", e);
-//			CommandHelper.unexceptedError(source);
-//			return 0;
-//		}
-//	}
-
 	public static int give(CommandSourceStack source, String giveItem) {
 		try {
 			ItemStack itemStack = switch(giveItem.toLowerCase()) {
@@ -1050,7 +515,7 @@ public class PlayersCommand {
 
 
 	/**
-	 *
+	 * Player version can only generate one type of deed -> citizen.
 	 * @param source
 	 * @param deedType
 	 * @param xSize
@@ -1065,29 +530,35 @@ public class PlayersCommand {
 			ServerPlayer player = source.getPlayerOrException();
 
 			// get the type
-			ParcelType type = ParcelType.valueOf(deedType);
+//			try {
+//			ParcelType type = ParcelType.valueOf(deedType);
+//			} catch(Exception e) {
+//				source.sendFailure(Component.translatable(LangUtil.chat("parcel.unknown_type")).withStyle(ChatFormatting.RED));
+//				return 0;
+//			}
 
 			// find the nation by name
-			Optional<Parcel> nation = ParcelRegistry.getNations().stream()
-					.filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getName()))
-					.findFirst();
+//			Optional<Parcel> nation = ParcelRegistry.getNations().stream()
+//					.filter(n -> nationName.equalsIgnoreCase(((NationParcel) n).getEstate().getName()))
+//					.findFirst();
+			Optional<Estate> optionalEstate = CommandHelper.getEstateByOwner(source, player.getUUID(), nationName);
 
 			// validations
-			if (nation.isEmpty()) {
+			if (optionalEstate.isEmpty()) {
 				source.sendFailure(Component.translatable(LangUtil.chat("parcel.nation.unable_to_locate")).withStyle(ChatFormatting.RED));
 				return 0;
 			}
-			if (!nation.get().getOwnerId().equals(player.getUUID())) {
-				source.sendFailure(Component.translatable(LangUtil.chat("parcel.nation.not_owner")).withStyle(ChatFormatting.RED));
-				return 0;
-			}
+//			if (!nation.get().getOwnerId().equals(player.getUUID())) {
+//				source.sendFailure(Component.translatable(LangUtil.chat("parcel.nation.not_owner")).withStyle(ChatFormatting.RED));
+//				return 0;
+//			}
 
 			// create a relative sized Box
 			Box size = new Box(Coords.of(0, -ySizeDown, 0), Coords.of(xSize-1, ySizeUp-1, zSize-1));
 
 			// create a deed item
-			ItemStack deed = DeedFactory.createCitizenDeed(size, nation.get().getNationId());
-			deed.getOrCreateTag().putString(CitizenDeed.NATION_NAME, nationName);
+			ItemStack deed = DeedFactory.createCitizenDeed(size, optionalEstate.get().getId());
+//			deed.getOrCreateTag().putString(CitizenDeed.NATION_NAME, nationName);
 
 			// attempt to add the deed item to the player inventory
 			if (deed != ItemStack.EMPTY) {

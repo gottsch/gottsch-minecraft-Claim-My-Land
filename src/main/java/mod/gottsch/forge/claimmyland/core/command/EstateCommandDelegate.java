@@ -22,11 +22,12 @@ package mod.gottsch.forge.claimmyland.core.command;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
-import mod.gottsch.forge.claimmyland.core.item.NationDeed;
+import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -49,35 +50,33 @@ import java.util.*;
  */
 public class EstateCommandDelegate {
 
-    public static int listEstatesByOwner(CommandSourceStack source, String ownerName) {
-        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source, ownerName);
-        if (playerUuid.isPresent()) {
-            return listEstatesByOwner(source, ownerName, playerUuid.get());
-        } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
-        }
-        return 1;
-    }
+//    public static int listEstatesByOwner(CommandSourceStack source, String ownerName) {
+//        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+//        if (playerUuid.isPresent()) {
+//            return listEstatesByOwner(source, ownerName, playerUuid.get());
+//        } else {
+//            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+//        }
+//        return 1;
+//    }
 
-    public static int listEstatesByOwner(CommandSourceStack source, ServerPlayer player) {
-        return listEstatesByOwner(source, player.getName().getString(), player.getUUID());
-    }
+//    public static int listEstatesByOwner(CommandSourceStack source, ServerPlayer player) {
+//        return listEstatesByOwner(source, player.getName().getString(), player.getUUID());
+//    }
 
-    public static int listEstatesByOwner(CommandSourceStack source, String playerName, UUID playerUuid) {
-        List<Component> messages = new ArrayList<>();
-
-        ParcelCommandDelegate.buildListTitle(messages, Component.translatable(LangUtil.chat("estate.list"), playerName));
-
-//        formatEstateList(messages, EstateRegistry.getByOwner(playerUuid),
+//    public static int listEstatesByOwner(CommandSourceStack source, String playerName, UUID playerUuid) {
+//        List<Component> messages = new ArrayList<>();
+//
+//        ParcelCommandDelegate.buildListTitle(messages, Component.translatable(LangUtil.chat("estate.list"), playerName));
+//
+//        ParcelCommandDelegate.formatParcelList(messages, EstateRegistry.getByOwner(playerUuid),
 //                EstateRegistry.getByFriend(playerUuid));
-        ParcelCommandDelegate.formatParcelList(messages, EstateRegistry.getByOwner(playerUuid),
-                EstateRegistry.getByFriend(playerUuid));
-
-        messages.forEach(component -> {
-            source.sendSuccess(() -> component, false);
-        });
-        return 1;
-    }
+//
+//        messages.forEach(component -> {
+//            source.sendSuccess(() -> component, false);
+//        });
+//        return 1;
+//    }
 
     @Deprecated
     static List<Component> formatEstateList(List<Component> messages, Set<Estate> estates, Set<Estate> friendsEstates) {
@@ -88,14 +87,8 @@ public class EstateCommandDelegate {
             estates.forEach(estate -> {
                 messages.add(
                         Component.literal(estate.getName().toUpperCase()).withStyle(ChatFormatting.GOLD)
-//                                .append(Component.literal(String.format(" [%s]: ", estate.getType().getSerializedName().charAt(0))).withStyle(ChatFormatting.WHITE))
-//                                .append(Component.translatable(String.format("(%s) to (%s)",
-//                                        formatCoords(estate.getMinCoords()),
-//                                        formatCoords(estate.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
-//                                )
-//                                .append(Component.translatable(", [" + formatCoords(ModUtil.getSize(estate.getSize())) + "]").withStyle(ChatFormatting.WHITE))
                 );
-                estate.getParcels().forEach(parcel -> {
+                estate.findParcels().forEach(parcel -> {
                     messages.add(
                             Component.literal(LangUtil.INDENT2).append(Component.literal(String.format("[%s]: ", parcel.getType().getSerializedName().charAt(0))).withStyle(ChatFormatting.WHITE))
                                     .append(parcel.getName().toUpperCase()).withStyle(ChatFormatting.AQUA));
@@ -103,40 +96,34 @@ public class EstateCommandDelegate {
 
 //				[STYLE].withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/tp @s " + blockpos.getX() + " " + s1 + " " + blockpos.getZ())).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("chat.coordinates.tooltip"))
             });
-            // append all friends parcels
-//            friendsEstates.forEach( parcel -> {
-//                messages.add(
-//                        Component.literal(parcel.getName().toUpperCase() + "*").withStyle(ChatFormatting.GRAY)
-//                                .append(Component.literal(String.format(" [%s]: ", parcel.getType().getSerializedName().charAt(0))).withStyle(ChatFormatting.WHITE))
-//                                .append(Component.translatable(String.format("(%s) to (%s)",
-//                                        formatCoords(parcel.getMinCoords()),
-//                                        formatCoords(parcel.getMaxCoords()))).withStyle(ChatFormatting.GREEN)
-//                                )
-//                                .append(Component.translatable(", [" + formatCoords(ModUtil.getSize(parcel.getSize())) + "]").withStyle(ChatFormatting.WHITE))
-//                );
-//            });
         }
         return messages;
     }
 
     public static int rename (CommandSourceStack source, String ownerName, String estateName, String newName){
         Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
-        if (player.isPresent()) {
-            Set<Estate> estates = EstateRegistry.getByOwner(player.get());
-            Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(estateName)).findFirst();
-            if (estate.isPresent()) {
-                // TODO ensure that the new name is unique across ALL estates ///////////////
-
-                /// ////////////////////////
-                estate.get().setName(newName);
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.success")).withStyle(ChatFormatting.GREEN), false);
-                CommandHelper.save(source.getLevel());
-            } else {
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.failure")).withStyle(ChatFormatting.RED), false);
-            }
-        } else {
+        if (player.isEmpty()) {
             CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            return -1;
         }
+
+        Set<Estate> estates = EstateRegistry.getByOwner(player.get());
+        Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(estateName)).findFirst();
+
+        if (estate.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.failure")).withStyle(ChatFormatting.RED), false);
+            return -1;
+        }
+
+        if (EstateRegistry.hasName(newName)) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.exists.failure")).withStyle(ChatFormatting.RED), false);
+            return -1;
+        }
+
+        estate.get().setName(newName);
+        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.success")).withStyle(ChatFormatting.GREEN), false);
+        CommandHelper.save(source.getLevel());
+
         return 1;
     }
 
@@ -154,7 +141,7 @@ public class EstateCommandDelegate {
         }
 
         // remove all parcels
-        estate.get().getParcels().forEach(parcel -> {
+        estate.get().findParcels().forEach(parcel -> {
             // remove the border
             BlockEntity blockEntity = source.getLevel().getBlockEntity(parcel.getCoords().toPos());
             if (blockEntity instanceof FoundationStoneBlockEntity) {
@@ -164,12 +151,68 @@ public class EstateCommandDelegate {
             ParcelRegistry.unregisterParcel(parcel);
         });
         // unregister the estate
-        EstateRegistry.removeEstate(estate.get());
+        EstateRegistry.unregister(estate.get());
 
         source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.remove.success")).withStyle(ChatFormatting.GREEN), false);
         CommandHelper.save(source.getLevel());
         return 1;
     }
+
+//    public static int relinquish(CommandSourceStack source, String ownerName, String estateName) {
+//        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+//        if (player.isEmpty()) {
+//            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+//            return -1;
+//        }
+//
+//        Optional<Estate> optionalEstate = CommandHelper.getEstateByOwner(source, player.get(), estateName);
+//        if (optionalEstate.isEmpty()) {
+//            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.failure")).withStyle(ChatFormatting.RED), false);
+//            return -1;
+//        }
+//
+//        Estate estate = optionalEstate.get();
+//        if (!estate.canRelinquish()) {
+////            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.disallowed.failure")).withStyle(ChatFormatting.RED), false);
+//            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.disallowed.failure")).withStyle(ChatFormatting.RED), false);
+//
+//            // get and format invalid reasons
+//            Component reasons = Component.translatable(LangUtil.chat("estate.relinquish.disallowed.reasons"));
+//            for (String s : reasons.getString().split("~")) {
+//                source.sendSuccess(() -> Component.literal(LangUtil.INDENT2).append(Component.translatable(s).withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC)), false);
+//            }
+//            return -1;
+//        }
+//
+//        estate.findParcels().forEach(parcel -> {
+//            try {
+//                // unregister parcel
+//                ParcelRegistry.unregisterParcel(parcel);
+//
+//                // create new estate (clears all whitelists)
+//                Estate newEstate = new EstateContext(estate.getOwnerId());
+//                // mark as relinquished
+//                newEstate.setRelinquished(true);
+//                // update parcel with estate
+//                parcel.setEstate(newEstate);
+//
+//                // re-register
+//                ParcelRegistry.register(parcel);
+//
+//                // set the abandon time
+//                parcel.setRelinquishedTime(source.getLevel().getGameTime());
+//            } catch (Exception e) {
+//                ClaimMyLand.LOGGER.error("unable to abandon estate -> {}", parcel.getId());
+//                // TODO should this message be sent as multiple parcels are being abandoned ??
+//                failure(source, "estate.abandon.failure");
+//            }
+//        });
+//
+//        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.abandon.success")).withStyle(ChatFormatting.GREEN), false);
+//        CommandHelper.save(source.getLevel());
+//
+//        return 1;
+//    }
 
     /**
      * joins two estates together
@@ -180,71 +223,102 @@ public class EstateCommandDelegate {
      * @return
      */
     public static int join(CommandSourceStack source, String ownerName, String mainEstateName, String otherEstateName) {
-        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
-        if (player.isPresent()) {
-            Set<Estate> estates = EstateRegistry.getByOwner(player.get());
-            Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(mainEstateName)).findFirst();
-            Optional<Estate> otherEstate = estates.stream().filter(est2 -> est2.getName().equalsIgnoreCase(otherEstateName)).findFirst();
-            if (estate.isPresent() && otherEstate.isPresent()) {
-                if (estate.get().getId().equals(otherEstate.get().getId())) {
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.same_estate.failure")).withStyle(ChatFormatting.RED), false);
-                    return 1;
-                }
-                // find all parcels belonging to otherEstate
-                Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(otherEstate.get().getId());
-                parcels.forEach(parcel -> {
-                    parcel.setEstate(estate.get());
-                });
-                // remove other estate
-                EstateRegistry.removeEstate(otherEstate.get());
-
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.success")).withStyle(ChatFormatting.GREEN), false);
-                CommandHelper.save(source.getLevel());
-            } else {
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.failure")).withStyle(ChatFormatting.RED), false);
-            }
-        } else {
+        Optional<UUID> owner = CommandHelper.getPlayerUuid(source, ownerName);
+        if (owner.isEmpty()) {
             CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            return -1;
         }
+        // didn't use CommandHelper.getEstateByOwner() because that would search 2x for the estates
+        Set<Estate> estates = EstateRegistry.getByOwner(owner.get());
+        Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(mainEstateName)).findFirst();
+        Optional<Estate> otherEstate = estates.stream().filter(est2 -> est2.getName().equalsIgnoreCase(otherEstateName)).findFirst();
+
+        if (estate.isEmpty() || otherEstate.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.failure")).withStyle(ChatFormatting.RED), false);
+            return -1;
+        }
+
+        // check if attempting to join an estate to itself
+//        if (estate.get().getId().equals(otherEstate.get().getId())) {
+//            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.same_estate.failure")).withStyle(ChatFormatting.RED), false);
+//            return -1;
+//        }
+
+        // test is the estates are like-estates ie only player estate can join player estates
+        if (!estate.get().canJoin(otherEstate.get())) {
+//            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.not_like.failure")).withStyle(ChatFormatting.RED), false);
+            source.sendSuccess(
+                    () -> Component.translatable(LangUtil.chat("estate.join.invalid.failure")).withStyle(ChatFormatting.RED), false);
+
+            // get and format invalid reasons
+            Component reasons = Component.translatable(LangUtil.chat("estate.join.invalid.reasons"));
+            for (String s : reasons.getString().split("~")) {
+                source.sendSuccess(() -> Component.literal(LangUtil.INDENT2)
+                        .append(Component.translatable(s).withStyle(ChatFormatting.GOLD, ChatFormatting.ITALIC)).append(LangUtil.NEWLINE), false);
+            }
+            return -1;
+        }
+
+        // find all parcels belonging to otherEstate
+        Set<Parcel> parcels = otherEstate.get().findParcels();//ParcelRegistry.findAllByEstateId(otherEstate.get().getId());
+        parcels.forEach(parcel -> {
+            // unregister the target parcel
+            ParcelRegistry.unregisterParcel(parcel);
+            // update the estate
+            parcel.setEstate(estate.get());
+            // re-register the target parcel
+            ParcelRegistry.register(parcel);
+        });
+
+        // remove other estate
+        EstateRegistry.unregister(otherEstate.get());
+
+        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.success")).withStyle(ChatFormatting.GREEN), false);
+        CommandHelper.save(source.getLevel());
+
         return 1;
     }
 
     public static int split(CommandSourceStack source, String ownerName, String estateName, String parcelName) {
         Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
-        if (player.isPresent()) {
-            Set<Estate> estates = EstateRegistry.getByOwner(player.get());
-            Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(estateName)).findFirst();
-
-            List<String> names = new ArrayList<>();
-            if (estate.isPresent()) {
-                Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(estate.get().getId());
-                if (parcels.size() <= 1) {
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.single_parcel.failure")).withStyle(ChatFormatting.RED), false);
-                    return -1;
-                }
-                Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
-                if (parcel.isPresent()) {
-                    // create new estate
-                    Estate estateContext = new EstateContext();
-                    estateContext.setOwnerId(estate.get().getOwnerId());
-                    estateContext.setName(estate.get().defaultName(player.get()));
-                    estateContext.setBlockWhitelist(estate.get().getBlockWhitelist());
-                    estateContext.setBlockTagWhitelist(estate.get().getBlockTagWhitelist());
-                    estateContext.setItemWhitelist(estate.get().getItemWhitelist());
-                    estateContext.setItemTagWhitelist(estate.get().getItemTagWhitelist());
-                    // update parcel
-                    parcel.get().setEstate(estateContext);
-                    // register estate
-                    EstateRegistry.register(estateContext);
-                } else {
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
-                }
-            } else {
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
-            }
-        } else {
+        if (player.isEmpty()) {
             CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            return -1;
         }
+
+        Set<Estate> estates = EstateRegistry.getByOwner(player.get());
+        Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(estateName)).findFirst();
+
+        List<String> names = new ArrayList<>();
+        if (estate.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
+            return -1;
+        }
+
+        Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(estate.get().getId());
+        if (parcels.size() <= 1) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.single_parcel.failure")).withStyle(ChatFormatting.RED), false);
+            return -1;
+        }
+        Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
+        if (parcel.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
+            return -1;
+        }
+
+        // create new estate
+        Estate estateContext = new EstateContext();
+        estateContext.setOwnerId(estate.get().getOwnerId());
+        estateContext.setName(estate.get().defaultName(player.get()));
+        estateContext.setBlockWhitelist(estate.get().getBlockWhitelist());
+        estateContext.setBlockTagWhitelist(estate.get().getBlockTagWhitelist());
+        estateContext.setItemWhitelist(estate.get().getItemWhitelist());
+        estateContext.setItemTagWhitelist(estate.get().getItemTagWhitelist());
+        // update parcel
+        parcel.get().setEstate(estateContext);
+        // register estate
+        EstateRegistry.register(estateContext);
+
         return 1;
     }
 
@@ -335,17 +409,12 @@ public class EstateCommandDelegate {
 
         // update owner time for all parcels
         long gameTime = level.getGameTime();
-        newEstate.getParcels().forEach(parcel -> parcel.setOwnerTime(gameTime));
+        newEstate.findParcels().forEach(parcel -> parcel.setOwnerTime(gameTime));
     }
 
     public static int demolish(CommandSourceStack source, String ownerName, String estateName) {
         try {
             ServerPlayer player = CommandHelper.getPlayer(source);
-            if (player == null) {
-                CommandHelper.sendUnableToLocatePlayerMessage(source);
-                return 1;
-            }
-
             ClaimMyLand.LOGGER.debug("command player -> {}", player.getName().getString());
 
             Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
@@ -364,7 +433,7 @@ public class EstateCommandDelegate {
             }
 
             // for each parcel in estate, demolish the parcel
-            estate.get().getParcels().forEach(parcel -> {
+            estate.get().findParcels().forEach(parcel -> {
                 demolishParcel(source, player, parcel);
             });
 
@@ -389,8 +458,11 @@ public class EstateCommandDelegate {
         // copy props over
         CompoundTag tag = deed.getOrCreateTag();
         tag.putUUID(Deed.PARCEL_ID, parcel.getId());
-        if (parcel.getNationId() != null) {
-            tag.putUUID(NationDeed.NATION_ID, parcel.getNationId());
+//        if (parcel.getNationId() != null) {
+//            tag.putUUID(NationDeed.NATION_ID, parcel.getNationId());
+//        }
+        if (parcel instanceof NationalizedParcel nationalizedParcel) {
+            tag.putUUID(Deed.NATION_ESTATE_ID, nationalizedParcel.getNationEstate().getId());
         }
 
         player.getInventory().add(deed);

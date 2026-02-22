@@ -18,8 +18,9 @@ public class LangUtil {
 	public static final String NEWLINE = "";
 	public static final String INDENT2 = "  ";
 	public static final String INDENT4 = "    ";
-	
-	/**
+    public static final String INDENT5 = "     ";
+
+    /**
 	 * 
 	 * @param tooltip
 	 * @param consumer

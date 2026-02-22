@@ -93,7 +93,7 @@ public class DeedFactory {
         }
 
         CompoundTag tag = deed.getOrCreateTag();
-        tag.putUUID(NationDeed.NATION_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.NATION_ID, UUID.randomUUID());
         // TODO this should be refactored out
 //        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
 //        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
@@ -112,7 +112,7 @@ public class DeedFactory {
         ItemStack deed = createItemStack(ParcelType.CITIZEN);
         CompoundTag tag = deed.getOrCreateTag();
         // add the ids
-        tag.putUUID(NationDeed.NATION_ID, nationId);
+        tag.putUUID(NationDeed.NATION_ESTATE_ID, nationId);
         // TODO this should be refactored out
 //        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
 //        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
