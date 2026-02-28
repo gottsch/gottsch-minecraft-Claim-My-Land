@@ -109,7 +109,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.join.failure"), "Unable to join estates.");
         add(LangUtil.chat("estate.join.not_like.failure"), "Cannot join estates that are of the different types, nor relinquished estates.");
         add(LangUtil.chat("estate.join.same_estate.failure"), "Cannot join estate to itself.");
-        add(LangUtil.chat("estate.join.invalid.failure"), "Cannot join estates:%s");
+        add(LangUtil.chat("estate.join.invalid.failure"), "Cannot join estates:");
         add(LangUtil.chat("estate.join.invalid.reasons"), "Same estate~Not the same type.~One or more estates are relinquished.~Not the same owner.");
 
         add(LangUtil.chat("estate.split.success"), "Estate has been split.");
@@ -122,10 +122,12 @@ public class LanguageGen extends LanguageProvider {
 
         add(LangUtil.chat("estate.remove.success"), "The estate has been removed.");
         add(LangUtil.chat("estate.remove.failure"), "Unable to remove the estate.");
+        add(LangUtil.chat("estate.remove.not_zone.failure"), "Only zone estates can be removed by players");
         
         add(LangUtil.chat("estate.rename.success"), "The estate has been renamed.");
         add(LangUtil.chat("estate.rename.failure"), "Unable to rename the estate.");
-        add(LangUtil.chat("estate.rename.exists.failure"), "Unable to rename. Duplicate name.");
+        add(LangUtil.chat("estate.rename.exists.failure"), "Unable to rename. Duplicate parcel name within the estate.");
+        add(LangUtil.chat("estate.rename.nation_parcel_exists.failure"), "Unable to rename. Duplicate parcel name within the nation.");
 
         add(LangUtil.chat("estate.relinquish.success"), "The estate has been relinquished.");
         add(LangUtil.chat("estate.relinquish.failure"), "Unable to relinquish the estate.");

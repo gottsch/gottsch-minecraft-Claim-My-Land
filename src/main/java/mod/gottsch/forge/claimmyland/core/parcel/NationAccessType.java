@@ -1,6 +1,7 @@
 package mod.gottsch.forge.claimmyland.core.parcel;
 
 import net.minecraft.util.StringRepresentable;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -20,7 +21,7 @@ public enum NationAccessType implements StringRepresentable {
 
     @Override
     public String toString() {
-        return this.name();
+        return StringUtils.capitalize(this.name().toLowerCase());
     }
 
     @Override

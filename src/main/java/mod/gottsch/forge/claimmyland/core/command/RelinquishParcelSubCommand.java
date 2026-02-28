@@ -25,6 +25,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
+import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
@@ -136,8 +137,16 @@ public class RelinquishParcelSubCommand implements SubCommand {
             // unregister parcel
             ParcelRegistry.unregisterParcel(parcel);
 
+            // save old estate
+            Estate oldEstate = parcel.getEstate();
+
             // create new estate (clears all whitelists)
-            Estate newEstate = new EstateContext(estate.getOwnerId());
+//            Estate newEstate = new EstateContext(estate.getOwnerId());
+            Estate newEstate = EstateTypeRegistry.create(estate.getType());
+            newEstate.setOwnerId(estate.getOwnerId());
+            newEstate.setName(oldEstate.getName());
+            newEstate.setParcelType(oldEstate.getParcelType());
+
             // mark as relinquished
             newEstate.setRelinquished(true);
             // update parcel with estate

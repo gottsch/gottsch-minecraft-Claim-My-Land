@@ -159,8 +159,8 @@ public class PlayerEvents {
 
         if (ParcelRegistry.intersectsParcel(Coords.of(event.getEntity().blockPosition()))
          && !(event.getSpawnType().equals(MobSpawnType.SPAWN_EGG)
-                || event.getSpawnType().equals(MobSpawnType.BUCKET))
-                || isInWhitelist) {
+//                || event.getSpawnType().equals(MobSpawnType.BUCKET))
+                || isInWhitelist)) {
             event.setResult(Result.DENY);
             event.setSpawnCancelled(true);
 //			ProtectIt.LOGGER.debug("denied mob spawn -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(event.getEntity().blockPosition()).toShortString());

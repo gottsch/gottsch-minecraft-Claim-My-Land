@@ -24,7 +24,10 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -32,24 +35,25 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
- * @author by Mark Gottschling on 2/19/2026
+ * @author by Mark Gottschling on 2/27/2026
  */
-public class RenameEstateSubCommand implements SubCommand {
+public class SplitSubCommand implements SubCommand {
+    static final String SPLIT = "split";
+
     @Override
     public LiteralArgumentBuilder<CommandSourceStack> build() {
-        return Commands.literal(RENAME)
+        return Commands.literal(SPLIT)
                 .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                         .suggests(OWNER_ESTATE_NAMES)
-                        .then(Commands.argument(NEW_NAME, StringArgumentType.string())
+                        .then(Commands.argument(PARCEL_NAME, StringArgumentType.string())
+                                .suggests(OWNER_ESTATE_PARCEL_NAMES_MORE_THAN_ONE)
                                 .executes(source -> {
-                                    return rename(source.getSource(),
+                                    return split(source.getSource(),
                                             StringArgumentType.getString(source, ESTATE_NAME),
-                                            StringArgumentType.getString(source, NEW_NAME));
+                                            StringArgumentType.getString(source, PARCEL_NAME));
                                 })
                         )
                 );
@@ -57,35 +61,36 @@ public class RenameEstateSubCommand implements SubCommand {
 
     @Override
     public LiteralArgumentBuilder<CommandSourceStack> buildOps() {
-        return Commands.literal(RENAME)
+        return  Commands.literal(SPLIT)
                 .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
                         .suggests(OPS_ESTATE_OWNER_NAMES)
                         .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                                 .suggests(OWNER_ESTATE_NAMES)
-                                .then(Commands.argument(NEW_NAME, StringArgumentType.string())
+                                .then(Commands.argument(PARCEL_NAME, StringArgumentType.string())
+                                        .suggests(OPS_OWNER_ESTATE_PARCEL_NAMES)
                                         .executes(source -> {
-                                            return rename(source.getSource(),
+                                            return split(source.getSource(),
                                                     StringArgumentType.getString(source, OWNER_NAME),
                                                     StringArgumentType.getString(source, ESTATE_NAME),
-                                                    StringArgumentType.getString(source, NEW_NAME));
+                                                    StringArgumentType.getString(source, PARCEL_NAME));
                                         })
                                 )
                         )
                 );
     }
 
-    public static int rename(CommandSourceStack source, String estateName, String newName) {
+    public static int split(CommandSourceStack source, String estateName, String parcelName) {
         try {
             ServerPlayer player = source.getPlayerOrException();
-            return rename(source, player.getScoreboardName(), estateName, newName);
-        } catch (Exception e) {
-            ClaimMyLand.LOGGER.error("an error occurred renaming estate:", e);
+            return split(source, player.getScoreboardName(), estateName, parcelName);
+        } catch(Exception e) {
+            ClaimMyLand.LOGGER.error("an error occurred joing estates:", e);
             CommandHelper.unexceptedError(source);
-            return 0;
+            return -1;
         }
     }
 
-    public static int rename(CommandSourceStack source, String ownerName, String estateName, String newName) {
+    public static int split(CommandSourceStack source, String ownerName, String estateName, String parcelName) {
         Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
         if (player.isEmpty()) {
             CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
@@ -95,20 +100,35 @@ public class RenameEstateSubCommand implements SubCommand {
         Set<Estate> estates = EstateRegistry.findByOwner(player.get());
         Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(estateName)).findFirst();
 
+        List<String> names = new ArrayList<>();
         if (estate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.failure")).withStyle(ChatFormatting.RED), false);
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
             return -1;
         }
 
-        if (EstateRegistry.hasName(newName)) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.exists.failure")).withStyle(ChatFormatting.RED), false);
+        Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(estate.get().getId());
+        if (parcels.size() <= 1) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.single_parcel.failure")).withStyle(ChatFormatting.RED), false);
+            return -1;
+        }
+        Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
+        if (parcel.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
             return -1;
         }
 
-        // NOTE temp replace spaces with underscore. future, update commands to use quoted values for names - StringArgumentType.escapeIfRequired(value);
-        estate.get().setName(newName.replace(" ", "_"));
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.success")).withStyle(ChatFormatting.GREEN), false);
-        CommandHelper.save(source.getLevel());
+        // create new estate
+        Estate estateContext = new EstateContext();
+        estateContext.setOwnerId(estate.get().getOwnerId());
+        estateContext.setName(estate.get().defaultName(player.get()));
+        estateContext.setBlockWhitelist(estate.get().getBlockWhitelist());
+        estateContext.setBlockTagWhitelist(estate.get().getBlockTagWhitelist());
+        estateContext.setItemWhitelist(estate.get().getItemWhitelist());
+        estateContext.setItemTagWhitelist(estate.get().getItemTagWhitelist());
+        // update parcel
+        parcel.get().setEstate(estateContext);
+        // register estate
+        EstateRegistry.register(estateContext);
 
         return 1;
     }

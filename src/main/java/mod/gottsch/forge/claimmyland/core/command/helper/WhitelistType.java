@@ -25,13 +25,13 @@ import net.minecraft.ChatFormatting;
  * @author by Mark Gottschling on 2/20/2026
  */
 public enum WhitelistType {
-    BLOCK("block", "blocks","BLOCK WHITELIST", ChatFormatting.GREEN),
+    BLOCK("block", "blocks","BLOCK WHITELIST", ChatFormatting.DARK_GREEN),
     BLOCK_TAG("block tag", "block_tags", "BLOCK TAG WHITELIST", ChatFormatting.DARK_GREEN),
-    ITEM("item", "items", "ITEM WHITELIST", ChatFormatting.AQUA),
+    ITEM("item", "items", "ITEM WHITELIST", ChatFormatting.DARK_AQUA),
     ITEM_TAG("item tag", "item_tags", "ITEM TAG WHITELIST", ChatFormatting.DARK_AQUA),
     FRIENDS("friends", "friends", "FRIENDS WHITELIST", ChatFormatting.YELLOW),
-    ENTITY("entity", "entities", "ENTITY WHITELIST", ChatFormatting.LIGHT_PURPLE),
-    ENTITY_TAG("entity tag", "entity_tags", "ENTITY TAG WHITELIST", ChatFormatting.DARK_PURPLE);
+    ENTITY("entity", "entities", "ENTITY WHITELIST", ChatFormatting.GOLD),
+    ENTITY_TAG("entity tag", "entity_tags", "ENTITY TAG WHITELIST", ChatFormatting.GOLD);
 
     private final String value;
     private final String command;

@@ -48,6 +48,7 @@ public interface SubCommand {
     static final String BLOCK_NAME = "block_name";
     static final String BY_OWNER = "by_owner";
     static final String CITIZEN_ESTATE_NAME = "citizen_estate_name";
+    static final String DEMOLISH = "demolish";
     static final String DETAILS = "details";
     static final String ENTITY = "entity";
     static final String ENTITIES = "entities";
@@ -60,12 +61,16 @@ public interface SubCommand {
     static final String LIST = "list";
     static final String NATION_NAME = "nation_name";
     static final String NEW_NAME = "new_name";
+    static final String NEW_OWNER_NAME = "new_owner_name";
     static final String OWNER_NAME = "owner_name";
+    static final String OTHER_ESTATE_NAME = "other_estate_name";
     static final String PARCEL_NAME = "parcel_name";
     static final String RELINQUISH = "relinquish";
     static final String REMOVE = "remove";
     static final String RENAME = "rename";
     static final String TAG_NAME = "tag_name";
+    static final String TRANSFER = "transfer";
+    static final String ZONE_ESTATE_NAME = "zone_estate_name";
 
     LiteralArgumentBuilder<CommandSourceStack> build();
 
@@ -126,7 +131,20 @@ public interface SubCommand {
         List<String> estates = new ArrayList<>();
         Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
         if (playerUuid.isPresent()) {
-            estates = EstateRegistry.getByOwner(playerUuid.get()).stream().map(Estate::getName).toList();
+            estates = EstateRegistry.findByOwner(playerUuid.get()).stream().map(Estate::getName).toList();
+        }
+        return SharedSuggestionProvider.suggest(estates, builder);
+    };
+
+    static final SuggestionProvider<CommandSourceStack> OPS_OWNER_ESTATE_NAMES_MINUS_SELF = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, OWNER_NAME);
+        String primaryEstateName = StringArgumentType.getString(source, ESTATE_NAME);
+        List<String> estates = new ArrayList<>();
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (playerUuid.isPresent()) {
+            estates = EstateRegistry.findByOwner(playerUuid.get()).stream()
+                    .map(Estate::getName)
+                    .filter(name -> !name.equalsIgnoreCase(primaryEstateName)).toList();
         }
         return SharedSuggestionProvider.suggest(estates, builder);
     };
@@ -138,7 +156,7 @@ public interface SubCommand {
         List<String> names = new ArrayList<>();
         Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
         if (ownerUuid.isPresent()) {
-            names = EstateRegistry.getByOwner(ownerUuid.get()).stream()
+            names = EstateRegistry.findByOwner(ownerUuid.get()).stream()
                     .filter(estate -> estate instanceof NationEstate)
                     .map((Estate::getName)).toList();
         }
@@ -183,6 +201,23 @@ public interface SubCommand {
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
+    static final SuggestionProvider<CommandSourceStack> OPS_OWNER_ESTATE_PARCEL_NAMES = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, OWNER_NAME);
+        String estateName = StringArgumentType.getString(source, ESTATE_NAME);
+
+        List<String> names = new ArrayList<>();
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (ownerUuid.isPresent()) {
+            Optional<Estate> estate = CommandHelper.getEstateByOwner(source.getSource(), ownerUuid.get(), estateName);
+            if (estate.isPresent()) {
+                Set<Parcel> parcels = estate.get().findParcels();
+                names = parcels.stream().map((Parcel::getName)).toList();
+            }
+        }
+        return SharedSuggestionProvider.suggest(names, builder);
+    };
+
+    @Deprecated
     static final SuggestionProvider<CommandSourceStack> OPS_PARCEL_NAMES = (source, builder) -> {
         String ownerName = StringArgumentType.getString(source, OWNER_NAME);
         List<String> parcels = new ArrayList<>();
@@ -196,7 +231,7 @@ public interface SubCommand {
     static final SuggestionProvider<CommandSourceStack>
             OWNER_NATION_ESTATE_NAMES = (source, builder) -> {
         ServerPlayer owner = source.getSource().getPlayerOrException();
-        List<String> names = EstateRegistry.getByOwner(owner.getUUID()).stream()
+        List<String> names = EstateRegistry.findByOwner(owner.getUUID()).stream()
                 .filter(estate -> estate instanceof NationEstate)
                 .map((Estate::getName)).toList();
         return SharedSuggestionProvider.suggest(names, builder);
@@ -205,9 +240,21 @@ public interface SubCommand {
     static final SuggestionProvider<CommandSourceStack>
             OWNER_ESTATE_NAMES = (source, builder) -> {
         ServerPlayer owner = source.getSource().getPlayerOrException();
-        List<String> names = EstateRegistry.getByOwner(owner.getUUID()).stream()
+        List<String> names = EstateRegistry.findByOwner(owner.getUUID()).stream()
                 .map((Estate::getName)).toList();
         return SharedSuggestionProvider.suggest(names, builder);
+    };
+
+    static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_NAMES_MINUS_SELF = (source, builder) -> {
+        ServerPlayer owner = source.getSource().getPlayerOrException();
+        String primaryEstateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
+        List<String> estates = new ArrayList<>();
+
+        estates = EstateRegistry.findByOwner(owner.getUUID()).stream()
+                .map(Estate::getName)
+                .filter(name -> !name.equalsIgnoreCase(primaryEstateName)).toList();
+
+        return SharedSuggestionProvider.suggest(estates, builder);
     };
 
     public static final SuggestionProvider<CommandSourceStack>
@@ -241,13 +288,30 @@ public interface SubCommand {
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
+    public static final SuggestionProvider<CommandSourceStack>
+            OWNER_ZONE_ESTATE_NAMES = (source, builder) -> {
+        String nationName = StringArgumentType.getString(source, NATION_NAME);
+        ServerPlayer owner = source.getSource().getPlayerOrException();
+
+        Set<String> names = ParcelRegistry.findByOwner(owner.getUUID()).stream()
+                .filter(parcel -> parcel.getType() == ParcelType.ZONE)
+                .map(parcel -> (NationalizedParcel)parcel)
+                .filter(nationalizedParcel -> nationalizedParcel.getNationEstate().getName().equalsIgnoreCase(nationName))
+                .map(nationalizedParcel -> nationalizedParcel.getEstate().getName())
+                .collect(Collectors.toSet());
+
+        return SharedSuggestionProvider.suggest(names, builder);
+    };
+
+
     static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_PARCEL_NAMES = (source, builder) -> {
         ServerPlayer owner = source.getSource().getPlayerOrException();
         String estateName = StringArgumentType.getString(source, ESTATE_NAME);
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source.getSource(), owner.getUUID(), estateName);
         List<String> names = new ArrayList<>();
         if (estate.isPresent()) {
-            Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(estate.get().getId());
+//            Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(estate.get().getId());
+            Set<Parcel> parcels = estate.get().findParcels();
             names = parcels.stream().map((Parcel::getName)).toList();
         }
         return SharedSuggestionProvider.suggest(names, builder);
@@ -267,6 +331,13 @@ public interface SubCommand {
                 names = parcels.stream().map((Parcel::getName)).toList();
             }
         }
+        return SharedSuggestionProvider.suggest(names, builder);
+    };
+
+    public static final SuggestionProvider<CommandSourceStack> OWNER_PARCEL_NAMES = (source, builder) -> {
+        ServerPlayer owner = source.getSource().getPlayerOrException();
+        List<String> names = ParcelRegistry.findByOwner(owner.getUUID()).stream()
+                .map((Parcel::getName)).toList();
         return SharedSuggestionProvider.suggest(names, builder);
     };
 

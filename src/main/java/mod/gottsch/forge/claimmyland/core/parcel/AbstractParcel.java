@@ -31,6 +31,7 @@ import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -71,10 +72,6 @@ public abstract class AbstractParcel implements Parcel {
     // ownership token
     private Estate estate;
 
-    // TODO will need to create a NationRegistry that associates a nation id
-    // to a name. that way instead of one parcel being a nation you can have
-    // multiple sharing the same name and id.
-    // the unique id of a nation
     @Deprecated
     private UUID nationId;
 
@@ -104,16 +101,6 @@ public abstract class AbstractParcel implements Parcel {
         setName(randomName());
     }
 
-//    public AbstractParcel(Estate estate) {
-//        setId(UUID.randomUUID());
-//        this.estate = estate;
-//    }
-//
-//    public AbstractParcel(Player player) {
-//        setId(UUID.randomUUID());
-//        this.estate = createEstate(player);
-//    }
-
     @Override
     public String defaultName(Player player) {
         Set<Parcel> parcels = getEstate().findParcels();
@@ -123,6 +110,13 @@ public abstract class AbstractParcel implements Parcel {
     @Override
     public String defaultName(UUID ownerId) {
         Optional<String> name = PlayerRegistry.getNameFromUUIDSynchronized(ownerId);
+        Set<Parcel> parcels = getEstate().findParcels();
+        return name.orElseGet(this::randomName) + "-parcel-" + (parcels.size() + 1);
+    }
+
+    @Override
+    public String defaultName(ServerLevel level, UUID ownerId) {
+        Optional<String> name = PlayerRegistry.getPlayerName(level, ownerId);
         Set<Parcel> parcels = getEstate().findParcels();
         return name.orElseGet(this::randomName) + "-parcel-" + (parcels.size() + 1);
     }
@@ -158,7 +152,6 @@ public abstract class AbstractParcel implements Parcel {
             ClaimMyLand.LOGGER.debug("ids match -> {} - {}", getOwnerId(), entityId);
             return true;
         } else {
-//            ClaimMyLand.LOGGER.debug("checking whitelist ...");
             // or the owner's whitelist has access
             return getWhitelist().stream().anyMatch(uuid -> uuid.equals(entityId));
         }
@@ -198,8 +191,8 @@ public abstract class AbstractParcel implements Parcel {
 
         Estate estate = getEstate();
         // TODO add isValidClaim() method
-        if (estate == null || estate.getId() == null) {// { || estate.getOwnerId() == null) { // TODO <-- if abandoned is removed, enforce this
-            ClaimMyLand.LOGGER.warn("Parcel {} is missing a valid Claim. This is an issue!", getId());
+        if (estate == null || estate.getId() == null || estate.getOwnerId() == null) { // TODO <-- if abandoned is removed, enforce this
+            ClaimMyLand.LOGGER.warn("parcel {} is missing a valid Estate.", getName());
             return;
         }
         tag.put(ESTATE_KEY, estate.save(new CompoundTag()));
@@ -211,11 +204,6 @@ public abstract class AbstractParcel implements Parcel {
         }
         if (StringUtils.isNotBlank(getName())) {
             tag.putString(NAME_KEY, getName());
-        }
-
-        // DEPRECATED
-        if (ObjectUtils.isNotEmpty(getNationId())) {
-            tag.putUUID(NATION_ID_KEY, getNationId());
         }
 
         if (ObjectUtils.isNotEmpty(getDeedId())) {
@@ -246,18 +234,16 @@ public abstract class AbstractParcel implements Parcel {
         }
 
         // load estate data
-//        Estate estate;
         if (tag.contains(ESTATE_KEY)) {
             CompoundTag estateTag = tag.getCompound(ESTATE_KEY);
             EstateRegistry.get(estateTag.getUUID(Estate.ID_KEY))
                     .ifPresentOrElse(this::setEstate,
-                            () -> getEstate().load(estateTag));
+                            () -> {
+                                getEstate().load(estateTag);
+                                EstateRegistry.register(getEstate());
+                            });
 
         }
-//        else {
-//            Estate estate = loadLegacy(tag);
-//                    setEstate(estate);
-//        }
 
         if (!isValidClaim(estate)) {
             ClaimMyLand.LOGGER.warn("unable to load parcel {} - invalid claim data.", getId());
@@ -303,56 +289,6 @@ public abstract class AbstractParcel implements Parcel {
     public boolean isValid() {
         return isValidClaim(getEstate()) && getId() != null;
     }
-
-//    private Estate loadLegacy(CompoundTag tag) {
-//        Estate estate = getEstate();
-//
-//        UUID ownerId;
-//        if (!tag.contains(OWNER_KEY)) {
-//            return estate;
-//        }
-//        estate.setOwnerId(tag.getUUID(OWNER_KEY));
-//
-//        if (tag.contains(NAME_KEY)) {
-//            estate.setName(tag.getString(NAME_KEY));
-//        } else {
-//            estate.setName(estate.defaultName(estate.getOwnerId()));
-//        }
-//
-//        if (tag.contains(BLOCK_TAG_WHITELIST_KEY)) {
-//            ListTag list = tag.getList(BLOCK_TAG_WHITELIST_KEY, Tag.TAG_STRING);
-//            list.forEach(element -> {
-//                String blockTag = element.getAsString();
-//                estate.getBlockTagWhitelist().add(blockTag);
-//            });
-//        }
-//
-//        if (tag.contains(BLOCK_WHITELIST_KEY)) {
-//            ListTag list = tag.getList(BLOCK_WHITELIST_KEY, Tag.TAG_STRING);
-//            list.forEach(element -> {
-//                String block = element.getAsString();
-//                estate.getBlockWhitelist().add(block);
-//            });
-//        }
-//
-//        if (tag.contains(ITEM_TAG_WHITELIST_KEY)) {
-//            ListTag list = tag.getList(ITEM_TAG_WHITELIST_KEY, Tag.TAG_STRING);
-//            list.forEach(element -> {
-//                String itemTag = element.getAsString();
-//                estate.getItemTagWhitelist().add(itemTag);
-//            });
-//        }
-//
-//        if (tag.contains(ITEM_WHITELIST_KEY)) {
-//            ListTag list = tag.getList(ITEM_WHITELIST_KEY, Tag.TAG_STRING);
-//            list.forEach(element -> {
-//                String item = element.getAsString();
-//                estate.getItemWhitelist().add(item);
-//            });
-//        }
-//
-//        return estate;
-//    }
 
     /**
      * gets an absolute box at a coords using the block entity
@@ -413,9 +349,10 @@ public abstract class AbstractParcel implements Parcel {
     @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public UUID getNationId() {
-        return nationId;
-//        return getEstate().getId();
+//        return nationId;
+        return getEstate().getId();
     }
+
     @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public void setNationId(UUID nationId) {

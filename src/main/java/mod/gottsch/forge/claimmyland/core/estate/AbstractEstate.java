@@ -28,6 +28,7 @@ public abstract class AbstractEstate implements Estate {
     public static final String NAME_KEY = "name";
     public static final String OWNER_KEY = "owner";
     public static final String ESTATE_TYPE_KEY = "estateType";
+    public static final String PARCEL_TYPE_KEY = "parcelType";
     public static final String RELINQUISHED_KEY = "relinquished";
     public static final String PLAYER_WHITELIST_KEY = "whitelist";
     public static final String BLOCK_TAG_WHITELIST_KEY = "blockTagWhitelist";
@@ -98,7 +99,7 @@ public abstract class AbstractEstate implements Estate {
     @Override
     public String defaultName(Player player) {
         // checks against the ClaimRegistry for any claims by ownerID
-        Set<Estate> estates = EstateRegistry.getByOwner(player.getUUID());
+        Set<Estate> estates = EstateRegistry.findByOwner(player.getUUID());
         return player.getScoreboardName() + "-estate-" + (estates.size() + 1);
     }
 
@@ -109,8 +110,38 @@ public abstract class AbstractEstate implements Estate {
         }
 
         Optional<String> name = PlayerRegistry.getNameFromUUIDSynchronized(ownerId);
-        Set<Estate> estates = EstateRegistry.getByOwner(ownerId);
+        Set<Estate> estates = EstateRegistry.findByOwner(ownerId);
         return name.orElseGet(ownerId::toString) + "-estate-" + (estates.size() + 1);
+    }
+
+    @Override
+    public String defaultName(Estate estate) {
+        Set<Estate> estates = EstateRegistry.findByOwner(estate.getOwnerId());
+        return estate.getName() + "-estate-" + (estates.size() + 1);
+    }
+
+    @Override
+    public boolean canJoin(Estate estate) {
+        if (getId().equals(estate.getId()) || isRelinquished() || estate.isRelinquished()) {
+            return false;
+        }
+
+        if (!getOwnerId().equals(estate.getOwnerId())) {
+            return false;
+        }
+
+//        Optional<Parcel> p1 = findParcels().stream().findFirst();
+//        if (p1.isEmpty()) {
+//            return false;
+//        }
+//
+//        return estate.findParcels().stream()
+//                .findFirst()
+//                .map(p2 -> p1.get().getType() == p2.getType())
+//                .orElse(false);
+
+        // ensure they are the same type
+        return getParcelType().equals(estate.getParcelType());
     }
 
     @Override
@@ -135,6 +166,8 @@ public abstract class AbstractEstate implements Estate {
         }
 
         tag.putString(ESTATE_TYPE_KEY, getType().toString());
+        tag.putString(PARCEL_TYPE_KEY, getParcelType().toString());
+
         tag.putBoolean(RELINQUISHED_KEY, isRelinquished());
 
         if (getPlayerWhitelist() != null) {
@@ -237,6 +270,10 @@ public abstract class AbstractEstate implements Estate {
         // NOTE this is a moot function
         if (tag.contains(ESTATE_TYPE_KEY) && ObjectUtils.isEmpty(getType())) {
             setType(new ResourceLocation(tag.getString(ESTATE_TYPE_KEY)));
+        }
+
+        if (tag.contains(PARCEL_TYPE_KEY)) {
+            setParcelType(ParcelType.fromString(tag.getString(PARCEL_TYPE_KEY)));
         }
 
         if (tag.contains(RELINQUISHED_KEY)) {

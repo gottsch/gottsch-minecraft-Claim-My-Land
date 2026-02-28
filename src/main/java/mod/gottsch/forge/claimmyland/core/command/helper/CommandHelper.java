@@ -18,7 +18,6 @@
  */
 package mod.gottsch.forge.claimmyland.core.command.helper;
 
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
@@ -46,8 +45,6 @@ import java.util.*;
  */
 public class CommandHelper {
 
-	@Deprecated
-	public static final String CML_OPS = "cml-ops";
 	public static final String DEED = "deed";
 	public static final String PARCEL = "parcel";
 	public static final String ESTATE = "estate";
@@ -61,7 +58,9 @@ public class CommandHelper {
 	public static final String DETAILS = "details";
 	@Deprecated
 	public static final String RENAME = "rename";
+	@Deprecated
 	public static final String TRANSFER = "transfer";
+	@Deprecated
 	public static final String JOIN = "join";
 	public static final String SPLIT = "split";
 	public static final String CLEAR = "clear";
@@ -75,6 +74,7 @@ public class CommandHelper {
 	public static final String Z_SIZE = "z_size";
 	@Deprecated
 	public static final String OWNER_NAME = "owner_name";
+	@Deprecated
 	public static final String NEW_OWNER_NAME = "new_owner_name";
 	@Deprecated
 	public static final String FRIEND_NAME = "friend_name";
@@ -113,6 +113,7 @@ public class CommandHelper {
 	public static final String BY_ABANDONED = "by_abandoned";
 	public static final String FROM_PARCEL = "from_parcel";
 	public static final String BY_RELINQUISHED = "by_relinquished";
+	@Deprecated
 	public static final String DEMOLISH = "demolish";
 	@Deprecated
 	public static final String ITEM = "item";
@@ -120,6 +121,7 @@ public class CommandHelper {
 	public static final String GIVE_ITEM = "give_item";
 	public static final String CLAIMED_BY = "claimed_by";
 
+	@Deprecated
 	public static final SuggestionProvider<CommandSourceStack> ACCESS_TYPES = (source, builder) -> {
 		return SharedSuggestionProvider.suggest(Arrays.stream(NationAccessType.values()).map(NationAccessType::getSerializedName), builder);
 	};
@@ -174,6 +176,14 @@ public class CommandHelper {
 		}
 	}
 
+	public static Optional<Parcel> findParcelByOwnerEstate(CommandSourceStack source, UUID ownerUuid, String estateName, String parcelName) {
+		Optional<Estate> optionalEstate = getEstateByOwner(source, ownerUuid, estateName);
+		return optionalEstate.flatMap(estate -> estate.findParcels().stream()
+				.filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst());
+	}
+
+	// deprecated because you have to have the estate because parcels can share the same name if in different estates.
+	@Deprecated
 	public static Optional<Parcel> getParcelByOwner(CommandSourceStack source, UUID ownerUuid, String parcelName) {
 		return getParcelsByOwner(source, ownerUuid).stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
 	}
@@ -185,7 +195,7 @@ public class CommandHelper {
 		return getEstatesByOwner(source, ownerUuid).stream().filter(e -> e.getName().equalsIgnoreCase(estateName)).findFirst();
 	}
 	public static Set<Estate> getEstatesByOwner(CommandSourceStack source, UUID playerUuid) {
-		return EstateRegistry.getByOwner(playerUuid);
+		return EstateRegistry.findByOwner(playerUuid);
 	}
 
 	/*

@@ -62,15 +62,15 @@ public class ClaimMyLand {
 //        modEventBus.addListener(this::onKeyRegister);
 
 
-        File saveDir = new File("world/data/claimmyland");
+        File saveDir = new File("world/data/claimmyland"); // TODO config option
         Type listType = new TypeToken<List<Parcel>>(){}.getType();
 
         // save every 5 minutes, keep 20 most recent files
         parcelSaver = new RollingJsonSaver<>(
                 saveDir,
-                "parcels",
-                20,
-                3,
+                "parcels",  // TODO config option
+                20,                                // TODO config option
+                10,                                 // TODO config option
                 ParcelRegistry::getParcels,  // supplier that returns current parcel list
                 listType
         );

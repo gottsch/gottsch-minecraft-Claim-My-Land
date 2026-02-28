@@ -23,7 +23,9 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
@@ -34,6 +36,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -101,6 +104,7 @@ public class RenameParcelSubCommand implements SubCommand {
             return -1;
         }
 
+
         List<Parcel> parcels = ParcelRegistry.findByOwner(player.get());
         Optional<Parcel> optionalParcel = parcels.stream().filter(p -> p.getEstate().getName().equalsIgnoreCase(estateName)
                 && p.getName().equalsIgnoreCase(parcelName)).findFirst();
@@ -108,14 +112,24 @@ public class RenameParcelSubCommand implements SubCommand {
             source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.failure")).withStyle(ChatFormatting.RED), false);
             return -1;
         }
-
+        // ensure parcels have unique names within the same estate
         Parcel parcel = optionalParcel.get();
         if (ParcelRegistry.hasName(parcel, newName)) {
             source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.exists.failure")).withStyle(ChatFormatting.RED), false);
             return -1;
         }
 
-        parcel.setName(newName);
+        // if nationalized parcel, ensure parcel name is unique within the nation
+        if (parcel instanceof NationalizedParcel nationalizedParcel) {
+            Set<Parcel> nationParcels = ParcelRegistry.findAllByNationEstateId(nationalizedParcel.getNationEstate().getId());
+            if (ParcelRegistry.hasName(nationParcels, parcel, newName)) {
+                source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.nation_parcel_exists.failure")).withStyle(ChatFormatting.RED), false);
+                return -1;
+            }
+        }
+
+        // update name
+        parcel.setName(newName.replace(" ", "_"));
         source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.success")).withStyle(ChatFormatting.GREEN), false);
         CommandHelper.save(source.getLevel());
 

@@ -34,6 +34,7 @@ import java.util.UUID;
 /**
  * @author by Mark Gottschling on 2/9/2026
  */
+@Deprecated
 public abstract class AbstractNationalizedParcel extends AbstractParcel implements NationalizedParcel {
     public static final String NATION_ESTATE_KEY = "nation_estate";
 
@@ -77,7 +78,7 @@ public abstract class AbstractNationalizedParcel extends AbstractParcel implemen
             CompoundTag nationEstateTag = tag.getCompound(NATION_ESTATE_KEY);
 
             EstateRegistry.get(nationEstateTag.getUUID(Estate.ID_KEY))
-                    .ifPresentOrElse(this::setEstate,
+                    .ifPresentOrElse(estate -> setNationEstate((NationEstate) estate),
                             () -> getNationEstate().load(nationEstateTag));
 
         } else {

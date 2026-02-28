@@ -20,9 +20,11 @@
 package mod.gottsch.forge.claimmyland.core.command.helper;
 
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
@@ -66,11 +68,12 @@ public class EstateDisplayFormatter {
         messages.add(newline());
         messages.add(Component.literal("Total Estates: ").withStyle(ChatFormatting.GRAY )
                 .append(Component.literal(String.valueOf(estates.size()))).withStyle(ChatFormatting.WHITE));
-        messages.add(newline());
+
 
         // TODO this isn't right
         if (estates.isEmpty()) {
             messages.add(Component.literal("No estates found.").withStyle(ChatFormatting.YELLOW));
+            messages.add(newline());
             return;
         }
 
@@ -104,20 +107,20 @@ public class EstateDisplayFormatter {
             Iterator<Estate> iterator = nationEstates.iterator();
             while (iterator.hasNext()) {
                 Estate estate = iterator.next();
-                boolean isLast = iterator.hasNext();
+                boolean isLast = !iterator.hasNext();
                 messages.addAll(formatEstateEntry(level, estate, isLast, "", isOps));
-                messages.add(newline());
+                messages.add(isLast ? newline() : Component.literal(VERTICAL));
             }
 //            messages.add(newline());
         }
 
         // zone estates section
-        if (!citizenEstates.isEmpty()) {
+        if (!zoneEstates.isEmpty()) {
             messages.add(Component.literal("▼ ZONE ESTATES").withStyle(BOLD_YELLOW));
             Iterator<Estate> iterator = zoneEstates.iterator();
             while (iterator.hasNext()) {
                 Estate estate = iterator.next();
-                boolean isLast = iterator.hasNext();
+                boolean isLast = !iterator.hasNext();
                 messages.addAll(formatEstateEntry(level, estate, isLast, "", isOps));
                 messages.add(newline());
             }
@@ -130,7 +133,7 @@ public class EstateDisplayFormatter {
             Iterator<Estate> iterator = citizenEstates.iterator();
             while (iterator.hasNext()) {
                 Estate estate = iterator.next();
-                boolean isLast = iterator.hasNext();
+                boolean isLast = !iterator.hasNext();
                 messages.addAll(formatEstateEntry(level, estate, isLast, "", isOps));
                 messages.add(newline());
             }
@@ -143,13 +146,12 @@ public class EstateDisplayFormatter {
             Iterator<Estate> iterator = regularEstates.iterator();
             while (iterator.hasNext()) {
                 Estate estate = iterator.next();
-                boolean isLast = iterator.hasNext();
+                boolean isLast = !iterator.hasNext();
                 messages.addAll(formatEstateEntry(level, estate, isLast, "", isOps));
                 messages.add(newline());
             }
 //            messages.add(newline());
         }
-        messages.add(newline());
     }
 
 
@@ -176,10 +178,10 @@ public class EstateDisplayFormatter {
                 .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
 
         // estate details
-        String indent = prefix + (isLast ? SPACE : VERTICAL);
+        String indent = prefix + VERTICAL; //(isLast ? SPACE : VERTICAL);
 
         if (estate.isRelinquished()) {
-            lines.add(Component.literal(indent)
+            lines.add(Component.literal(indent).withStyle(ChatFormatting.WHITE)
                     .append(Component.literal(LangUtil.INDENT4))
                     .append(Component.literal("-RELINQUISHED-")).withStyle(ChatFormatting.RED));
         }
@@ -200,15 +202,19 @@ public class EstateDisplayFormatter {
                         .append(Component.literal("Parcels: ").withStyle(ChatFormatting.GRAY))
                         .append(Component.literal(String.valueOf(parcels.size())).withStyle(ChatFormatting.WHITE)));
 
+        boolean isNationFlag = estate.isNation();
         if (isPlayer(estate)) {
             lines.add(Component.literal(indent)
                     .append(Component.literal("Type: ").withStyle(ChatFormatting.GRAY))
                     .append(Component.literal("Player").withStyle(color)));
         }
-        else if (isNation(estate)) {
+        else if (isNationFlag) {
             lines.add(Component.literal(indent)
                     .append(Component.literal("Type: ").withStyle(ChatFormatting.GRAY))
                     .append(Component.literal("Nation").withStyle(color)));
+            lines.add(Component.literal(indent)
+                    .append(Component.literal("Access Type: ").withStyle(ChatFormatting.GRAY))
+                    .append(Component.literal(((NationEstate)estate).getAccessType().toString())).withStyle(ChatFormatting.WHITE));
 //            if (estate.getCitizenCount() > 0) {
 //                lines.add(indent + ChatFormatting.GRAY + "Citizens: " + ChatFormatting.WHITE + estate.getCitizenCount());
 //            }
@@ -250,14 +256,53 @@ public class EstateDisplayFormatter {
         Set<UUID> whitelist = estate.getPlayerWhitelist();
         lines.add(Component.literal(indent)
                 .append(Component.translatable(LangUtil.chat("estate.player.whitelist")).withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(String.format("(" + whitelist.size() + " players)")).withStyle(ChatFormatting.YELLOW)));
+                .append(Component.literal(String.format("(" + whitelist.size() + " friends)")).withStyle(ChatFormatting.YELLOW)));
 
         if (!whitelist.isEmpty()) {
 //            lines.add(Component.literal(LangUtil.INDENT4)
 //                    .append(Component.literal("No whitelisted players found.").withStyle(ChatFormatting.WHITE)));
-            lines.addAll(formatEstateListPlayerWhitelist(level, whitelist, LangUtil.INDENT4));
+            lines.addAll(formatEstateListPlayerWhitelist(level, whitelist, indent + LangUtil.INDENT2));
         }
 
+        if (isNationFlag) {
+            // TENANT ESTATES
+            Set<Estate> nationalizedEstates = ParcelRegistry.findAllByNationEstateId(estate.getId()).stream()
+                    .map(parcel -> ((NationalizedParcel)parcel).getEstate())
+                    .collect(Collectors.toSet());
+
+            if (!nationalizedEstates.isEmpty()) {
+                lines.add(Component.literal(indent)
+                        .append(Component.translatable(LangUtil.chat("estate.tenants")).withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(String.format("(" + nationalizedEstates.size() + " estates)")).withStyle(ChatFormatting.AQUA)));
+                lines.addAll(formatTenantEstateList(level, nationalizedEstates, indent + LangUtil.INDENT2));
+            }
+        }
+
+        return lines;
+    }
+
+    private static List<Component> formatTenantEstateList(ServerLevel level, Set<Estate> nationalizedEstates, String indent) {
+        List<Component> lines = new ArrayList<>();
+
+        // group players alphabetically for easier reading
+        List<String> sortedEstates = new ArrayList<>(nationalizedEstates.stream().map(Estate::getName).toList());
+        sortedEstates.sort(String.CASE_INSENSITIVE_ORDER);
+
+        // TODO this could be a config value
+        final int maxPerRow = 5;
+
+        for (int i = 0; i < sortedEstates.size(); i += maxPerRow) {
+            MutableComponent component = Component.literal(indent);
+
+            // add up to maxPerRow names
+            for (int j = 0; j < maxPerRow && (i + j) < sortedEstates.size(); j++) {
+                if (j > 0) {
+                    component.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
+                }
+                component.append(Component.literal(String.valueOf(sortedEstates.get(i + j))).withStyle(ChatFormatting.WHITE));
+            }
+            lines.add(component);
+        }
         return lines;
     }
 
@@ -297,6 +342,9 @@ public class EstateDisplayFormatter {
         else if (isNation(estate)) {
             lines.add(Component.literal("Type: ").withStyle(ChatFormatting.GRAY)
                     .append(Component.literal("Nation").withStyle(typeColor)));
+            lines.add(Component.literal("Access Type: ").withStyle(ChatFormatting.GRAY)
+                    .append(Component.literal(((NationEstate)estate).getAccessType().toString()).withStyle(ChatFormatting.WHITE)));
+
         } else if (isZone(estate)) {
             lines.add(
                     Component.literal("Type: ").withStyle(ChatFormatting.GRAY)
@@ -324,40 +372,34 @@ public class EstateDisplayFormatter {
                 .append(Component.literal(String.valueOf(estate.isRelinquished())).withStyle(estate.isRelinquished() ? ChatFormatting.RED : ChatFormatting.WHITE)));
 
         lines.add(newline());
+
         // player whitelist
         Set<UUID> playerWhitelist = estate.getPlayerWhitelist();
-        lines.add(Component.literal("▼ Friends Whitelist (" + playerWhitelist.size() + "):").withStyle(BOLD_AQUA));
-//        lines.add(Component.translatable(LangUtil.chat("estate.player.whitelist")).withStyle(ChatFormatting.GRAY)
-//                .append(Component.literal(String.format("(" + playerWhitelist.size() + " players)")).withStyle(ChatFormatting.YELLOW)));
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ ").withStyle(ChatFormatting.GRAY, ChatFormatting.BOLD))
+                .append(Component.literal("Friends Whitelist ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" (" + playerWhitelist.size() + " friends)").withStyle(ChatFormatting.YELLOW)));
         if (!playerWhitelist.isEmpty()) {
             lines.addAll(formatEstateDetailsPlayerWhitelist(level, playerWhitelist, LangUtil.INDENT2));
-
         }
-//        else {
-//            lines.add(Component.literal(LangUtil.INDENT2)
-//                    .append(Component.literal("No whitelisted friends found.").withStyle(ChatFormatting.GRAY)));
-////        if (playerWhitelist.isEmpty()) {
-////            lines.add(Component.literal(LangUtil.INDENT2)
-////                    .append(Component.literal("No whitelisted players found.").withStyle(ChatFormatting.WHITE)));
-////        }
-//        }
         lines.add(newline());
 
         // block and block tag whitelist
         Set<String> blockWhitelist = estate.getBlockWhitelist();
-        lines.add(Component.literal("▼ ")
-                .append(Component.translatable(LangUtil.chat("estate.block.whitelist"))).withStyle(BOLD_AQUA)
-                .append(Component.literal(String.format(" (" + blockWhitelist.size() + " blocks)")).withStyle(BOLD_AQUA)));
-
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ ").withStyle(ChatFormatting.BOLD, ChatFormatting.GRAY))
+                .append(Component.translatable(LangUtil.chat("estate.block.whitelist")).withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" (" + blockWhitelist.size() + " blocks)").withStyle(ChatFormatting.AQUA)));
         if (!blockWhitelist.isEmpty()) {
             lines.addAll(formatGenericList(blockWhitelist, WhitelistType.BLOCK, ""));
         }
         lines.add(newline());
 
         Set<String> blockTagWhitelist = estate.getBlockTagWhitelist();
-        lines.add(Component.literal("▼ ")
-                .append(Component.translatable(LangUtil.chat("estate.block_tag.whitelist"))).withStyle(BOLD_AQUA)
-                .append(Component.literal(String.format(" (" + blockTagWhitelist.size() + " block tags)")).withStyle(BOLD_AQUA)));
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ ").withStyle(ChatFormatting.BOLD, ChatFormatting.GRAY))
+                .append(Component.translatable(LangUtil.chat("estate.block_tag.whitelist")).withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" (" + blockTagWhitelist.size() + " block tags)").withStyle(ChatFormatting.AQUA)));
 
         if (!blockTagWhitelist.isEmpty()) {
             lines.addAll(formatGenericList(blockTagWhitelist, WhitelistType.BLOCK_TAG, ""));
@@ -366,9 +408,10 @@ public class EstateDisplayFormatter {
 
         // item and item tag whitelists
         Set<String> itemWhitelist = estate.getItemWhitelist();
-        lines.add(Component.literal("▼ ")
-                .append(Component.translatable(LangUtil.chat("estate.item.whitelist"))).withStyle(BOLD_AQUA)
-                .append(Component.literal(String.format(" (" + itemWhitelist.size() + " items)")).withStyle(BOLD_AQUA)));
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ ").withStyle(ChatFormatting.BOLD, ChatFormatting.GRAY))
+                .append(Component.translatable(LangUtil.chat("estate.item.whitelist")).withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" (" + itemWhitelist.size() + " items)").withStyle(ChatFormatting.AQUA)));
 
         if (!itemWhitelist.isEmpty()) {
             lines.addAll(formatGenericList(itemWhitelist, WhitelistType.ITEM, ""));
@@ -376,9 +419,10 @@ public class EstateDisplayFormatter {
         lines.add(newline());
 
         Set<String> itemTagWhitelist = estate.getItemTagWhitelist();
-        lines.add(Component.literal("▼ ")
-                .append(Component.translatable(LangUtil.chat("estate.item_tag.whitelist"))).withStyle(BOLD_AQUA)
-                .append(Component.literal(String.format(" (" + itemTagWhitelist.size() + " items)")).withStyle(BOLD_AQUA)));        lines.addAll(formatWhitelist(itemTagWhitelist, "  "));
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ ").withStyle(ChatFormatting.BOLD, ChatFormatting.GRAY))
+                .append(Component.translatable(LangUtil.chat("estate.item_tag.whitelist")).withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" (" + itemTagWhitelist.size() + " items)").withStyle(ChatFormatting.AQUA)));
         if (!itemTagWhitelist.isEmpty()) {
             lines.addAll(formatGenericList(itemTagWhitelist, WhitelistType.ITEM_TAG, ""));
         }
@@ -386,18 +430,20 @@ public class EstateDisplayFormatter {
 
         // entity and entity tag whitelists
         Set<String> entityWhitelist = estate.getEntitySpawnWhitelist();
-        lines.add(Component.literal("▼ ")
-                .append(Component.translatable(LangUtil.chat("estate.entity_spawn.whitelist"))).withStyle(BOLD_AQUA)
-                .append(Component.literal(String.format(" (" + entityWhitelist.size() + " entities)")).withStyle(BOLD_AQUA)));
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ ").withStyle(ChatFormatting.BOLD, ChatFormatting.GRAY))
+                .append(Component.translatable(LangUtil.chat("estate.entity_spawn.whitelist")).withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" (" + entityWhitelist.size() + " entities)").withStyle(ChatFormatting.AQUA)));
         if (!entityWhitelist.isEmpty()) {
             lines.addAll(formatGenericList(entityWhitelist, WhitelistType.ENTITY, ""));
         }
         lines.add(newline());
 
         Set<String> entityTagWhitelist = estate.getEntitySpawnTagWhitelist();
-        lines.add(Component.literal("▼ ")
-                .append(Component.translatable(LangUtil.chat("estate.entity_spawn_tag.whitelist"))).withStyle(BOLD_AQUA)
-                .append(Component.literal(String.format(" (" + entityTagWhitelist.size() + " entity tags)")).withStyle(BOLD_AQUA)));
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ ").withStyle(ChatFormatting.BOLD, ChatFormatting.GRAY))
+                .append(Component.translatable(LangUtil.chat("estate.entity_spawn_tag.whitelist")).withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(" (" + entityTagWhitelist.size() + " entity tags)").withStyle(ChatFormatting.AQUA)));
         if (!entityTagWhitelist.isEmpty()) {
             lines.addAll(formatGenericList(entityTagWhitelist, WhitelistType.ENTITY_TAG, ""));
         }
@@ -427,7 +473,14 @@ public class EstateDisplayFormatter {
                         .append(Component.literal(parcel.getId().toString()).withStyle(ChatFormatting.WHITE))
                         .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
 
-                String indent = isLast ? SPACE : VERTICAL;
+                String indent = VERTICAL; //isLast ? SPACE : VERTICAL;
+
+                if (estate.isRelinquished()) {
+                    lines.add(Component.literal(indent)
+                            .append(Component.literal(LangUtil.INDENT4))
+                            .append(Component.literal("-RELINQUISHED-").withStyle(ChatFormatting.RED)));
+                }
+
                 lines.add(Component.literal(indent)
                         .append(Component.literal( "Min Pos: ").withStyle(ChatFormatting.GRAY))
                         .append(
@@ -450,15 +503,59 @@ public class EstateDisplayFormatter {
                 }
             }
         }
+        lines.add(newline());
 
-        // nation-specific info
+        // ===========
+        // tenant estates info
+        // ===========
+        if (estate.isNation()) {
+            // TENANT ESTATES
+            Set<Estate> nationalizedEstates = ParcelRegistry.findAllByNationEstateId(estate.getId()).stream()
+                    .map(parcel -> ((NationalizedParcel)parcel).getEstate())
+                    .collect(Collectors.toSet());
+
+            lines.add(Component.literal("▼ Tenant Estates (" + nationalizedEstates.size() + "):").withStyle(BOLD_AQUA));
+
+            if (nationalizedEstates.isEmpty()) {
+                lines.add(Component.literal(LangUtil.INDENT2)
+                        .append(Component.literal("No tenant estates").withStyle(ChatFormatting.GRAY)));
+            } else {
+                Iterator<Estate> iterator = nationalizedEstates.iterator();
+                while (iterator.hasNext()) {
+                    Estate tenantEstate = iterator.next();
+                    boolean isLast = iterator.hasNext();
+                    String branch = isLast ? LAST_BRANCH : BRANCH;
+                    // attempt to the get owner name
+                    String ownerName = PlayerRegistry.getPlayerName(level, estate.getOwnerId()).orElseGet(() -> tenantEstate.getOwnerId().toString());
+
+                    lines.add(Component.literal(branch)
+                            .append(Component.literal(tenantEstate.getName()).withStyle(getEstateColor(tenantEstate), ChatFormatting.BOLD))
+                            .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
+                            .append(Component.literal(tenantEstate.getId().toString()).withStyle(ChatFormatting.WHITE))
+                            .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
+
+                    String indent = VERTICAL; //isLast ? SPACE : VERTICAL;
+                    lines.add(Component.literal(indent)
+                            .append(Component.literal("Owner: ").withStyle(ChatFormatting.GRAY))
+                            .append(Component.literal(ownerName).withStyle(ChatFormatting.WHITE)));
+                    lines.add(Component.literal(indent)
+                            // is relinquished
+                            .append(Component.literal("Relinquished: ").withStyle(ChatFormatting.GRAY))
+                            .append(Component.literal(String.valueOf(tenantEstate.isRelinquished())).withStyle(tenantEstate.isRelinquished() ? ChatFormatting.RED : ChatFormatting.WHITE)));
+                }
+            }
+            lines.add(newline());
+        }
+
+
+//         nation-specific info
 //        if (estate.isNation()) {
 //            lines.add("");
 //            lines.add(ChatFormatting.AQUA + "" + ChatFormatting.BOLD + "Nation Info:");
 //            lines.add(ChatFormatting.GRAY + "Citizens: " + ChatFormatting.WHITE + estate.getCitizenCount());
 //        }
 
-        //nationalized-specific info
+//        nationalized-specific info
 //        if (isCitizen(estate) || isZone(estate)) {
 //            NationalizedParcel nationalizedParcel = ((NationalizedParcel) parcels.iterator().next());
 //            if (nationalizedParcel.getNationEstate().getId() != null) {
@@ -638,12 +735,6 @@ public class EstateDisplayFormatter {
 
         Optional<String> optionalOwnerName = PlayerRegistry.getPlayerName(level, parcel.getEstate().getOwnerId());
 
-        // attempt to the get owner name
-//            String ownerName = PlayerRegistry.getPlayerName(level, parcel.getOwnerId()).orElseGet(() -> parcel.getOwnerId().toString());
-        lines.add(Component.literal(indent)
-                .append(Component.literal("Owner: ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(optionalOwnerName.orElse(parcel.getEstate().getOwnerId().toString())).withStyle(ChatFormatting.WHITE)));
-
         // build clickable name component
         MutableComponent clickableName = Component.literal(parcel.getEstate().getName()).withStyle(color, ChatFormatting.BOLD);
         if (isOps && optionalOwnerName.isPresent()) {
@@ -654,10 +745,24 @@ public class EstateDisplayFormatter {
 
         lines.add(Component.literal(indent)
                 .append(Component.literal("Estate: ").withStyle(ChatFormatting.GRAY))
-                .append(clickableName.withStyle(ChatFormatting.WHITE))
+                .append(clickableName)
                 .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(parcel.getEstate().getId().toString()).withStyle(ChatFormatting.WHITE))
                 .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
+
+
+        if (parcel.getEstate().isRelinquished()) {
+            lines.add(Component.literal(indent).withStyle(ChatFormatting.WHITE)
+                    .append(Component.literal(LangUtil.INDENT4))
+                    .append(Component.literal("-RELINQUISHED-").withStyle(ChatFormatting.RED)));
+        }
+
+        // attempt to the get owner name
+//            String ownerName = PlayerRegistry.getPlayerName(level, parcel.getOwnerId()).orElseGet(() -> parcel.getOwnerId().toString());
+        lines.add(Component.literal(indent)
+                .append(Component.literal("Owner: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(optionalOwnerName.orElse(parcel.getEstate().getOwnerId().toString())).withStyle(ChatFormatting.WHITE)));
+
 
         lines.add(Component.literal(indent)
                 .append(Component.literal( "Min Pos: ").withStyle(ChatFormatting.GRAY))
@@ -728,12 +833,12 @@ public class EstateDisplayFormatter {
         ChatFormatting typeColor = getEstateColor(estate);
 
         // Player Whitelist Section
-        lines.add(Component.literal("▼ PLAYER WHITELIST").withStyle(BOLD_AQUA ));
+        lines.add(Component.literal("▼ FRIENDS WHITELIST").withStyle(BOLD_AQUA ));
         Set<UUID> players = estate.getPlayerWhitelist();
         if (!players.isEmpty()) {
             lines.add(Component.literal(LangUtil.INDENT2 + "Total: ").withStyle(ChatFormatting.GRAY)
                     .append(Component.literal(String.valueOf(players.size())).withStyle(ChatFormatting.WHITE))
-                    .append(Component.literal( "players").withStyle(ChatFormatting.GRAY)));
+                    .append(Component.literal( "friends").withStyle(ChatFormatting.GRAY)));
             lines.addAll(formatEstateDetailsPlayerWhitelist(level, players, LangUtil.INDENT2));
         }
         lines.add(newline());
@@ -782,7 +887,7 @@ public class EstateDisplayFormatter {
         List<String> sortedPlayers = new ArrayList<>(playerNames);
         sortedPlayers.sort(String.CASE_INSENSITIVE_ORDER);
 
-        // One player per line
+        // one player per line
         for (int i = 0; i < sortedPlayers.size(); i++) {
             boolean isLast = i == sortedPlayers.size() - 1;
             String branch = isLast ? LAST_BRANCH : BRANCH;

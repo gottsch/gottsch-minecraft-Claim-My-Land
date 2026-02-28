@@ -27,6 +27,7 @@ import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -62,6 +63,13 @@ public interface Parcel {
                 }
             }
     };
+
+    ParcelType getType();
+    void setType(ParcelType type);
+    default boolean isPlayer() { return getType() == ParcelType.PLAYER; }
+    default boolean isCitizen() { return getType() == ParcelType.CITIZEN; }
+    default boolean isZone() { return getType() == ParcelType.ZONE; }
+    default boolean isNation() { return getType() == ParcelType.NATION; }
 
     void save(CompoundTag parcelTag);
     Parcel load(CompoundTag tag);
@@ -101,6 +109,8 @@ public interface Parcel {
     String defaultName(Player player);
 
     String defaultName(UUID ownerId);
+
+    String defaultName(ServerLevel level, UUID ownerId);
 
     /**
      * determine if this parcel grants access to the given parcel
@@ -341,10 +351,6 @@ public interface Parcel {
     void setItemWhitelist(List<String> itemWhitelist);
     @Deprecated(forRemoval = true, since = "2.0")
     void setItemWhitelist(Set<String> whitelist);
-
-    ParcelType getType();
-
-    void setType(ParcelType type);
 
     @Deprecated(forRemoval = true, since = "2.0")
     Long getFoundedTime();

@@ -26,10 +26,7 @@ import com.google.gson.Gson;
 import com.mojang.authlib.minecraft.client.ObjectMapper;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
-import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
-import mod.gottsch.forge.claimmyland.core.estate.NationEstateContext;
+import mod.gottsch.forge.claimmyland.core.estate.*;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -44,6 +41,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -394,8 +392,14 @@ public class ParcelRegistry {
         }
     }
 
+    /*
+     * determines if parcel name exists within an estate.
+     */
     public static boolean hasName(Parcel parcel, String newName) {
-        Set<Parcel> parcels = parcel.getEstate().findParcels();
+        return hasName(parcel.getEstate().findParcels(), parcel, newName);
+    }
+
+    public static boolean hasName(Set<Parcel> parcels, Parcel parcel, String newName) {
         return parcels.stream()
                 .anyMatch(p -> p.getName().equalsIgnoreCase(newName));
     }
@@ -416,37 +420,19 @@ public class ParcelRegistry {
         try {
             // add to parcels by coords
             registerCoords(parcel);
-//        PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
 
-//        if (ObjectUtils.isNotEmpty(parcel.getOwnerId())) {
-//            // add to parcels_by_owner
-//            PARCELS_BY_OWNER.computeIfAbsent(parcel.getOwnerId(), k -> new ArrayList<>())
-//                    .add(parcel);
-//        }
             registerOwner(parcel);
-//        if (ObjectUtils.isNotEmpty(parcel.getWhitelist())) {
-//            // add to parcels_by_friends
-//            parcel.getWhitelist().forEach(friend ->
-//                    PARCELS_BY_FRIENDS.computeIfAbsent(friend, k -> new ArrayList<>())
-//                            .add(parcel)
-//            );
-//        }
+
             registerFriends(parcel);
 
             // add to tree
             registerTree(parcel);
-//        IInterval<UUID> interval = TREE.insert(
-//                new CoordsInterval<>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())
-//        );
 
             // add to the buffer tree
             registerBuffer(parcel);
 
             // add to nations map
             registerNation(parcel);
-//        if (parcel.getType() == ParcelType.NATION) {
-//            NATIONS_BY_ID.put(((NationParcel)parcel).getNationId(), parcel);
-//        }
 
             //register estate
             EstateRegistry.register(parcel.getEstate());
@@ -708,6 +694,7 @@ public class ParcelRegistry {
      * @param nationId
      * @return
      */
+    @Deprecated
     public static List<Parcel> findByNationId(UUID nationId) {
         List<Parcel> parcels = new ArrayList<>(1);
         for (Parcel parcel : PARCELS_BY_COORDS.values()) {
@@ -719,6 +706,7 @@ public class ParcelRegistry {
         return parcels;
     }
 
+
     public static List<Parcel> findByNationName(String nationName) {
         return PARCELS_BY_COORDS.values().stream()
                 .filter(p -> (p instanceof NationParcel))
@@ -728,8 +716,10 @@ public class ParcelRegistry {
 
     public static List<Parcel> findChildrenByNationId(UUID nationId) {
         return PARCELS_BY_COORDS.values().stream()
-                .filter(p -> ((p instanceof CitizenParcel || p instanceof ZoneParcel)) && nationId.equals(p.getNationId()))
-                .toList();
+                .filter(p -> ((p instanceof CitizenParcel || p instanceof ZoneParcel)))
+                .map(p -> (NationalizedParcel) p)
+                .filter(nationalizedParcel -> nationalizedParcel.getNationEstate().getId().equals(nationId))
+                .collect(Collectors.toList());
     }
 
     public static Set<Parcel> findAllByEstateId(UUID estateId) {
@@ -1203,6 +1193,28 @@ public class ParcelRegistry {
      */
     public static Optional<Parcel> findByName(String name) {
         return PARCELS_BY_COORDS.values().stream().filter(p -> p.getName().equalsIgnoreCase(name)).findFirst();
+    }
+
+    public static void transferParcelOwnership(ServerLevel level, Parcel parcel, UUID newOwnerUuid) {
+        // unregister parcel
+        ParcelRegistry.unregisterParcel(parcel);
+
+        // create new estate and update parcel
+        // TODO use factory (might be a nation)
+
+        // save old estate
+        Estate oldEstate = parcel.getEstate();
+
+        Estate estate = EstateTypeRegistry.create(parcel.isNation() ? EstateTypeRegistry.NATION_ESTATE_TYPE : EstateTypeRegistry.ESTATE_TYPE);
+        estate.setOwnerId(newOwnerUuid);
+        estate.setName(oldEstate.getName());
+        estate.setParcelType(oldEstate.getParcelType());
+
+        parcel.setEstate(estate);
+        parcel.setOwnerTime(level.getGameTime());
+
+        // re-register parcel
+        ParcelRegistry.register(parcel);
     }
 
     @Deprecated

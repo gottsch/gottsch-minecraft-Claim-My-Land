@@ -71,8 +71,8 @@ public class CitizenTool extends BlockItem {
 
         Optional<Parcel> parentParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
         if (parentParcel.isEmpty()
-                || (parentParcel.get().getType() != ParcelType.NATION
-                && parentParcel.get().getType() != ParcelType.ZONE)) {
+                || (!parentParcel.get().isNation()
+                && !parentParcel.get().isZone())) {
             context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("citizen_placement.not_valid_parent")).withStyle(ChatFormatting.RED));
             return InteractionResult.FAIL;
         }
@@ -106,6 +106,7 @@ public class CitizenTool extends BlockItem {
                 context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("parcel.add.failure_too_small")).withStyle(ChatFormatting.RED));
             }
 
+            // TODO fix - see ZoningTool
             ParcelTypeRegistry.create(ParcelType.CITIZEN, parentParcel.get().getNationId())
                     .ifPresentOrElse(p -> {
                                 p.setOwnerId(parentParcel.get().getOwnerId());

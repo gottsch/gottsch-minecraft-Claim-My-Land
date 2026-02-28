@@ -32,7 +32,7 @@ public interface NationEstate extends Estate {
     public static final String ACCESS_TYPE_KEY = "accessType";
     public static final String PLAYER_BLACKLIST_KEY = "playerBlacklist";
 
-    Set<Parcel> findConstituentParcels();
+    Set<Parcel> findTenantParcels();
 
     NationAccessType getAccessType();
     void setAccessType(NationAccessType type);

@@ -30,6 +30,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,6 +55,31 @@ public class NationEstateContext extends AbstractEstate implements NationEstate 
     @Override
     public ResourceLocation getType() {
         return EstateTypeRegistry.ESTATE_TYPE;
+    }
+
+    @Override
+    public boolean canJoin(Estate estate) {
+        if (!super.canJoin(estate)) {
+            return false;
+        }
+
+        if (getId().equals(estate.getId()) || isRelinquished() || estate.isRelinquished()) {
+            return false;
+        }
+
+        if (!getOwnerId().equals(estate.getOwnerId())) {
+            return false;
+        }
+
+        Optional<Parcel> p1 = findParcels().stream().findFirst();
+        if (p1.isEmpty()) {
+            return false;
+        }
+
+        return estate.findParcels().stream()
+                .findFirst()
+                .map(p2 -> p1.get().getType() == p2.getType())
+                .orElse(false);
     }
 
     @Override
@@ -101,14 +127,9 @@ public class NationEstateContext extends AbstractEstate implements NationEstate 
      * finds all the citizen & zone parcels from all the nations parcels in the estate.
      */
     @Override
-    public Set<Parcel> findConstituentParcels() {
+    public Set<Parcel> findTenantParcels() {
         // fetch all parcels by estate id
         return ParcelRegistry.findAllByNationEstateId(this.getId());
-    }
-
-    @Override
-    public boolean canJoin(Estate estate) {
-        return false;
     }
 
     @Override

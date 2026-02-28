@@ -2,9 +2,12 @@ package mod.gottsch.forge.claimmyland.core.registry;
 
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
+import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author by Mark Gottschling on 1/28/2026
@@ -52,14 +55,6 @@ public class EstateRegistry {
         });
     }
 
-    public static Set<Estate> getByOwner(UUID ownerId) {
-        return ESTATES_BY_OWNER.getOrDefault(ownerId, Collections.emptySet());
-    }
-
-    public static Optional<Estate> get(UUID claimId) {
-        return Optional.ofNullable(ESTATES_BY_ID.get(claimId));
-    }
-
     public static void unregister(Estate estate) {
         // remove estate from all registries
         Set<Estate> estates = ESTATES_BY_OWNER.get(estate.getOwnerId());
@@ -77,10 +72,23 @@ public class EstateRegistry {
         ESTATES_BY_ID.remove(estate.getId());
     }
 
+    public static Optional<Estate> get(UUID estateId) {
+        return Optional.ofNullable(ESTATES_BY_ID.get(estateId));
+    }
+
+    /** returns a cloned set ie changes to the set will not update the registry. */
+    public static Set<Estate> getAll() {
+        return new HashSet<>(ESTATES_BY_ID.values());
+    }
+
+    public static Set<Estate> findByOwner(UUID ownerId) {
+        return ESTATES_BY_OWNER.getOrDefault(ownerId, Collections.emptySet());
+    }
+
     /**
      * retrieves a set of all estates by friend
      */
-    public static Set<Estate> getByFriend(UUID id) {
+    public static Set<Estate> findByFriend(UUID id) {
         Set<Estate> estates = ESTATES_BY_FRIENDS.get(id);
         return estates == null ? Collections.emptySet() : estates;
     }
@@ -115,9 +123,14 @@ public class EstateRegistry {
         return newEstate;
     }
 
-    public static boolean hasName(String newName) {
+    public static boolean hasName(String name) {
         return ESTATES_BY_ID.values().stream()
-                .anyMatch(estate -> estate.getName().equalsIgnoreCase(newName));
+                .anyMatch(estate -> estate.getName().equalsIgnoreCase(name));
     }
 
+    public static Optional<Estate> findByName(String nationName) {
+        return ESTATES_BY_ID.values().stream()
+                .filter(estate -> estate.getName().equalsIgnoreCase(nationName))
+                .findFirst();
+    }
 }

@@ -107,7 +107,7 @@ public class CitizenDeed extends Deed {
                 // update block entity with properties of that of the existing citizen parcel
                 blockEntity.setParcelId(registryParcel.get().getId());
 //                blockEntity.setNationId(((CitizenParcel) registryParcel.get()).getNationId());
-                blockEntity.setNationId(citizenParcel.getNationEstate().getId());
+//                blockEntity.setNationId(citizenParcel.getNationEstate().getId());
                 blockEntity.setNationEstateId(citizenParcel.getNationEstate().getId());
                 blockEntity.setRelativeBox(registryParcel.get().getSize());
                 blockEntity.setCoords(registryParcel.get().getCoords());

@@ -59,24 +59,5 @@ public class EstateContext extends AbstractEstate {
 //                && p1.getType() == p2.getType()
 //                && !isRelinquished() && !estate.isRelinquished();
 //    }
-    @Override
-    public boolean canJoin(Estate estate) {
-        if (getId().equals(estate.getId()) || isRelinquished() || estate.isRelinquished()) {
-            return false;
-        }
 
-        if (!getOwnerId().equals(estate.getOwnerId())) {
-            return false;
-        }
-
-        Optional<Parcel> p1 = findParcels().stream().findFirst();
-        if (p1.isEmpty()) {
-            return false;
-        }
-
-        return estate.findParcels().stream()
-                .findFirst()
-                .map(p2 -> p1.get().getType() == p2.getType())
-                .orElse(false);
-    }
 }

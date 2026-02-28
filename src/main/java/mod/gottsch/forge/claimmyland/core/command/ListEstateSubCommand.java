@@ -88,7 +88,7 @@ public class ListEstateSubCommand implements SubCommand {
     private static int list(CommandSourceStack source, UUID ownerUuid, boolean isOps) {
         List<Component> messages = new ArrayList<>();
 
-        EstateDisplayFormatter.formatEstateList(source.getLevel(), messages, EstateRegistry.getByOwner(ownerUuid), isOps);
+        EstateDisplayFormatter.formatEstateList(source.getLevel(), messages, EstateRegistry.findByOwner(ownerUuid), isOps);
 
         messages.forEach(component -> {
             source.sendSuccess(() -> component, false);

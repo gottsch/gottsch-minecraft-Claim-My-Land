@@ -61,23 +61,16 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         super();
         setEstate(EstateTypeRegistry.create(EstateTypeRegistry.NATION_ESTATE_TYPE));
         setType(ParcelType.NATION);
-//        setBorderType(NationBorderType.CLOSED);
         getEstate().setParcelType(getType());
-    }
-
-    @Deprecated
-    public NationParcel(UUID nationId) {
-        this();
-        setNationId(nationId);
     }
 
     public static NationParcel create() {
         return new NationParcel();
     }
 
-    public static NationParcel create(UUID nationId) {
-        return new NationParcel(nationId);
-    }
+//    public static NationParcel create(UUID nationId) {
+//        return new NationParcel(nationId);
+//    }
 
     @Override
     public String randomName() {
@@ -86,9 +79,10 @@ public class NationParcel extends AbstractParcel implements INationParcel {
 
     @Override
     public boolean grantsAccess(Parcel virtualParcel) {
-        return virtualParcel.getType() == ParcelType.NATION
-                && this.getOwnerId() == null
-                && ModUtil.getVolume(virtualParcel.getBox()) >= ModUtil.getVolume(this.getBox());
+//        return virtualParcel.isNation()
+//                && this.getOwnerId() == null
+//                && ModUtil.getVolume(virtualParcel.getBox()) >= ModUtil.getVolume(this.getBox());
+        return false;
     }
 
     /**
@@ -98,8 +92,7 @@ public class NationParcel extends AbstractParcel implements INationParcel {
      */
     @Override
     public boolean hasAccessTo(Parcel parcel) {
-        return parcel.getType() == ParcelType.NATION;
-//        return false;
+        return parcel.isNation();
     }
 
     /**
@@ -111,16 +104,6 @@ public class NationParcel extends AbstractParcel implements INationParcel {
     public boolean hasAccessTo(FoundationStoneBlockEntity blockEntity) {
         return getDeedId().equals(blockEntity.getDeedId());
     }
-
-    /*
-     * cannot use deed to place foundation stone that is embedded in another parcel
-     */
-    // Not true. if the nation is abandoned can place a nation foundation stone
-//    @Override
-//    public boolean handleEmbeddedPlacementRules(Parcel registryParcel) {
-//        // TODO have to override to allow
-//        return false;
-//    }
 
     @Override
     public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
@@ -144,51 +127,6 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         }
         return result;
     }
-
-    // TODO update
-//    @Override
-//    public void save(CompoundTag tag) {
-//        super.save(tag);
-//        tag.putString("borderType", getBorderType().getSerializedName());
-//
-//        // TODO refactor this out to the Nation in the NationRegistry
-//        if (!getBlacklist().isEmpty()) {
-//            ListTag blacklist = new ListTag();
-//            getBlacklist().forEach(b -> {
-//                StringTag blackTag = StringTag.valueOf(b.toString());
-//                blacklist.add(blackTag);
-//            });
-//            tag.put("blacklist", blacklist);
-//        }
-//
-//        ClaimMyLand.LOGGER.debug("saved parcel -> {}", this);
-//    }
-
-    // TODO update
-//    @Override
-//    public Parcel load(CompoundTag tag) {
-//        super.load(tag);
-//
-//        // TODO refactor out to the Nation
-//        if (tag.contains("borderType")) {
-//            try {
-//                setBorderType(NationBorderType.valueOf(tag.getString("borderType")));
-//            } catch(Exception e) {
-//                ClaimMyLand.LOGGER.warn("unable to parse and load borderType - using default CLOSED");
-//                setBorderType(NationBorderType.CLOSED);
-//            }
-//        }
-//
-//        if (tag.contains("blacklist")) {
-//            ListTag list = tag.getList("blacklist", Tag.TAG_STRING);
-//            list.forEach(element -> {
-//                StringTag uuidTag = ((StringTag)element);
-//                getBlacklist().add(UUID.fromString(uuidTag.getAsString()));
-//            });
-//        }
-//
-//        return this;
-//    }
 
     // TODO these need to use the level min and max build heights
     @Override

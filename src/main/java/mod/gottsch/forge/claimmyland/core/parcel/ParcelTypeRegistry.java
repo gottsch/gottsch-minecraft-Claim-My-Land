@@ -20,6 +20,8 @@
 package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.HashMap;
@@ -73,6 +75,8 @@ public class ParcelTypeRegistry {
         register(ParcelType.PLAYER, args -> {
             if (args.length == 0) {
                 return PlayerParcel.create();
+            } else if (args.length == 1 && args[0] instanceof Parcel) {
+                return PlayerParcel.create((Parcel) args[0]);
             }
             throw new IllegalArgumentException("invalid arguments for PlayerParcel.");
         });
@@ -80,9 +84,9 @@ public class ParcelTypeRegistry {
             if(args.length == 0) {
                 return CitizenParcel.create();
             }
-            else if (args.length == 1 && args[0] instanceof UUID) {
-                return CitizenParcel.create((UUID) args[0]);
-            }
+//            else if (args.length == 1 && args[0] instanceof UUID) {
+//                return CitizenParcel.create((UUID) args[0]);
+//            }
             throw new IllegalArgumentException("invalid arguments for CitizenParcel.");
         });
         register(ParcelType.NATION, args -> {
@@ -95,11 +99,14 @@ public class ParcelTypeRegistry {
             if (args.length == 0) {
                 return ZoneParcel.create();
             }
-            else if (args.length == 1 && args[0] instanceof UUID) {
-                return ZoneParcel.create((UUID) args[0]);
-            }
-            else if (args.length == 1 && args[0] instanceof NationParcel) {
+//            else if (args.length == 1 && args[0] instanceof UUID) {
+//                return ZoneParcel.create((UUID) args[0]);
+//            }
+            else if (args.length == 1 && args[0] instanceof NationParcel) { // deprecated
                 return ZoneParcel.create((NationParcel) args[0]);
+            }
+            else if (args.length == 1 && args[0] instanceof NationEstate) {
+                return ZoneParcel.create((NationEstate) args[0]);
             }
             throw new IllegalArgumentException("invalid arguments for ZoneParcel.");
         });

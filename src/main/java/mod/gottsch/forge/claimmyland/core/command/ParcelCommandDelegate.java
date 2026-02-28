@@ -80,6 +80,7 @@ public class ParcelCommandDelegate {
      * @param ownerName
      * @return
      */
+    @Deprecated
     public static int listParcelsByOwner(CommandSourceStack source, String ownerName) {
 //        ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(ownerName);
         Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source, ownerName);
@@ -91,10 +92,12 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
+    @Deprecated
     public static int listParcelsByOwner(CommandSourceStack source, ServerPlayer player) {
         return listParcelsByOwner(source, player.getName().getString(), player.getUUID());
     }
 
+    @Deprecated
     public static int listParcelsByOwner(CommandSourceStack source, String playerName, UUID playerUuid) {
         /// / TEST /////
         // Configure the HUD
@@ -130,8 +133,8 @@ public class ParcelCommandDelegate {
 
 //        formatParcelList(messages, ParcelRegistry.findByOwner(playerUuid),
 //                ParcelRegistry.findByFriend(playerUuid));
-        formatParcelList(messages, EstateRegistry.getByOwner(playerUuid),
-                EstateRegistry.getByFriend(playerUuid));
+        formatParcelList(messages, EstateRegistry.findByOwner(playerUuid),
+                EstateRegistry.findByFriend(playerUuid));
 
         messages.forEach(component -> {
             source.sendSuccess(() -> component, false);
@@ -806,6 +809,7 @@ public class ParcelCommandDelegate {
         return 1;
     }
 
+    @Deprecated
     private static Optional<Parcel> findParcelByName(UUID ownerUuid, String parcelName) {
         List<Parcel> parcels = ParcelRegistry.findByOwner(ownerUuid);
         return parcels.stream()

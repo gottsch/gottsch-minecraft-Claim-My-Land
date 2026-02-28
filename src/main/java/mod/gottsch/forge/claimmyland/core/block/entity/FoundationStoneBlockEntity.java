@@ -93,7 +93,7 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
             tag.putUUID(NATION_ID, getNationId());
         }
         if (ObjectUtils.isNotEmpty(getNationEstateId())) {
-            tag.putUUID(NATION_ESTATE_ID, getNationId());
+            tag.putUUID(NATION_ESTATE_ID, getNationEstateId());
         }
     }
 

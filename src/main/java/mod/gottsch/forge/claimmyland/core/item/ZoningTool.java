@@ -70,7 +70,7 @@ public class ZoningTool extends BlockItem {
         }
 
         Optional<Parcel> nationParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
-        if (nationParcel.isEmpty() || nationParcel.get().getType() != ParcelType.NATION) {
+        if (nationParcel.isEmpty() || !nationParcel.get().isNation()) {
             context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("zone_placement.not_nation")).withStyle(ChatFormatting.RED));
             return InteractionResult.FAIL;
         }

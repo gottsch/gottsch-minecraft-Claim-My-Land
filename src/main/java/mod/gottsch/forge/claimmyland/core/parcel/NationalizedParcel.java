@@ -19,13 +19,56 @@
 
 package mod.gottsch.forge.claimmyland.core.parcel;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
+import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
+import net.minecraft.nbt.CompoundTag;
+
+import java.util.Optional;
 
 /**
  * @author by Mark Gottschling on 2/9/2026
  */
 public interface NationalizedParcel extends Parcel {
-    boolean isSameNation(NationalizedParcel citizenParcel);
+    public static final String NATION_ESTATE_KEY = "nation_estate";
+//    boolean isSameNation(NationalizedParcel citizenParcel);
+
+    default public boolean isSameNation(NationalizedParcel citizenParcel) {
+        NationEstate myNation = getNationEstate();
+        NationEstate theirNation = citizenParcel.getNationEstate();
+        return myNation != null && theirNation != null
+                && myNation.getId().equals(theirNation.getId());
+    }
+
+    default NationAccessType getAccessType() {
+        return Optional.ofNullable(getNationEstate())
+                .map(NationEstate::getAccessType)
+                .orElse(NationAccessType.CLOSED);
+    }
+
+    default void saveNationEstate(CompoundTag tag) {
+        if (getNationEstate() != null) {
+            tag.put(NATION_ESTATE_KEY, getNationEstate().save(new CompoundTag()));
+        }
+    }
+
+    default boolean loadNationEstate(CompoundTag tag) {
+        if (!tag.contains(NATION_ESTATE_KEY)) {
+            ClaimMyLand.LOGGER.warn("unable to load parcel - missing nation estate data.");
+            return false;
+        }
+
+        CompoundTag nationEstateTag = tag.getCompound(NATION_ESTATE_KEY);
+        EstateRegistry.get(nationEstateTag.getUUID(Estate.ID_KEY))
+                .ifPresentOrElse(
+                        estate -> setNationEstate((NationEstate) estate),
+                        () -> {
+                            getNationEstate().load(nationEstateTag);
+                            EstateRegistry.register(getNationEstate());
+                        });
+        return true;
+    }
 
     NationEstate getNationEstate();
 

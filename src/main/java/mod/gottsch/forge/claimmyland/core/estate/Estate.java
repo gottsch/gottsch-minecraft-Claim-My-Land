@@ -36,6 +36,17 @@ public interface Estate {
                 && this.getId().equals(parcel.getEstate().getId());    // the estate == parcel's estate
     }
 
+    // TODO add other type checks
+    default public boolean isNation() {
+        return this.getParcelType() == ParcelType.NATION;
+    }
+    default public boolean isCitizen() {
+        return this.getParcelType() == ParcelType.CITIZEN;
+    }
+    default public boolean isZone() {
+        return this.getParcelType() == ParcelType.ZONE;
+    }
+
     ResourceLocation getType();
     void setType(ResourceLocation resourceLocation);
 
@@ -49,6 +60,8 @@ public interface Estate {
     String defaultName(Player player);
 
     String defaultName(UUID ownerId);
+
+    String defaultName(Estate estate);
 
     CompoundTag save(CompoundTag tag);
 

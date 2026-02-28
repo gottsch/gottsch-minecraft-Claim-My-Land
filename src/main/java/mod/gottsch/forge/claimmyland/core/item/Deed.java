@@ -330,6 +330,7 @@ public abstract class Deed extends Item {
 
             BlockPlaceContext placeContext = new BlockPlaceContext(context);
             ICoords placeTargetCoords = Coords.of(placeContext.getClickedPos());
+            // TODO need some feedback to player that !canPlaceAt() like "Player parcel cannot be placed in CLOSED Nation parcel"
             return parcel.canPlaceAt(context.getLevel(), placeTargetCoords)
                     && this.placeBlock(placeContext, foundationStone.defaultBlockState())
                     ? InteractionResult.SUCCESS : InteractionResult.FAIL;

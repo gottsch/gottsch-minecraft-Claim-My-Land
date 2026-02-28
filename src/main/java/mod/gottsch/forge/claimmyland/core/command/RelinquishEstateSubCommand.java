@@ -25,6 +25,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
+import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
@@ -119,8 +120,15 @@ public class RelinquishEstateSubCommand implements SubCommand {
                 // unregister parcel
                 ParcelRegistry.unregisterParcel(parcel);
 
+                // save old estate
+                Estate oldEstate = parcel.getEstate();
+
                 // create new estate (clears all whitelists)
-                Estate newEstate = new EstateContext(estate.getOwnerId());
+                Estate newEstate = EstateTypeRegistry.create(estate.getType());
+                newEstate.setOwnerId(estate.getOwnerId());
+                newEstate.setName(oldEstate.getName());
+                newEstate.setParcelType(oldEstate.getParcelType());
+
                 // mark as relinquished
                 newEstate.setRelinquished(true);
                 // update parcel with estate
@@ -132,13 +140,13 @@ public class RelinquishEstateSubCommand implements SubCommand {
                 // set the abandon time
                 parcel.setRelinquishedTime(source.getLevel().getGameTime());
             } catch (Exception e) {
-                ClaimMyLand.LOGGER.error("unable to abandon estate -> {}", parcel.getId());
+                ClaimMyLand.LOGGER.error("unable to relinquish estate -> {}", parcel.getId());
                 // TODO should this message be sent as multiple parcels are being abandoned ??
-                failure(source, "estate.abandon.failure");
+                failure(source, "estate.relinquish.failure");
             }
         });
 
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.abandon.success")).withStyle(ChatFormatting.GREEN), false);
+        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.success")).withStyle(ChatFormatting.GREEN), false);
         CommandHelper.save(source.getLevel());
 
         return 1;
