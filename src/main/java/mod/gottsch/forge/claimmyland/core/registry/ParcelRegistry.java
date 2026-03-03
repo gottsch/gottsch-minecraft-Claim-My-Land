@@ -1172,6 +1172,21 @@ public class ParcelRegistry {
         return Optional.ofNullable(parcel);
     }
 
+    /**
+     * returns the most significant (largest area) parcel at coords,
+     * optionally filtered by type. used to find the containing nation/zone parcel.
+     */
+    public static Optional<Parcel> findMostSignificant(ICoords coords) {
+        return findMostSignificant(ParcelRegistry.find(coords));
+    }
+
+    public static Optional<Parcel> findMostSignificant(List<Parcel> parcels, ParcelType... types) {
+        Set<ParcelType> typeSet = Set.of(types);
+        return parcels.stream()
+                .filter(p -> typeSet.isEmpty() || typeSet.contains(p.getType()))
+                .max(Comparator.comparingLong(Parcel::getArea));
+    }
+
     public static List<UUID> getOwnerIds() {
         return PARCELS_BY_OWNER.keySet().stream().toList();
     }

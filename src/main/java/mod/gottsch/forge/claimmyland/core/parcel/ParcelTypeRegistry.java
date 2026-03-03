@@ -84,9 +84,12 @@ public class ParcelTypeRegistry {
             if(args.length == 0) {
                 return CitizenParcel.create();
             }
-//            else if (args.length == 1 && args[0] instanceof UUID) {
-//                return CitizenParcel.create((UUID) args[0]);
-//            }
+            else if (args.length == 1 && args[0] instanceof NationParcel) { // deprecated
+                return CitizenParcel.create((NationParcel) args[0]);
+            }
+            else if (args.length == 1 && args[0] instanceof NationEstate) {
+                return CitizenParcel.create((NationEstate) args[0]);
+            }
             throw new IllegalArgumentException("invalid arguments for CitizenParcel.");
         });
         register(ParcelType.NATION, args -> {

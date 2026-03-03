@@ -162,7 +162,6 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
                 .addOptionalTag(new ResourceLocation(MCWF, "triple_drawer"))
                 .addOptionalTag(new ResourceLocation(MCWF, "wardrobe"))
         ;
-        // TODO add some more common tags
     }
 
 }

@@ -91,7 +91,6 @@ public class ModUtil {
       return absoluteSize.getX() * absoluteSize.getZ() * absoluteSize.getY();
     }
 
-    // TODO add to Box in GottschCore
     public static boolean intersects(Box box1, Box box2) {
         return toAABB(box1).intersects(toAABB(box2));
     }
@@ -111,16 +110,11 @@ public class ModUtil {
                 && box1.getMaxCoords().getZ() >= box2.getMinCoords().getZ();
     }
 
-    // TODO add to Box in GottschCore
     public static boolean contains(Box box1, Box box2) {
-//        AABB aabb = toAABB(box1);
         return contains(box1, box2.getMinCoords())
                 && contains(box1, box2.getMaxCoords());
-//        return aabb.contains(box2.getMinCoords().toVec3())
-//                && aabb.contains(box2.getMaxCoords().toVec3());
     }
 
-    // TODO move to GottschCore
     public static boolean contains(Box box, ICoords coords) {
         return coords.getX() >= box.getMinCoords().getX() && coords.getX() <= box.getMaxCoords().getX()
                 && coords.getY() >= box.getMinCoords().getY() && coords.getY() <= box.getMaxCoords().getY()
@@ -136,7 +130,6 @@ public class ModUtil {
 //    }
     /////////////////////
 
-    // TODO add to Box in GottschCore
     public static AABB toAABB(Box box) {
         return new AABB(box.getMinCoords().toPos(), box.getMaxCoords().toPos());
     }

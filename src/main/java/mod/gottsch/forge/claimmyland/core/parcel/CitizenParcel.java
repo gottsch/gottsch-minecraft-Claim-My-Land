@@ -61,7 +61,7 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
 
         Estate estate = getEstate();
         estate.setParcelType(getType());
-        estate.setName(estate.defaultName(getOwnerId()));
+        estate.setName(estate.defaultName(nationEstate));
         estate.setBlockWhitelist(nationEstate.getBlockWhitelist());
         estate.setBlockTagWhitelist(nationEstate.getBlockTagWhitelist());
         estate.setItemWhitelist(nationEstate.getItemWhitelist());
@@ -80,6 +80,10 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
 
     public static CitizenParcel create(NationEstate nationEstate) {
         return new CitizenParcel(nationEstate);
+    }
+
+    public static CitizenParcel create(NationParcel nation) {
+        return create((NationEstate) nation.getEstate());
     }
 
     /**
@@ -148,12 +152,36 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
         }
 
         // update nation estate - inherit from parent parcel
-        setNationEstate(((NationalizedParcel) parentParcel).getNationEstate());
+        if (parentParcel.isZone()) {
+            setNationEstate(((NationalizedParcel) parentParcel).getNationEstate());
+        } else {
+            setNationEstate((NationEstate) parentParcel.getEstate());
+        }
 
         // add to the registry
         ParcelRegistry.register(this);
         CommandHelper.save(level);
         return ClaimResult.SUCCESS;
+    }
+
+    @Override
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+        ClaimResult result = ClaimResult.FAILURE;
+
+        // claiming an existing and relinquished citizen parcel
+        if (isRelinquishedCitizenClaim(parentParcel, parcelBox)) {
+            return claimRelinquishedCitizenParcel(level, parentParcel, parcelBox);
+        }
+
+        // placing a parcel within a zone
+        if (isValidParentParcel(parentParcel)) {
+            return claimWithinZone(level, parentParcel, parcelBox);
+        }
+        return ClaimResult.FAILURE;
+    }
+
+    protected boolean isValidParentParcel(Parcel parcel) {
+        return parcel.isZone() || parcel.isNation();
     }
 
     // NOTE due to Java's singular inheritance, Citizen and Zone parcels have to define

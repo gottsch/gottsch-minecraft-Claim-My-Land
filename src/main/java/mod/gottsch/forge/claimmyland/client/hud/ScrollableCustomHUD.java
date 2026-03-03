@@ -37,7 +37,8 @@ import java.util.List;
 /**
  * @author by Mark Gottschling on 2/17/2026
  */
-@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT)
+@Deprecated
+//@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT)
 public class ScrollableCustomHUD {
 
     private static final List<String> allLines = new ArrayList<>();
@@ -78,7 +79,7 @@ public class ScrollableCustomHUD {
 //        return customFont;
 //    }
 
-    @SubscribeEvent
+//    @SubscribeEvent
     public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
         if (event.getOverlay().id().toString().equals("minecraft:hotbar")) {
             if (isVisible && !allLines.isEmpty()) {
@@ -93,7 +94,7 @@ public class ScrollableCustomHUD {
         }
     }
 
-    @SubscribeEvent
+//    @SubscribeEvent
     public static void onMouseScroll(InputEvent.MouseScrollingEvent event) {
         if (!isVisible || allLines.isEmpty()) {
             return;

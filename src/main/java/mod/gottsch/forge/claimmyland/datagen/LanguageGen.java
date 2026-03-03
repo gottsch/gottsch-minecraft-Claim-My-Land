@@ -111,6 +111,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.join.same_estate.failure"), "Cannot join estate to itself.");
         add(LangUtil.chat("estate.join.invalid.failure"), "Cannot join estates:");
         add(LangUtil.chat("estate.join.invalid.reasons"), "Same estate~Not the same type.~One or more estates are relinquished.~Not the same owner.");
+        add(LangUtil.chat("estate.join.different.zone.failure"), "Cannot join estates that have different parent zone/nations.");
 
         add(LangUtil.chat("estate.split.success"), "Estate has been split.");
         add(LangUtil.chat("estate.split.failure"), "Unable to split estate.");
@@ -267,6 +268,7 @@ public class LanguageGen extends LanguageProvider {
         // zone placement
         add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or it is claimed.");
         add(LangUtil.chat("zone_placement.not_owner"), "You are not the owner of this nation.");
+        add(LangUtil.chat("zone_placement.not_same_nation"), "That block is not within the same nation parcel as the start block.");
 
 
         // info
@@ -312,15 +314,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.tooltip("estate.details"), "Click to view estate details");
 
         // parcel
-        // TODO this is for an admin stone or info stone - need a good name
+//        add(LangUtil.tooltip("parcel.howto.remove"), "Place cornerstone block inside parcel boundaries.\\nUse cornerstone block to open GUI.\nClick Remove button.");
 
-        add(LangUtil.tooltip("parcel.howto.remove"), "Place cornerstone block inside parcel boundaries.\\nUse cornerstone block to open GUI.\nClick Remove button.");
-
-//        {
-//            "key.yourmodid.toggle_hud": "Toggle Land Claim HUD",
-//                "key.yourmodid.scroll_hud_up": "Scroll HUD Up",
-//                "key.yourmodid.scroll_hud_down": "Scroll HUD Down",
-//                "key.categories.yourmodid": "Your Mod Name"
-//        }
     }
 }

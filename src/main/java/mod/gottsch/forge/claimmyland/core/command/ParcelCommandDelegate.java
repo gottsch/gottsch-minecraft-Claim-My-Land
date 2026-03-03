@@ -26,6 +26,7 @@ import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntit
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.NationDeed;
@@ -607,7 +608,7 @@ public class ParcelCommandDelegate {
                     if (p.getType() == ParcelType.NATION) {
                         messages.add(
                                 Component.translatable(LangUtil.chat("parcel.border"),
-                                        Component.literal(((NationParcel)p).getBorderType().getSerializedName().toLowerCase()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY)
+                                        Component.literal(((NationEstate)p.getEstate()).getAccessType().getSerializedName().toLowerCase()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY)
                         );
                     }
                     // add newline

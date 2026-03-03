@@ -32,14 +32,15 @@ import net.minecraftforge.fml.common.Mod;
 /**
  * @author by Mark Gottschling on 2/17/2026
  */
-@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT)
+@Deprecated
+//@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT)
 public class KeyInputHandler {
 
     private static boolean wasTogglePressed = false;
     private static boolean wasScrollUpPressed = false;
     private static boolean wasScrollDownPressed = false;
 
-    @SubscribeEvent
+//    @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
             return;

@@ -45,6 +45,7 @@ import java.util.*;
  */
 public class CommandHelper {
 
+	@Deprecated
 	public static final String DEED = "deed";
 	public static final String PARCEL = "parcel";
 	public static final String ESTATE = "estate";
@@ -65,12 +66,19 @@ public class CommandHelper {
 	public static final String SPLIT = "split";
 	public static final String CLEAR = "clear";
 	public static final String GENERATE = "generate";
+	@Deprecated
 	public static final String NEW = "new";
+	@Deprecated
 	public static final String DEED_TYPE = "deed_type";
+	@Deprecated
 	public static final String POS = "pos";
+	@Deprecated
 	public static final String X_SIZE = "x_size";
+	@Deprecated
 	public static final String Y_SIZE_UP = "y_size_up";
+	@Deprecated
 	public static final String Y_SIZE_DOWN = "y_size_down";
+	@Deprecated
 	public static final String Z_SIZE = "z_size";
 	@Deprecated
 	public static final String OWNER_NAME = "owner_name";

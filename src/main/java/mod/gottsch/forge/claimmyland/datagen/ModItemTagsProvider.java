@@ -59,7 +59,6 @@ public class ModItemTagsProvider extends ItemTagsProvider {
 
         // populate integration tags
         String MF = "mageflame";
-        // TODO complete
         tag(ModTags.Items.MAGEFLAME_SCROLLS_WHITELIST)
                 .addOptional(new ResourceLocation(MF, "mage_flame_scroll"))
                 .addOptional(new ResourceLocation(MF, "lesser_revelation_scroll"))
@@ -92,8 +91,6 @@ public class ModItemTagsProvider extends ItemTagsProvider {
                 .addOptional(TreasureItems.PILFERERS_LOCK_PICK.getId())
                 .addOptional(TreasureItems.THIEFS_LOCK_PICK.getId())
                 ;
-
-        // TODO add some more common tags
     }
 
 }

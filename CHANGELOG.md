@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.0.0] - 2025-03-01
+## [2.0.0] - 2025-03-02
 
 > **💡 Recommended:** Since this mod is heavily command-based, we recommend using [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
 
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Group multiple Parcels under shared ownership and access rules
   - Parcels within the same Estate don't need to be adjacent
   - Apply whitelist changes to all Parcels in an Estate at once
-  - 
+  
 ### ⚙️ Changed
 
 - **Command Structure Reorganization:**

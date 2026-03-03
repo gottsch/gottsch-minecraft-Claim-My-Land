@@ -36,15 +36,6 @@ public class EstateRegistry {
         ESTATES_BY_FRIENDS.clear();
     }
 
-//    public static synchronized CompoundTag save(CompoundTag tag) {
-//        return tag;
-//    }
-//
-//    public static synchronized void load(CompoundTag tag) {
-//        ClaimMyLand.LOGGER.debug("loading registry...");
-//        clear();
-//    }
-
     public static synchronized void register(Estate estate) {
         ESTATES_BY_ID.put(estate.getId(), estate);
         if (estate.getOwnerId() != null) {

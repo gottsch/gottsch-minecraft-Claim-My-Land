@@ -120,9 +120,9 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 	implementation fg.deobf("gottsch:gottschcore:${minecraft_version}-${gottschcore_version}")
 
-//    implementation fg.deobf("curse.maven:kotlin-for-forge-351264:7291067")
-//    implementation fg.deobf("curse.maven:architectury-api-419699:5137938")
-//    implementation fg.deobf("maven.modrinth:chat-plus:2.7.0")
+    implementation fg.deobf("curse.maven:kotlin-for-forge-351264:7291067")
+    implementation fg.deobf("curse.maven:architectury-api-419699:5137938")
+    implementation fg.deobf("maven.modrinth:chat-plus:${chatplus_version}")
 
     implementation fg.deobf("curse.maven:treasure2-289760:6085216")
     implementation fg.deobf("curse.maven:jade-324717:5672013") // 1.20.1

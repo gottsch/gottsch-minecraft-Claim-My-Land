@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
@@ -60,6 +61,7 @@ public interface SubCommand {
     static final String ITEM_TAG = "item_tag";
     static final String LIST = "list";
     static final String NATION_NAME = "nation_name";
+    static final String NEW = "new";
     static final String NEW_NAME = "new_name";
     static final String NEW_OWNER_NAME = "new_owner_name";
     static final String OWNER_NAME = "owner_name";

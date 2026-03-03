@@ -130,16 +130,6 @@ public abstract class AbstractEstate implements Estate {
             return false;
         }
 
-//        Optional<Parcel> p1 = findParcels().stream().findFirst();
-//        if (p1.isEmpty()) {
-//            return false;
-//        }
-//
-//        return estate.findParcels().stream()
-//                .findFirst()
-//                .map(p2 -> p1.get().getType() == p2.getType())
-//                .orElse(false);
-
         // ensure they are the same type
         return getParcelType().equals(estate.getParcelType());
     }

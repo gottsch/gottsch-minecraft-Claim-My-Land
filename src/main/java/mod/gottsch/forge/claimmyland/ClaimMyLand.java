@@ -50,17 +50,8 @@ public class ClaimMyLand {
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus);
 
-        // register the setup method for mod loading
-
         // register 'ModSetup::init' to be called at mod setup time (server and client)
         modEventBus.addListener(CommonSetup::init);
-//        modEventBus.addListener(this::config);
-
-        // register 'ClientSetup::init' to be called at mod setup time (client only)
-//        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> modEventBus.addListener(ClientSetup::init));
-
-//        modEventBus.addListener(this::onKeyRegister);
-
 
         File saveDir = new File("world/data/claimmyland"); // TODO config option
         Type listType = new TypeToken<List<Parcel>>(){}.getType();
@@ -93,11 +84,4 @@ public class ClaimMyLand {
             }
         }
     }
-
-//    private void onKeyRegister(RegisterKeyMappingsEvent event) {
-//        System.out.println("Registering key mappings!");
-//        System.out.println("Toggle HUD key: " + KeyBindings.TOGGLE_HUD.getName());
-//        System.out.println("Scroll Up key: " + KeyBindings.SCROLL_HUD_UP.getName());
-//        System.out.println("Scroll Down key: " + KeyBindings.SCROLL_HUD_DOWN.getName());
-//    }
 }

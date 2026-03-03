@@ -31,7 +31,8 @@ import org.lwjgl.glfw.GLFW;
 /**
  * @author by Mark Gottschling on 2/17/2026
  */
-@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@Deprecated
+//@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class KeyBindings {
 
     public static final KeyMapping TOGGLE_HUD = new KeyMapping(
@@ -55,7 +56,7 @@ public class KeyBindings {
             "key.categories.claimmyland"
     );
 
-    @SubscribeEvent
+//    @SubscribeEvent
     public static void registerKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(TOGGLE_HUD);
         event.register(SCROLL_HUD_UP);

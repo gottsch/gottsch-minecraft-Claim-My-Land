@@ -20,33 +20,20 @@
 package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.WhitelistType;
 import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
-import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import mod.gottsch.forge.gottschcore.spatial.Box;
-import mod.gottsch.forge.gottschcore.spatial.Coords;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.minecraft.world.item.ItemStack;
 
-import java.util.*;
+import java.util.List;
 
 /**
  *
@@ -56,37 +43,6 @@ import java.util.*;
 public class OpsCommand {
     private static final String CML_OPS = "cml-ops";
 
-    private static final SuggestionProvider<CommandSourceStack> DEED_TYPES = (source, builder) -> {
-        return SharedSuggestionProvider.suggest(Arrays.stream(ParcelType.values()).filter(p -> p != ParcelType.ZONE).map(ParcelType::getSerializedName), builder);
-    };
-
-    /*
-     * names of estates by owner
-     */
-    @Deprecated
-    public static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_NAMES = (source, builder) -> {
-        String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
-        List<String> estates = new ArrayList<>();
-        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
-        if (playerUuid.isPresent()) {
-            estates = EstateRegistry.findByOwner(playerUuid.get()).stream().map(Estate::getName).toList();
-        }
-        return SharedSuggestionProvider.suggest(estates, builder);
-    };
-
-    @Deprecated
-    private static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_NAMES_MINUS_SELF = (source, builder) -> {
-        String ownerName = StringArgumentType.getString(source, CommandHelper.OWNER_NAME);
-        String primaryEstateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
-        List<String> estates = new ArrayList<>();
-        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
-        if (playerUuid.isPresent()) {
-            estates = EstateRegistry.findByOwner(playerUuid.get()).stream()
-                    .map(Estate::getName)
-                    .filter(name -> !name.equalsIgnoreCase(primaryEstateName)).toList();
-        }
-        return SharedSuggestionProvider.suggest(estates, builder);
-    };
 
     @Deprecated
     public static final SuggestionProvider<CommandSourceStack> OWNER_NAMES = (source, builder) -> {
@@ -100,21 +56,6 @@ public class OpsCommand {
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
-    private static final SuggestionProvider<CommandSourceStack> NATION_NAMES = (source, builder) -> {
-        List<String> names = ParcelRegistry.getNations().stream().map((Parcel::getName)).toList();
-        return SharedSuggestionProvider.suggest(names, builder);
-    };
-
-    @Deprecated
-    public static final SuggestionProvider<CommandSourceStack>
-            NATION_ESTATE_NAMES = (source, builder) -> {
-        List<String> names = EstateRegistry.getAll().stream()
-                .filter(Estate::isNation)
-                .map((Estate::getName)).toList();
-        return SharedSuggestionProvider.suggest(names, builder);
-    };
-
-
     /*
      * cml-ops
      */
@@ -124,50 +65,9 @@ public class OpsCommand {
                                     return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get()); // only ops can use command
                                 })
                                 ///// DEED TOP-LEVEL OPTION /////
-                                .then(Commands.literal(CommandHelper.DEED).requires(source -> {
-                                                    return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
-                                                })
-
                                                 ///// NEW DEED /////
-                                                .then(Commands.literal(CommandHelper.NEW)
-                                                        .then(Commands.argument(CommandHelper.DEED_TYPE, StringArgumentType.string())
-                                                                .suggests(DEED_TYPES)
-                                                                .then(Commands.argument(CommandHelper.X_SIZE, IntegerArgumentType.integer())
-                                                                        .then(Commands.argument(CommandHelper.Y_SIZE_UP, IntegerArgumentType.integer())
-                                                                                .then(Commands.argument(CommandHelper.Y_SIZE_DOWN, IntegerArgumentType.integer())
-                                                                                        .then(Commands.argument(CommandHelper.Z_SIZE, IntegerArgumentType.integer())
-                                                                                                .executes(source -> {
-                                                                                                    return generateDeed(source.getSource(),
-                                                                                                            StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
-                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
-                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
-                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
-                                                                                                            IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE)
-                                                                                                    );
-                                                                                                })
-                                                                                                .then(Commands.argument(CommandHelper.NATION_NAME, StringArgumentType.string())
-                                                                                                        .suggests(NATION_ESTATE_NAMES)
-                                                                                                        .executes(source -> {
-                                                                                                            return generateDeed(source.getSource(),
-                                                                                                                    StringArgumentType.getString(source, CommandHelper.DEED_TYPE),
-                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.X_SIZE),
-                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_UP),
-                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Y_SIZE_DOWN),
-                                                                                                                    IntegerArgumentType.getInteger(source, CommandHelper.Z_SIZE),
-                                                                                                                    StringArgumentType.getString(source, CommandHelper.NATION_NAME)
-                                                                                                            );
-                                                                                                            // TODO need to supply the owner name
-                                                                                                        })
-                                                                                                )
-                                                                                        )
+                                        .then(new GenerateDeedSubCommand().buildOps())
 
-                                                                                )
-                                                                        )
-                                                                )
-                                                        )
-                                                )
-
-                                )
                                 ///// PARCEL TOP-LEVEL OPTION /////
                                 .then(Commands.literal(CommandHelper.PARCEL).requires(source -> {
                                                     return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get());
@@ -262,9 +162,9 @@ public class OpsCommand {
 
     } // end of method
 
-    private static int generateDeed(CommandSourceStack source, String deedType, int xSize, int ySizeUp, int ySizeDown, int zSize) {
-        return generateDeed(source, deedType, xSize, ySizeUp, ySizeDown, zSize, "");
-    }
+//    private static int generateDeed(CommandSourceStack source, String deedType, int xSize, int ySizeUp, int ySizeDown, int zSize) {
+//        return generateDeed(source, deedType, xSize, ySizeUp, ySizeDown, zSize, "");
+//    }
 
     /**
      *
@@ -276,63 +176,63 @@ public class OpsCommand {
      * @param zSize
      * @return
      */
-    private static int generateDeed(CommandSourceStack source, String deedType, int xSize, int ySizeUp, int ySizeDown, int zSize, String nationName) {
-        // get the type
-        ParcelType type;
-
-        type = ParcelType.fromString(deedType);
-        if (type == ParcelType.NONE) {
-            source.sendFailure(Component.translatable(LangUtil.chat("deed.invalid_type")).withStyle(ChatFormatting.RED));
-            return -1;
-        }
-
-        Optional<Estate> optionalEstate = EstateRegistry.findByName(nationName);
-
-        // validations
-        if ((type == ParcelType.CITIZEN) && optionalEstate.isEmpty()) {
-            source.sendFailure(Component.translatable(LangUtil.chat("deed.citizen.nationId_required")).withStyle(ChatFormatting.RED));
-            return -1;
-        }
-
-        if (xSize < 2 || (ySizeUp  + ySizeDown) < 2 || zSize < 2) {
-            CommandHelper.failure(source, "deed.too_small");
-            return -1;
-        }
-
-        if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown)) {
-            source.sendFailure(Component.translatable(LangUtil.chat("deed.outside_world_boundaries")).withStyle(ChatFormatting.RED));
-            return -1;
-        }
-
-        // create a relative sized Box
-        Box size = new Box(new Coords(0, -ySizeDown, 0), new Coords(xSize-1, ySizeUp-1, zSize-1));
-
-        // attempt to add the deed item to the player inventory
-        try {
-            // create a deed item
-            ItemStack deed = switch (type) {
-                case PLAYER -> DeedFactory.createPlayerDeed(size);
-                // NOTE nation DEED does NOT take in a nationId nor nationName as
-                // a deed is a net new parcel to be used by anyone. the name would not be known
-                // and also this avoids duplicate names floating around in the deeds.
-                case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
-                case CITIZEN -> {
-                    ItemStack d = DeedFactory.createCitizenDeed(size, optionalEstate.get().getId());
-//                    d.getOrCreateTag().putString(Deed.NATION_NAME, nationName);
-                    yield d;
-                }
-                case ZONE -> ItemStack.EMPTY;
-                default -> ItemStack.EMPTY;
-            };
-
-            if (deed != ItemStack.EMPTY) {
-                source.getPlayerOrException().getInventory().add(deed);
-            }
-        } catch (Exception e) {
-            ClaimMyLand.LOGGER.error("error while generating deed:", e);
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat(" deed.generate.failure")).withStyle(ChatFormatting.RED), false);
-        }
-
-        return 1;
-    }
+//    private static int generateDeed(CommandSourceStack source, String deedType, int xSize, int ySizeUp, int ySizeDown, int zSize, String nationName) {
+//        // get the type
+//        ParcelType type;
+//
+//        type = ParcelType.fromString(deedType);
+//        if (type == ParcelType.NONE) {
+//            source.sendFailure(Component.translatable(LangUtil.chat("deed.invalid_type")).withStyle(ChatFormatting.RED));
+//            return -1;
+//        }
+//
+//        Optional<Estate> optionalEstate = EstateRegistry.findByName(nationName);
+//
+//        // validations
+//        if ((type == ParcelType.CITIZEN) && optionalEstate.isEmpty()) {
+//            source.sendFailure(Component.translatable(LangUtil.chat("deed.citizen.nationId_required")).withStyle(ChatFormatting.RED));
+//            return -1;
+//        }
+//
+//        if (xSize < 2 || (ySizeUp  + ySizeDown) < 2 || zSize < 2) {
+//            CommandHelper.failure(source, "deed.too_small");
+//            return -1;
+//        }
+//
+//        if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown)) {
+//            source.sendFailure(Component.translatable(LangUtil.chat("deed.outside_world_boundaries")).withStyle(ChatFormatting.RED));
+//            return -1;
+//        }
+//
+//        // create a relative sized Box
+//        Box size = new Box(new Coords(0, -ySizeDown, 0), new Coords(xSize-1, ySizeUp-1, zSize-1));
+//
+//        // attempt to add the deed item to the player inventory
+//        try {
+//            // create a deed item
+//            ItemStack deed = switch (type) {
+//                case PLAYER -> DeedFactory.createPlayerDeed(size);
+//                // NOTE nation DEED does NOT take in a nationId nor nationName as
+//                // a deed is a net new parcel to be used by anyone. the name would not be known
+//                // and also this avoids duplicate names floating around in the deeds.
+//                case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
+//                case CITIZEN -> {
+//                    ItemStack d = DeedFactory.createCitizenDeed(size, optionalEstate.get().getId());
+////                    d.getOrCreateTag().putString(Deed.NATION_NAME, nationName);
+//                    yield d;
+//                }
+//                case ZONE -> ItemStack.EMPTY;
+//                default -> ItemStack.EMPTY;
+//            };
+//
+//            if (deed != ItemStack.EMPTY) {
+//                source.getPlayerOrException().getInventory().add(deed);
+//            }
+//        } catch (Exception e) {
+//            ClaimMyLand.LOGGER.error("error while generating deed:", e);
+//            source.sendSuccess(() -> Component.translatable(LangUtil.chat(" deed.generate.failure")).withStyle(ChatFormatting.RED), false);
+//        }
+//
+//        return 1;
+//    }
 }
