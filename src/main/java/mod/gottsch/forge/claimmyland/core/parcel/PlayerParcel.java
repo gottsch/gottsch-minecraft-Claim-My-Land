@@ -21,133 +21,124 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  *
  * @author Mark Gottschling on Sep 14, 2024
  *
  */
-public class PlayerParcel extends AbstractParcel {
+public class PlayerParcel extends AbstractClaimableParcel {
 
     /**
      *
      */
-    public PlayerParcel() {
+    private PlayerParcel() {
+        super();
         setType(ParcelType.PLAYER);
+        getEstate().setParcelType(getType());
+    }
+
+    /** public factory method */
+    public static PlayerParcel create() {
+        return new PlayerParcel();
+    }
+
+    /** copy factory method. */
+    public static PlayerParcel create(Parcel source) {
+        PlayerParcel playerParcel = new PlayerParcel();
+        playerParcel.setId(source.getId());
+        playerParcel.setName(source.getName());
+        playerParcel.setCoords(source.getCoords());
+        playerParcel.setSize(source.getSize());
+
+        // TODO update estate factory to allow copy constructor
+        // TODO EstateTypeRegistry should take in the getType() from the other.getEstate(). Have to ensure that estates are setting/saving/loading their types.
+        Estate estate = EstateTypeRegistry.create(EstateTypeRegistry.ESTATE_TYPE);
+        estate.setOwnerId(source.getEstate().getOwnerId());
+        estate.setParcelType(ParcelType.PLAYER);
+        estate.setPlayerWhitelist(source.getEstate().getPlayerWhitelist());
+        estate.setBlockWhitelist(source.getEstate().getBlockWhitelist());
+        estate.setBlockTagWhitelist(source.getEstate().getBlockTagWhitelist());
+        estate.setItemWhitelist(source.getEstate().getItemWhitelist());
+        estate.setItemTagWhitelist(source.getEstate().getItemTagWhitelist());
+        estate.setEntitySpawnWhitelist(source.getEstate().getEntitySpawnWhitelist());
+        estate.setEntitySpawnTagWhitelist(source.getEstate().getEntitySpawnTagWhitelist());
+        playerParcel.setEstate(estate);
+        return playerParcel;
     }
 
     @Override
     public boolean hasAccessTo(Parcel otherParcel) {
         return switch (otherParcel.getType()) {
-            case PLAYER -> { yield true;}
-            case CITIZEN -> {yield true;}
-            case ZONE -> {yield true;}
+            case PLAYER, CITIZEN, ZONE -> true;
             default -> false;
         };
     }
 
     @Override
-    public boolean grantsAccess(Parcel otherParcel) {
-        // if the other parcel/deed is type player and its area is bigger than this
-        // and this parcel is abandoned.
-        return otherParcel.getType() == ParcelType.PLAYER
-                && this.getOwnerId() == null
-                && ModUtil.getVolume(otherParcel.getBox()) >= ModUtil.getVolume(this.getBox());
-        // TODO transfer parcel
-    }
-
-    @Override
-
     public boolean hasAccessTo(FoundationStoneBlockEntity blockEntity) {
         return getDeedId().equals(blockEntity.getDeedId());
     }
 
+    /**
+     * version 2+: player parcels cannot be relinquished and thus cannot be claimed
+     * by another deed. ie can be created by a deed or demolished/removed.
+     */
     @Override
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
-        ClaimResult result = ClaimResult.FAILURE; //false; //
+    public boolean grantsAccess(Parcel otherParcel) {
+        return false;
+    }
 
-        if ((parentParcel.getType() == ParcelType.CITIZEN
-                || parentParcel.getType() == ParcelType.PLAYER)
-                && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
-
-            if (ModUtil.getVolume(parcelBox) >= parentParcel.getArea()) {
-                ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
-                result = ClaimResult.SUCCESS;
-            } else {
-                result = ClaimResult.INSUFFICIENT_SIZE;
-            }
+    @Override
+    protected ClaimResult claimWithinZone(Level level, Parcel parentParcel, Box parcelBox) {
+        if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
+            return ClaimResult.FAILURE;
         }
-        else if (parentParcel.getType() == ParcelType.ZONE) {
 
-            // find overlaps of the parcel with buffered registry parcels.
-            // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
-            // NOTE filter out the multicitizen and nation parcels
-            List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
-                    .filter(p -> !p.getId().equals(parentParcel.getId()))
-                    .filter(p -> !p.getId().equals(((ZoneParcel)parentParcel).getNationId()))
-                    .toList();
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
+                .filter(p -> !p.getId().equals(parentParcel.getId()))
+                .filter(p -> !p.isNation())
+                .toList();
 
-            // short-circuit if the parcel overlaps/intersects any parcels
-            if (!overlaps.isEmpty()) {
-                for (Parcel overlapParcel : overlaps) {
-                    // if parcel in hand equals parcel in world then fail
-                    /*
-                     * NOTE this should be moot as the deed shouldn't exist at this point anymore (survival)
-                     * as this can potentially only happen in creative.
-                     */
-                    if (getId().equals(overlapParcel.getId())) {
-                        return ClaimResult.FAILURE;
-                    }
-
-                    /*
-                     * if parcel in hand has same owner as parcel in world, ignore buffers,
-                     * but check border overlaps. parcels owned by the same player can be touching.
-                     */
-                    if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-                        // get the existing owned parcel
-                        Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-
-                        // test if the non-buffered parcels intersect
-                        if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
-                            return ClaimResult.INTERSECTS;
-                        }
-                    } else {
-                        return ClaimResult.INTERSECTS;
-                    }
-                }
-            }
-
-            // validate placement. transform personal into citizen parcel
-            Optional<Parcel> optionalCitizenParcel = ParcelFactory.create(ParcelType.CITIZEN);
-            if (optionalCitizenParcel.isPresent()) {
-                CitizenParcel citizenParcel = (CitizenParcel) optionalCitizenParcel.get();
-                citizenParcel.setNationId(((ZoneParcel) parentParcel).getNationId());
-                citizenParcel.setId(getId());
-                citizenParcel.setSize(getSize());
-                citizenParcel.setCoords(parcelBox.getMinCoords());
-                citizenParcel.setOwnerId(getOwnerId());
-
-                // add to the registry
-                ParcelRegistry.add(citizenParcel);
-                CommandHelper.save(level);
-                // register the player
-                PlayerRegistry.register(level, getOwnerId());
-                result = ClaimResult.SUCCESS;
-            }
+        if (Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
+            return ClaimResult.INTERSECTS;
         }
-        return result;
+
+        Optional<Parcel> optionalCitizenParcel = ParcelTypeRegistry.create(ParcelType.CITIZEN);
+        if (optionalCitizenParcel.isEmpty()) {
+            return ClaimResult.FAILURE;
+        }
+
+        CitizenParcel citizenParcel = (CitizenParcel) optionalCitizenParcel.get();
+        citizenParcel.setEstate(getEstate()); // TODO need to update estate with parcelType
+        citizenParcel.getEstate().setParcelType(ParcelType.CITIZEN);
+        citizenParcel.setNationEstate(((NationalizedParcel) parentParcel).getNationEstate());
+        citizenParcel.setId(getId());
+        citizenParcel.setName(getName());//citizenParcel.defaultName((ServerLevel) level, getOwnerId()));
+        citizenParcel.setSize(getSize());
+        citizenParcel.setCoords(getCoords());
+        citizenParcel.setOwnerId(getOwnerId());
+
+        ParcelRegistry.register(citizenParcel);
+        CommandHelper.save(level);
+        PlayerRegistry.register(level, getOwnerId());
+
+        return ClaimResult.SUCCESS;
     }
 
     @Override
@@ -155,15 +146,6 @@ public class PlayerParcel extends AbstractParcel {
         super.save(tag);
         tag.putString(TYPE, getType().getSerializedName());
         ClaimMyLand.LOGGER.debug("saved parcel -> {}", this);
-    }
-
-    @Override
-    public Parcel load(CompoundTag tag) {
-        super.load(tag);
-        if (tag.contains(TYPE)) {
-            setType(ParcelType.valueOf(tag.getString(TYPE)));
-        }
-        return this;
     }
 
     @Override

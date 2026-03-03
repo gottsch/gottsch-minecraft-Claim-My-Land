@@ -73,7 +73,9 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
         if (!level.isClientSide()) {
             return (lvl, pos, blockState, t) -> {
                 if (t instanceof BorderStoneBlockEntity entity) { // test and cast
-                    entity.tickServer();
+                    if (entity.getCoords() != null) {
+                        entity.tickServer();
+                    }
                 }
             };
         } else {

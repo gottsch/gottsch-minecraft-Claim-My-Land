@@ -100,6 +100,76 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("unable_locate_player"), "Unable to locate the player -> %s");
         add(LangUtil.chat("unexpected_error"), "An unexpected error occurred.");
 
+        // estates
+        add(LangUtil.chat("estate.list"), "%s's Estates");
+        add(LangUtil.chat("estate.list.relinquished"), "Relinquished Estates");
+        add(LangUtil.chat("estate.list.empty"), "[Empty]");
+
+        add(LangUtil.chat("estate.join.success"), "Estates have been joined.");
+        add(LangUtil.chat("estate.join.failure"), "Unable to join estates.");
+        add(LangUtil.chat("estate.join.not_like.failure"), "Cannot join estates that are of the different types, nor relinquished estates.");
+        add(LangUtil.chat("estate.join.same_estate.failure"), "Cannot join estate to itself.");
+        add(LangUtil.chat("estate.join.invalid.failure"), "Cannot join estates:");
+        add(LangUtil.chat("estate.join.invalid.reasons"), "Same estate~Not the same type.~One or more estates are relinquished.~Not the same owner.");
+        add(LangUtil.chat("estate.join.different.zone.failure"), "Cannot join estates that have different parent zone/nations.");
+
+        add(LangUtil.chat("estate.split.success"), "Estate has been split.");
+        add(LangUtil.chat("estate.split.failure"), "Unable to split estate.");
+        add(LangUtil.chat("estate.split.single_parcel.failure"), "An estate with only one parcel cannot be split.");
+
+        add(LangUtil.chat("estate.demolish.success"), "The estate has been demolished.");
+        add(LangUtil.chat("estate.demolish.failure"), "Unable to demolish the estate.");
+        add(LangUtil.chat("estate.demolish.zone_cannot_demolish"), "A Zone parcel (in the estate) cannot be demolished. Use 'remove' instead.");
+
+        add(LangUtil.chat("estate.remove.success"), "The estate has been removed.");
+        add(LangUtil.chat("estate.remove.failure"), "Unable to remove the estate.");
+        add(LangUtil.chat("estate.remove.not_zone.failure"), "Only zone estates can be removed by players");
+        
+        add(LangUtil.chat("estate.rename.success"), "The estate has been renamed.");
+        add(LangUtil.chat("estate.rename.failure"), "Unable to rename the estate.");
+        add(LangUtil.chat("estate.rename.exists.failure"), "Unable to rename. Duplicate parcel name within the estate.");
+        add(LangUtil.chat("estate.rename.nation_parcel_exists.failure"), "Unable to rename. Duplicate parcel name within the nation.");
+
+        add(LangUtil.chat("estate.relinquish.success"), "The estate has been relinquished.");
+        add(LangUtil.chat("estate.relinquish.failure"), "Unable to relinquish the estate.");
+        add(LangUtil.chat("estate.relinquish.disallowed.failure"), "This estate can not be relinquished:");
+        add(LangUtil.chat("estate.relinquish.disallowed.reasons"), "Not a citizen parcel(s).~Parcel(s) already relinquished.");
+
+        add(LangUtil.chat("estate.transfer.success"), "The estate has been transferred.");
+        add(LangUtil.chat("estate.transfer.failure"), "Unable to transfer the estate.");
+
+        add(LangUtil.chat("estate.whitelist.add.success"), "Friend was added to the whitelist.");
+        add(LangUtil.chat("estate.whitelist.add.failure"), "Unable to add friend to the whitelist.");
+        add(LangUtil.chat("estate.whitelist.add.same_name.failure"), "Cannot add owner as a friend.");
+        add(LangUtil.chat("estate.whitelist.remove.success"), "Friend was removed from the whitelist.");
+        add(LangUtil.chat("estate.whitelist.remove.failure"), "Unable to remove friend from the whitelist.");
+        add(LangUtil.chat("estate.whitelist.list"), "Friends Whitelist for estate ");
+
+        add(LangUtil.chat("estate.block_tag.add.success"), "A block tag was added to the block tag whitelist.");
+        add(LangUtil.chat("estate.block_tag.add.failure"), "Unable to add block tag to the block tag whitelist.");
+        add(LangUtil.chat("estate.block_tag.remove.success"), "A block tag was removed from the block tag whitelist.");
+        add(LangUtil.chat("estate.block_tag.remove.failure"), "Unable to remove block tag from the block tag whitelist.");
+
+        add(LangUtil.chat("estate.block.add.success"), "A block was added to the block whitelist.");
+        add(LangUtil.chat("estate.block.add.failure"), "Unable to add block to the block whitelist.");
+        add(LangUtil.chat("estate.block.remove.success"), "A block was removed from the block whitelist.");
+        add(LangUtil.chat("estate.block.remove.failure"), "Unable to remove block from the block whitelist.");
+
+        add(LangUtil.chat("estate.item_tag.add.success"), "An item tag was added to the item tag whitelist.");
+        add(LangUtil.chat("estate.item_tag.add.failure"), "Unable to add item tag to the item tag whitelist.");
+        add(LangUtil.chat("estate.item_tag.remove.success"), "An item tag was removed from the item tag whitelist.");
+        add(LangUtil.chat("estate.item_tag.remove.failure"), "Unable to remove item tag from the item tag whitelist.");
+
+        add(LangUtil.chat("estate.item.add.success"), "A item was added to the item whitelist.");
+        add(LangUtil.chat("estate.item.add.failure"), "Unable to add item to the item whitelist.");
+        add(LangUtil.chat("estate.item.remove.success"), "A item was removed from the item whitelist.");
+        add(LangUtil.chat("estate.item.remove.failure"), "Unable to remove item from the item whitelist.");
+
+        add(LangUtil.chat("estate.block_tag.list"), "Block Tag Whitelist for estate ");
+        add(LangUtil.chat("estate.block.list"), "Block Whitelist for estate ");
+        add(LangUtil.chat("estate.item_tag.list"), "Item Tag Whitelist for estate ");
+        add(LangUtil.chat("estate.item.list"), "Item Whitelist for estate ");
+        
         // parcels
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");
@@ -108,11 +178,14 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.place_block.block_claimed"), "You cannot place a block there. It is already claimed.");
 
         add(LangUtil.chat("parcel.list"), "%s's Parcels");
-        add(LangUtil.chat("parcel.list.abandoned"), "Abandoned Parcels");
+        add(LangUtil.chat("parcel.list.relinquished"), "Relinquished Parcels");
         add(LangUtil.chat("parcel.list.empty"), "[Empty]");
 
-        add(LangUtil.chat("parcel.abandon.success"), "The parcel has been abandoned.");
-        add(LangUtil.chat("parcel.abandon.failure"), "Unable to abandon the parcel.");
+        add(LangUtil.chat("parcel.relinquish.success"), "The parcel has been relinquished.");
+        add(LangUtil.chat("parcel.relinquish.failure"), "Unable to relinquish the parcel.");
+        add(LangUtil.chat("parcel.relinquish.disallowed.failure"), "This parcel can not be relinquished:");
+        add(LangUtil.chat("parcel.relinquish.disallowed.reasons"), "Not a citizen parcel.~Parcel already relinquished.");
+
 
         add(LangUtil.chat("parcel.add.success"), "The parcel has been added.");
         add(LangUtil.chat("parcel.add.failure"), "Unable to add the parcel.");
@@ -126,8 +199,11 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.remove.success"), "The parcel has been removed.");
         add(LangUtil.chat("parcel.remove.failure"), "Unable to remove the parcel.");
 
+        add(LangUtil.chat("parcel.clear.success"), "The estates/parcels have been removed.");
+
         add(LangUtil.chat("parcel.rename.success"), "The parcel has been renamed.");
         add(LangUtil.chat("parcel.rename.failure"), "Unable to rename the parcel.");
+        add(LangUtil.chat("parcel.rename.exists.failure"), "Unable to rename. Duplicate name within estate.");
 
         add(LangUtil.chat("parcel.transfer.success"), "The parcel has been transferred.");
         add(LangUtil.chat("parcel.transfer.failure"), "Unable to transfer the parcel.");
@@ -168,6 +244,8 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.nation.unable_to_locate"), "A nation with that name does not exist.");
         add(LangUtil.chat("parcel.nation.not_owner"), "You are not the owner of the nation.");
 
+        add(LangUtil.chat("parcel.unknown_type"), "Unknown parcel type.");
+
         // deeds
         add(LangUtil.chat("deed.claim.success"), "You claimed a parcel at [%s] of size [%s].");
         add(LangUtil.chat("deed.claim.intersects"), "You cannot claimed this parcel as it intersects with another.");
@@ -190,6 +268,7 @@ public class LanguageGen extends LanguageProvider {
         // zone placement
         add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or it is claimed.");
         add(LangUtil.chat("zone_placement.not_owner"), "You are not the owner of this nation.");
+        add(LangUtil.chat("zone_placement.not_same_nation"), "That block is not within the same nation parcel as the start block.");
 
 
         // info
@@ -204,7 +283,15 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.volume"), "Volume: %s m^3");
         add(LangUtil.chat("parcel.border"), "Border: %s");
         add(LangUtil.chat("parcel.claimed_by.not_claimed"), "The block at %s is not claimed.");
-        add(LangUtil.chat("parcel.claimed_by.abandoned"), "None (abandoned)");
+        add(LangUtil.chat("parcel.claimed_by.relinquished"), "None (relinquished)");
+
+        add(LangUtil.chat("estate.player.whitelist"), "Player Whitelist: ");
+        add(LangUtil.chat("estate.block.whitelist"), "Block Whitelist: ");
+        add(LangUtil.chat("estate.block_tag.whitelist"), "Block Tag Whitelist: ");
+        add(LangUtil.chat("estate.item.whitelist"), "Item Whitelist: ");
+        add(LangUtil.chat("estate.item_tag.whitelist"), "Item Tag Whitelist: ");
+        add(LangUtil.chat("estate.entity_spawn.whitelist"), "Entity Spawn Whitelist: ");
+        add(LangUtil.chat("estate.entity_spawn_tag.whitelist"), "Entity Spawn Tag Whitelist: ");
 
         /*
          *  Util.tooltips
@@ -223,11 +310,11 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.tooltip("citizen_deed.usage"), "Can be used on any unclaimed land within parent nation and within nations with OPEN borders.");
         add(LangUtil.tooltip("nation_deed.usage"), "Can be used on any unclaimed land.");
 
+        // estate
+        add(LangUtil.tooltip("estate.details"), "Click to view estate details");
+
         // parcel
-        // TODO this is for an admin stone or info stone - need a good name
-
-        add(LangUtil.tooltip("parcel.howto.remove"), "Place cornerstone block inside parcel boundaries.\\nUse cornerstone block to open GUI.\nClick Remove button.");
-
+//        add(LangUtil.tooltip("parcel.howto.remove"), "Place cornerstone block inside parcel boundaries.\\nUse cornerstone block to open GUI.\nClick Remove button.");
 
     }
 }

@@ -1,18 +1,26 @@
 package mod.gottsch.forge.claimmyland;
 
+import com.google.common.reflect.TypeToken;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.ModBlockEntities;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
-import mod.gottsch.forge.claimmyland.core.setup.ClientSetup;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.persistence.RollingJsonSaver;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.setup.CommonSetup;
-import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+import java.lang.reflect.Type;
+import java.util.List;
 
 /**
  *
@@ -27,15 +35,13 @@ public class ClaimMyLand {
     // constants
     public static final String MOD_ID = "claimmyland";
 
+    private static RollingJsonSaver<List<Parcel>> parcelSaver;
+
     /**
      *
      */
     public ClaimMyLand() {
         Config.register();
-        // create the default configs
-//        createServerConfig(Config.CHESTS_CONFIG_SPEC, "chests", CHESTS_CONFIG_VERSION);
-//        createServerConfig(Config.STRUCTURE_CONFIG_SPEC, "structures", STRUCTURES_CONFIG_VERSION);
-//        createServerConfig(Config.MOBS_CONFIG_SPEC, "mobs", MOBS_CONFIG_VERSION);
 
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
 
@@ -43,22 +49,39 @@ public class ClaimMyLand {
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus);
-//        TreasureContainers.register(modEventBus);
-//        TreasureParticles.register(modEventBus);
-//        TreasureEntities.register(modEventBus);
-//        TreasureConfiguredFeatures.register(modEventBus);
-//        TreasureSounds.register(modEventBus);
-//        TreasureLootModifiers.register(modEventBus);
-//        TreasureCreativeModeTabs.TABS.register(modEventBus);
-
-        // register the setup method for mod loading
 
         // register 'ModSetup::init' to be called at mod setup time (server and client)
         modEventBus.addListener(CommonSetup::init);
-//        modEventBus.addListener(this::config);
 
-        // register 'ClientSetup::init' to be called at mod setup time (client only)
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> modEventBus.addListener(ClientSetup::init));
+        File saveDir = new File("world/data/claimmyland"); // TODO config option
+        Type listType = new TypeToken<List<Parcel>>(){}.getType();
 
+        // save every 5 minutes, keep 20 most recent files
+        parcelSaver = new RollingJsonSaver<>(
+                saveDir,
+                "parcels",  // TODO config option
+                20,                                // TODO config option
+                10,                                 // TODO config option
+                ParcelRegistry::getParcels,  // supplier that returns current parcel list
+                listType
+        );
+
+//        // Load latest on startup
+//        List<Parcel> loaded = parcelSaver.loadLatest();
+//        if (loaded != null) {
+//            parcelList = loaded;
+//        }
+
+        // register FORGE bus events separately
+        MinecraftForge.EVENT_BUS.register(new ForgeEventHandler());
+    }
+
+    public static class ForgeEventHandler {
+        @SubscribeEvent
+        public void onServerTick(TickEvent.ServerTickEvent event) {
+            if (event.phase == TickEvent.Phase.END) {
+                parcelSaver.tick();
+            }
+        }
     }
 }

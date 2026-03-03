@@ -23,6 +23,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 
@@ -77,5 +78,24 @@ public class TagHelper {
 
     public static boolean doesItemBelongToTag(Item item, TagKey<Item> tagKey){
         return item.builtInRegistryHolder().is(tagKey);
+    }
+
+    public static Optional<TagKey<EntityType<?>>> getEntityTypeTagFromResourceLocation(ResourceLocation location) {
+        try {
+            return Optional.of(TagKey.create(Registries.ENTITY_TYPE, location));
+        } catch (IllegalArgumentException e) {
+            System.err.println("invalid ResourceLocation for Entity Type Tag: " + location);
+            return Optional.empty();
+        }
+    }
+
+    public static boolean doesEntityBelongToTag(EntityType<?> type, ResourceLocation tagResourceLocation) {
+        Optional<TagKey<EntityType<?>>> tagKeyOptional = getEntityTypeTagFromResourceLocation(tagResourceLocation);
+        if (tagKeyOptional.isPresent()) {
+            TagKey<EntityType<?>> tagKey = tagKeyOptional.get();
+            return type.builtInRegistryHolder().is(tagKey);
+        }
+        return false;
+
     }
 }

@@ -113,16 +113,16 @@ public class ModItems {
         Registration.registerItems(bus);
     }
 
-    public static void createPlayerParcel(ItemStack stack, Box size) {
-        CompoundTag tag = stack.getOrCreateTag();
-        // create a relative sized Box
-        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
-        tag.putString(Deed.PARCEL_TYPE, ParcelType.PLAYER.name());
-        CompoundTag sizeTag = new CompoundTag();
-        size.save(sizeTag);
-        tag.put(Deed.SIZE, sizeTag);
-    }
+//    public static void createPlayerParcel(ItemStack stack, Box size) {
+//        CompoundTag tag = stack.getOrCreateTag();
+//        // create a relative sized Box
+//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
+//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
+//        tag.putString(Deed.PARCEL_TYPE, ParcelType.PLAYER.name());
+//        CompoundTag sizeTag = new CompoundTag();
+//        size.save(sizeTag);
+//        tag.put(Deed.SIZE, sizeTag);
+//    }
 
     // convenience method: take a RegistryObject<Block> and make a corresponding RegistryObject<Item> from it
     public static <B extends Block> RegistryObject<Item> fromBlock(RegistryObject<B> block, Supplier<Item.Properties> itemProperties) {

@@ -136,6 +136,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
         this.getLevel().removeBlockEntity(this.getBlockPos());
     }
 
+    // TODO should return Optional
     /**
      *
      * @return
@@ -147,9 +148,11 @@ public class BorderStoneBlockEntity extends BlockEntity {
             case NATION -> ModBlocks.NATION_BORDER.get();
             case CITIZEN -> ModBlocks.CITIZEN_BORDER.get();
             case ZONE -> ModBlocks.ZONE_BORDER.get();
+            case NONE -> ModBlocks.PLAYER_BORDER.get();
         };
     }
 
+    // TODO should return Optional
     public Block getHorizontalAreaBlock() {
         ParcelType parcelType = getParcelType() != null ? ParcelType.valueOf(getParcelType()) : ParcelType.PLAYER;
         return switch (parcelType) {
@@ -157,6 +160,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
             case NATION -> ModBlocks.NATION_HORIZONTAL_AREA.get();
             case CITIZEN -> ModBlocks.CITIZEN_HORIZONTAL_AREA.get();
             case ZONE -> ModBlocks.ZONE_HORIZONTAL_AREA.get();
+            case NONE -> ModBlocks.PLAYER_HORIZONTAL_AREA.get();
         };
     }
 
@@ -175,6 +179,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
             case PLAYER, CITIZEN -> Config.SERVER.general.parcelBufferRadius.get();
             case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
             case ZONE -> 0;
+            default -> 0;
         };
     }
 

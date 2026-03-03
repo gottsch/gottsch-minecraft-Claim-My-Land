@@ -38,13 +38,17 @@ import java.util.UUID;
 public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity {
     private static final String DEED_ID = "deed_id";
     private static final String NATION_ID = "nation_id";
+    private static final String NATION_ESTATE_ID = "nation_estate_id";
 
     // unique id of of deed that created this block / block entity
     // TODO might not be necessary when adding TransferDeed
     private UUID deedId;
 
+    @Deprecated
     // unique id of the nation this parcel belong to
     private UUID nationId;
+
+    private UUID nationEstateId;
 
     /**
      *
@@ -88,6 +92,9 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         if (ObjectUtils.isNotEmpty(getNationId())) {
             tag.putUUID(NATION_ID, getNationId());
         }
+        if (ObjectUtils.isNotEmpty(getNationEstateId())) {
+            tag.putUUID(NATION_ESTATE_ID, getNationEstateId());
+        }
     }
 
     @Override
@@ -99,6 +106,9 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         }
         if (tag.contains(NATION_ID)) {
             setNationId(tag.getUUID(NATION_ID));
+        }
+        if (tag.contains(NATION_ESTATE_ID)) {
+            setNationEstateId(tag.getUUID(NATION_ESTATE_ID));
         }
     }
 
@@ -138,10 +148,20 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         this.deedId = deedId;
     }
 
+    @Deprecated
     public UUID getNationId() {
         return nationId;
     }
+    @Deprecated
     public void setNationId(UUID nationId) {
         this.nationId = nationId;
+    }
+
+    public UUID getNationEstateId() {
+        return nationEstateId;
+    }
+
+    public void setNationEstateId(UUID nationEstateId) {
+        this.nationEstateId = nationEstateId;
     }
 }

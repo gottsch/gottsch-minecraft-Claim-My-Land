@@ -24,9 +24,13 @@ import com.google.common.collect.HashBiMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.config.Config;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
@@ -148,6 +152,7 @@ public class PlayerRegistry {
         }
     }
 
+    @Deprecated
     public static CompletableFuture<String> getOfflinePlayerName(UUID uuid) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -180,6 +185,51 @@ public class PlayerRegistry {
                 return null;
             }
         }, EXECUTOR_SERVICE);
+    }
+
+    /*
+     * get player using extended search
+     * 1. online
+     * 2. PlayerRegistry
+     * 3. offline
+     */
+    public static Optional<UUID> getPlayerUuid(ServerLevel level, String playerName) {
+        // get the online player
+        ServerPlayer player = level.getServer().getPlayerList().getPlayerByName(playerName);
+        if (player == null) {
+            // get the player from the player registry
+            return PlayerRegistry.get(playerName).or(() -> {
+                if (Config.SERVER.general.allowMojangNameCalls.get()) {
+                    Optional<UUID> playerUuid = PlayerRegistry.getUUIDFromNameSynchronized(playerName);
+                    // before returning, update PlayerRegistry with the UUID/name mapping
+                    playerUuid.ifPresent(ownerUuid -> PlayerRegistry.update(ownerUuid, playerName));
+                    return playerUuid;
+                } else {
+                    return Optional.empty();
+                }
+            });
+        }
+        return Optional.of(player.getUUID());
+    }
+
+    public static Optional<String> getPlayerName(ServerLevel level, UUID playerUuid) {
+        // get the online player
+        ServerPlayer player = level.getServer().getPlayerList().getPlayer(playerUuid);
+        if (player != null) {
+            return Optional.of(player.getName().getString());
+        }
+
+        // get the player from the player registry
+        return PlayerRegistry.get(playerUuid).or(() -> {
+            if (Config.SERVER.general.allowMojangNameCalls.get()) {
+                Optional<String> playerName = PlayerRegistry.getNameFromUUIDSynchronized(playerUuid);
+                // before returning, update PlayerRegistry with the UUID/name mapping
+                playerName.ifPresent(name -> PlayerRegistry.update(playerUuid, name));
+                return playerName;
+            } else {
+                return Optional.empty();
+            }
+        });
     }
 
     public static Optional<String> getNameFromUUIDSynchronized(UUID uuid) {

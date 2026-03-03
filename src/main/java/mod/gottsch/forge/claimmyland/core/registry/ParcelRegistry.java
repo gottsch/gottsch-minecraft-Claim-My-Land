@@ -25,8 +25,8 @@ import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.mojang.authlib.minecraft.client.ObjectMapper;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.estate.*;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -34,26 +34,29 @@ import mod.gottsch.forge.gottschcore.bst.CoordsInterval;
 import mod.gottsch.forge.gottschcore.bst.CoordsIntervalTree;
 import mod.gottsch.forge.gottschcore.bst.IInterval;
 import mod.gottsch.forge.gottschcore.spatial.Box;
+import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  *
  * @author Mark Gottschling on Sep 14, 2024
  *
  */
+@SuppressWarnings("removal")
 public class ParcelRegistry {
     private static final String PARCELS_KEY = "parcels";
 
@@ -87,6 +90,7 @@ public class ParcelRegistry {
     /*
      * nation caches
      */
+    @Deprecated
     private static final Multimap<UUID, Parcel> NATIONS_BY_ID = ArrayListMultimap.create();
 
 
@@ -116,9 +120,9 @@ public class ParcelRegistry {
 
         ListTag list = new ListTag();
         PARCELS_BY_COORDS.forEach((coords, parcel) -> {
-//            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-//                ClaimMyLand.LOGGER.debug("registry saving parcel -> {}", parcel);
-//            }
+            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+                ClaimMyLand.LOGGER.debug("registry saving parcel -> {}", parcel);
+            }
             CompoundTag parcelTag = new CompoundTag();
             parcel.save(parcelTag);
             list.add(parcelTag);
@@ -142,58 +146,23 @@ public class ParcelRegistry {
             ListTag list = tag.getList(PARCELS_KEY, Tag.TAG_COMPOUND);
 //            ClaimMyLand.LOGGER.debug("loading registry, size -> {}", list.size());
 
-            list.forEach(element -> {
-                ClaimMyLand.LOGGER.debug("processing parcel element...");
-                Optional<Parcel> optionalParcel = ParcelFactory.create((CompoundTag)element);
-                optionalParcel.ifPresent(parcel -> {
-                    // load the parcel
-                    parcel.load((CompoundTag) element);
+            list.stream()
+                    .map(element -> (CompoundTag) element)
+                    .peek(e -> ClaimMyLand.LOGGER.debug("processing parcel element..."))
+                    .forEach(e -> {
+                        ParcelType type = e.contains(Parcel.TYPE)
+                                ? ParcelType.fromString(e.getString(Parcel.TYPE))
+                                : ParcelType.NONE;
 
-                    if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-                        ClaimMyLand.LOGGER.debug("loaded parcel -> {}", parcel);
-                    }
-
-                    // add to byCoords map
-                    PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
-
-                    // add to by Owner map
-                    if (ObjectUtils.isNotEmpty(parcel.getOwnerId())) {
-                        List<Parcel> parcelsByOwner = new ArrayList<>();
-                        if (!PARCELS_BY_OWNER.containsKey(parcel.getOwnerId())) {
-                            // create new list entry
-                            PARCELS_BY_OWNER.put(parcel.getOwnerId(), parcelsByOwner);
-                        } else {
-                            parcelsByOwner = PARCELS_BY_OWNER.get(parcel.getOwnerId());
-                        }
-                        parcelsByOwner.add(parcel);
-                    }
-                    // add to by friends map
-                    if (ObjectUtils.isNotEmpty((parcel.getWhitelist()))) {
-                        parcel.getWhitelist().forEach(friend -> {
-                            List<Parcel> parcels = new ArrayList<>();
-                            if (!PARCELS_BY_FRIENDS.containsKey(friend)) {
-                                PARCELS_BY_FRIENDS.put(friend, parcels);
-                            } else {
-                                parcels = PARCELS_BY_FRIENDS.get(friend);
+                        ParcelTypeRegistry.create(type).ifPresent(parcel -> {
+                            // load the parcel
+                            parcel.load(e);
+                            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+                                ClaimMyLand.LOGGER.debug("loaded parcel -> {}", parcel);
                             }
-                            parcels.add(parcel);
-                            ClaimMyLand.LOGGER.debug("loading/adding {} to friends list for parcel {}", friend, parcel.getName());
+                            ParcelRegistry.register(parcel);
                         });
-                    }
-
-                    // add to tree
-                    Box box = new Box(parcel.getMinCoords(), parcel.getMaxCoords());
-                    TREE.insert(new CoordsInterval<>(box.getMinCoords(), box.getMaxCoords(), parcel.getOwnerId()));
-
-                    // add to the buffer tree
-                    addParcelToBufferTree(parcel);
-
-                    // if nation add to special map
-                    if (parcel.getType() == ParcelType.NATION) {
-                        NATIONS_BY_ID.put(((NationParcel)parcel).getNationId(), parcel);
-                    }
-                });
-            });
+                    });
         }
     }
 
@@ -204,7 +173,7 @@ public class ParcelRegistry {
      * NOTE even if buffer size == 0, the parcel must be added to teh buffer tree.
      * @param parcel
      */
-    public static synchronized void addParcelToBufferTree(Parcel parcel) {
+    public static synchronized void registerBuffer(Parcel parcel) {
         Box inflatedBox;
         // inflate if buffer size is > 0
         if (parcel.getBufferSize() > 0) {
@@ -225,6 +194,216 @@ public class ParcelRegistry {
         return mapper.writeValueAsString(PARCELS_BY_COORDS);
     }
 
+    /**
+     *
+     * @param tag
+     */
+    public static void convertV1ToV2(CompoundTag tag) {
+        Map<ICoords, Parcel> byCoords = new HashMap<>();
+        ClaimMyLand.LOGGER.debug("converting registry from v1 to v2...");
+
+        if (tag.contains(PARCELS_KEY)) {
+            // 1. load parcels into local map
+            ListTag list = tag.getList(PARCELS_KEY, Tag.TAG_COMPOUND);
+
+            list.stream()
+                    .map(element -> (CompoundTag) element)
+                    .peek(e -> ClaimMyLand.LOGGER.debug("processing v1 parcel element..."))
+                    .forEach(e -> {
+                        ParcelType type = e.contains(Parcel.TYPE)
+                                ? ParcelType.fromString(e.getString(Parcel.TYPE))
+                                : ParcelType.NONE;
+
+                        ParcelTypeRegistry.create(type).ifPresent(parcel -> {
+                            // load the legacy parcel
+                            // NOTE the new parcel structure is used, so method calls like setWhitelist()
+                            //  are actually updating the estate.
+                            loadV1(parcel, e);
+
+                            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+                                ClaimMyLand.LOGGER.debug("loaded v1 parcel -> {}", parcel);
+                            }
+
+                            // add parcel to the local map
+                            byCoords.put(parcel.getCoords(), parcel);
+                        });
+                    });
+
+
+            // 2. walk the parcel map, building the nation-level parcels
+            byCoords.values().stream()
+                    .filter(p -> p instanceof NationParcel)
+                    .map(p -> (NationParcel)p)
+                    .forEach(np -> {
+                        NationEstateContext estate = (NationEstateContext) np.getEstate();
+                        // copy properties
+//                                        estate.setName(np.getName());
+//                                        estate.setOwnerId(np.getOwnerId());
+//                                        estate.setBlockWhitelist(np.getBlockWhitelist());
+//                                        estate.setBlockTagWhitelist(np.getBlockWhitelist());
+//                                        estate.setItemWhitelist(np.getBlockWhitelist());
+//                                        estate.setItemTagWhitelist(np.getItemTagWhitelist());
+//                                        estate.setPlayerWhitelist(np.getPlayerWhitelist());
+                        estate.setAccessType(NationAccessType.fromString(np.getBorderType().name()));
+                        estate.setPlayerBlacklist(new HashSet<>(np.getBlacklist()));
+//                        EstateRegistry.register(estate);
+                        if (estate.getOwnerId() != null) {
+                            ParcelRegistry.register(np);
+                        }
+                    });
+
+            // walk he parcel map again, building the rest
+            byCoords.values().stream()
+                    .filter(p -> !(p instanceof NationParcel))
+                    .forEach(p -> {
+                        Estate estate = p.getEstate();
+                        // setup default estate
+//                                        estate.setOwnerId(p.getOwnerId());
+//                                        estate.setBlockWhitelist(p.getBlockWhitelist());
+//                                        estate.setBlockTagWhitelist(p.getBlockWhitelist());
+//                                        estate.setItemWhitelist(p.getBlockWhitelist());
+//                                        estate.setItemTagWhitelist(p.getItemTagWhitelist());
+//                                        estate.setPlayerWhitelist(p.getPlayerWhitelist());
+
+                        // setup the nation estate if a nation id exists
+                        if (p instanceof NationalizedParcel nationalizedParcel) {
+                            // NOTE load nationId from tag since new parceling loading doesn't load nation id ????
+                            if (nationalizedParcel.getNationId() == null) {
+                                // TODO log warning
+                                return;
+                            }
+
+                            Optional<Estate> nationEstate = EstateRegistry.get(nationalizedParcel.getNationId());
+                            if (nationEstate.isEmpty()) {
+                                // TODO log warning
+                                return;
+                            }
+
+                            if (estate.getOwnerId() == null) {
+                                estate.setRelinquished(true);
+                                estate.setOwnerId(nationEstate.get().getOwnerId());
+                            }
+                            nationalizedParcel.setNationEstate((NationEstate) nationEstate.get());
+                        }
+                        ParcelRegistry.register(p);
+                    });
+        }
+    }
+
+    public static synchronized void loadV1(Parcel parcel, CompoundTag tag) {
+        // standard parcel
+        if (tag.contains(AbstractParcel.ID_KEY)) {
+            parcel.setId(tag.getUUID(AbstractParcel.ID_KEY));
+        } else {
+            parcel.setId(UUID.randomUUID());
+        }
+        if (tag.contains(AbstractParcel.NATION_ID_KEY)) {
+            parcel.setNationId(tag.getUUID(AbstractParcel.NATION_ID_KEY));
+        }
+        if (tag.contains(AbstractParcel.NAME_KEY)) {
+            parcel.setName(tag.getString(AbstractParcel.NAME_KEY));
+        }
+        if (tag.contains(AbstractParcel.OWNER_KEY)) {
+            parcel.setOwnerId(tag.getUUID(AbstractParcel.OWNER_KEY));
+        }
+        if (tag.contains(AbstractParcel.DEED_KEY)) {
+            parcel.setDeedId(tag.getUUID(AbstractParcel.DEED_KEY));
+        }
+        if (tag.contains(AbstractParcel.TYPE)) {
+            parcel.setType(ParcelType.valueOf(tag.getString(AbstractParcel.TYPE)));
+        }
+        if (tag.contains(AbstractParcel.COORDS_KEY)) {
+            parcel.setCoords(Coords.EMPTY.load(tag.getCompound(AbstractParcel.COORDS_KEY)));
+        }
+        if (tag.contains(AbstractParcel.SIZE_KEY)) {
+            parcel.setSize(Box.load(tag.getCompound(AbstractParcel.SIZE_KEY)));
+        }
+        if (tag.contains(AbstractParcel.WHITELIST_KEY)) {
+            ListTag list = tag.getList(AbstractParcel.WHITELIST_KEY, Tag.TAG_COMPOUND);
+            list.forEach(element -> {
+                CompoundTag uuidTag = ((CompoundTag)element);
+                if (uuidTag.contains(AbstractParcel.ID_KEY)) {
+                    ClaimMyLand.LOGGER.debug("loading {} to whitelist", uuidTag.getUUID(AbstractParcel.ID_KEY));
+                    parcel.getWhitelist().add(uuidTag.getUUID(AbstractParcel.ID_KEY));
+                }
+            });
+        }
+
+        if (tag.contains(AbstractParcel.BLOCK_TAG_WHITELIST_KEY)) {
+            ListTag list = tag.getList(AbstractParcel.BLOCK_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String blockTag = element.getAsString();
+                parcel.getBlockTagWhitelist().add(blockTag);
+            });
+        }
+
+        if (tag.contains(AbstractParcel.BLOCK_WHITELIST_KEY)) {
+            ListTag list = tag.getList(AbstractParcel.BLOCK_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String block = element.getAsString();
+                parcel.getBlockWhitelist().add(block);
+            });
+        }
+
+        if (tag.contains(AbstractParcel.ITEM_TAG_WHITELIST_KEY)) {
+            ListTag list = tag.getList(AbstractParcel.ITEM_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String itemTag = element.getAsString();
+                parcel.getItemTagWhitelist().add(itemTag);
+            });
+        }
+
+        if (tag.contains(AbstractParcel.ITEM_WHITELIST_KEY)) {
+            ListTag list = tag.getList(AbstractParcel.ITEM_WHITELIST_KEY, Tag.TAG_STRING);
+            list.forEach(element -> {
+                String item = element.getAsString();
+                parcel.getItemWhitelist().add(item);
+            });
+        }
+
+        if (tag.contains("foundedTime")) {
+            parcel.setFoundedTime(tag.getLong("foundedTime"));
+        }
+        if (tag.contains("ownerTime")) {
+            parcel.setOwnerTime(tag.getLong("ownerTime"));
+        }
+        if (tag.contains("abandonedTime")) {
+            parcel.setRelinquishedTime(tag.getLong("abandonedTime"));
+        }
+
+        // parcel specific properties
+        if (parcel instanceof NationParcel nationParcel) {
+            if (tag.contains("borderType")) {
+                try {
+                    nationParcel.setBorderType(NationBorderType.valueOf(tag.getString("borderType")));
+                } catch(Exception e) {
+                    ClaimMyLand.LOGGER.warn("unable to parse and load borderType - using default CLOSED");
+                    nationParcel.setBorderType(NationBorderType.CLOSED);
+                }
+            }
+
+            if (tag.contains("blacklist")) {
+                ListTag list = tag.getList("blacklist", Tag.TAG_STRING);
+                list.forEach(element -> {
+                    StringTag uuidTag = ((StringTag)element);
+                    nationParcel.getBlacklist().add(UUID.fromString(uuidTag.getAsString()));
+                });
+            }
+        }
+    }
+
+    /*
+     * determines if parcel name exists within an estate.
+     */
+    public static boolean hasName(Parcel parcel, String newName) {
+        return hasName(parcel.getEstate().findParcels(), parcel, newName);
+    }
+
+    public static boolean hasName(Set<Parcel> parcels, Parcel parcel, String newName) {
+        return parcels.stream()
+                .anyMatch(p -> p.getName().equalsIgnoreCase(newName));
+    }
+
     // TODO
     public List<Parcel> fromJson() {
         return null;
@@ -235,84 +414,114 @@ public class ParcelRegistry {
      * @param parcel
      * @return
      */
-    public static Optional<Parcel> add(Parcel parcel) {
+    public static synchronized Optional<Parcel> register(Parcel parcel) {
         ClaimMyLand.LOGGER.debug("adding parcel to registry -> {}", parcel);
 
-        // add to parcels by owner
-        List<Parcel> parcels = null;
+        try {
+            // add to parcels by coords
+            registerCoords(parcel);
 
-        // TODO make own method
-        if (!PARCELS_BY_OWNER.containsKey(parcel.getOwnerId())) {
-            // create new list entry
-            PARCELS_BY_OWNER.put(parcel.getOwnerId(), new ArrayList<>());
+            registerOwner(parcel);
+
+            registerFriends(parcel);
+
+            // add to tree
+            registerTree(parcel);
+
+            // add to the buffer tree
+            registerBuffer(parcel);
+
+            // add to nations map
+            registerNation(parcel);
+
+            //register estate
+            EstateRegistry.register(parcel.getEstate());
+
+        } catch(Exception e) {
+            ClaimMyLand.LOGGER.error("error attempting to register parcel", parcel.getId());
+            return Optional.empty();
         }
-        parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
-        parcels.add(parcel);
+        return Optional.of(parcel);
+    }
 
-        // add to parcels by friends
-        parcel.getWhitelist().forEach(friend -> {
-            if (!PARCELS_BY_FRIENDS.containsKey(friend)) {
-                PARCELS_BY_FRIENDS.put(friend, new ArrayList<>());
-            }
-            PARCELS_BY_FRIENDS.get(friend).add(parcel);
-        });
-
-        // add to parcels by coords
-        PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
-
-        // add to BST
-        Box box = new Box(parcel.getMinCoords(), parcel.getMaxCoords());
-        IInterval<UUID> interval = TREE.insert(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId()));
-
-        // add to the buffer tree
-//        Box inflatedBox = inflateParcelBox(parcel);
-//        BUFFER_TREE.insert(new CoordsInterval<>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId()));
-//        BUFFER_PARCELS_BY_COORDS.put(inflatedBox.getMinCoords(), parcel);
-        addParcelToBufferTree(parcel);
-
+    public static synchronized void registerNation(Parcel parcel) {
         if (parcel.getType() == ParcelType.NATION) {
-            NATIONS_BY_ID.put(((NationParcel)parcel).getNationId(), parcel);
+            NATIONS_BY_ID.put(((NationParcel)parcel).getEstate().getId(), parcel);
         }
+    }
 
-        return interval != null ? Optional.of(parcel) : Optional.empty();
+    public static  synchronized void registerTree(Parcel parcel) {
+        IInterval<UUID> interval = TREE.insert(
+                new CoordsInterval<>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())
+        );
+    }
+
+    public static synchronized void registerCoords(Parcel parcel) {
+        PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
     }
 
     /**
      * removes a parcel from the registries/maps
      * @param parcel
      */
-    public static void removeParcel(Parcel parcel) {
+    public static synchronized void unregisterParcel(Parcel parcel) {
         // remove from the TREE
-        TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
-        // delete from PARCELS registries
-        List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
-        if (!parcels.isEmpty()) {
-            parcels.removeIf(p -> p.getId().equals(parcel.getId()));
-        }
+//        TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
+        unregisterTree(parcel);
+        // remove from PARCELS registries
+//        List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
+//        if (!parcels.isEmpty()) {
+//            parcels.removeIf(p -> p.getId().equals(parcel.getId()));
+//        }
+        unregisterOwner(parcel);
 
         // remove from friends
-        parcel.getWhitelist().forEach(friend -> {
-            List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
-            if (!parcelList.isEmpty()) {
-                parcelList.removeIf(p -> p.getId().equals(parcel.getId()));
-            }
-        });
+//        parcel.getWhitelist().forEach(friend -> {
+//            List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
+//            if (!parcelList.isEmpty()) {
+//                parcelList.removeIf(p -> p.getId().equals(parcel.getId()));
+//            }
+//        });
+        unregisterFriends(parcel);
 
-        // remove from coords
-        PARCELS_BY_COORDS.remove(parcel.getMinCoords());
+        // remove from coords (also removes ability of Estate finding parcel ie Estate.getParcels() )
+        unregisterCoords(parcel);
+//        PARCELS_BY_COORDS.remove(parcel.getMinCoords());
 
         // remove from buffer map
+        unregisterBuffer(parcel);
+//        Box inflatedBox = inflateParcelBox(parcel);
+//        BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
+//        // TODO test if this only deletes the one, or everything in this area.
+//        // remove from buffer tree
+//        BUFFER_TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId())));
+
+        // if nation remove from special map/registry
+        unregisterNation(parcel);
+
+        //remove the estate if no more parcels
+        if (parcel.getEstate().findParcels().isEmpty()) {
+            EstateRegistry.unregister(parcel.getEstate());
+        }
+    }
+
+    public static synchronized void unregisterBuffer(Parcel parcel) {
         Box inflatedBox = inflateParcelBox(parcel);
         BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
         // TODO test if this only deletes the one, or everything in this area.
         // remove from buffer tree
         BUFFER_TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId())));
-
-        // if nation remove from special map/registry
-        removeFromNationsRegistry(parcel);
     }
 
-    private static void removeFromNationsRegistry(Parcel parcel) {
+    public static synchronized void unregisterCoords(Parcel parcel) {
+        PARCELS_BY_COORDS.remove(parcel.getMinCoords());
+    }
+
+    public static synchronized void unregisterTree(Parcel parcel) {
+        TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
+    }
+
+    public static synchronized void unregisterNation(Parcel parcel) {
         if (parcel.getType() == ParcelType.NATION) {
             NATIONS_BY_ID.remove(((NationParcel)parcel).getNationId(), parcel);
 
@@ -320,14 +529,13 @@ public class ParcelRegistry {
                     .forEach(p -> {
                         // TODO calling this may cause Concurrent operation exceptions.
                         if (p.getType() == ParcelType.ZONE) {
-                            ParcelRegistry.removeParcel(p);
+                            ParcelRegistry.unregisterParcel(p);
                         } else {
                             p.setType(ParcelType.PLAYER);
                             p.setNationId(null);
                             // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
                         }
                     });
-
         }
     }
 
@@ -335,7 +543,7 @@ public class ParcelRegistry {
      * removes all parcels by player
      * @param ownerId
      */
-    public static void removeParcel(Level level, UUID ownerId) {
+    public static synchronized void removeParcel(Level level, UUID ownerId) {
 
         // get all parcels excluding zones as they will be handled when handling nations
         List<Parcel> parcels = Optional.ofNullable(PARCELS_BY_OWNER.get(ownerId))
@@ -344,69 +552,92 @@ public class ParcelRegistry {
                 .filter(p -> p.getType() != ParcelType.ZONE).toList();
 
         if (!parcels.isEmpty()) {
-            for (Parcel p : parcels) {
-                // remove the border
-                BlockEntity blockEntity = level.getBlockEntity(p.getCoords().toPos());
-                if (blockEntity instanceof FoundationStoneBlockEntity) {
-                    ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(level, p.getCoords());
-                }
-
-                // remove nations parcels (and zones)
-                removeFromNationsRegistry(p);
-
-                // remove from friends
-                p.getWhitelist().forEach(friend -> {
-                    List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
-                    if (!parcelList.isEmpty()) {
-                        parcelList.removeIf(fp -> fp.getId().equals(p.getId()));
-                    }
-                });
-
-                // remove from coords
-                PARCELS_BY_COORDS.remove(p.getMinCoords());
-                // remove from buffer map
-                Box inflatedBox = inflateParcelBox(p);
-                BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
+            for (Parcel parcel : parcels) {
+                unregisterParcel(parcel);
             }
+            // TODO can this not be replace with removeParcel(parcel) ?
+//                // remove the border
+//                BlockEntity blockEntity = level.getBlockEntity(p.getCoords().toPos());
+//                if (blockEntity instanceof FoundationStoneBlockEntity) {
+//                    ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(level, p.getCoords());
+//                }
+//
+//                // remove nations parcels (and zones)
+//                removeFromNationsRegistry(p);
+//
+//                // remove from friends
+//                p.getWhitelist().forEach(friend -> {
+//                    List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
+//                    if (!parcelList.isEmpty()) {
+//                        parcelList.removeIf(fp -> fp.getId().equals(p.getId()));
+//                    }
+//                });
+//
+//                // remove from coords
+//                PARCELS_BY_COORDS.remove(p.getMinCoords());
+//                // remove from buffer map
+//                Box inflatedBox = inflateParcelBox(p);
+//                BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
+//            }
         }
-        PARCELS_BY_OWNER.remove(ownerId);
+//        PARCELS_BY_OWNER.remove(ownerId);
+
+        // TODO needs to remove the estate if the estate only has the one parcel
     }
 
+    @Deprecated
     public static boolean abandonParcel(UUID parcelId) {
         Optional<Parcel> abandonedParcel = findByParcelId(parcelId);
-        if (abandonedParcel.isPresent()) {
-            if (PARCELS_BY_OWNER.containsKey(abandonedParcel.get().getOwnerId())) {
-                List<Parcel> parcels = PARCELS_BY_OWNER.get(abandonedParcel.get().getOwnerId());
-                if (!parcels.isEmpty()) {
-                    parcels.removeIf(p -> p.getId().equals(abandonedParcel.get().getId()));
-                }
-                // remove from friends
-                abandonedParcel.get().getWhitelist().forEach(friend -> {
-                    if (PARCELS_BY_FRIENDS.containsKey(friend)) {
-                        List<Parcel> friendsParcels = PARCELS_BY_FRIENDS.get(friend);
-                        if (!friendsParcels.isEmpty()) {
-                            friendsParcels.removeIf(p -> p.getId().equals(abandonedParcel.get().getId()));
-                        }
-                    }
-                });
-                // remove owner
-                abandonedParcel.get().setOwnerId(null);
-                return true;
-            }
-        }
-        return false;
+        return abandonedParcel.filter(ParcelRegistry::abandonParcel).isPresent();
+    }
+
+    @Deprecated
+    public static boolean abandonParcel(Parcel parcel) {
+        if (parcel == null) return false;
+        if (parcel.getType() != ParcelType.CITIZEN) return false;
+
+        // unregister parcel
+        ParcelRegistry.unregisterParcel(parcel);
+
+        // NOTE this will change if a "relinquish" flag is added instead of clearing ownership
+        // create new estate
+        parcel.setEstate(new EstateContext()); // NOTE estate will not have an owner assigned
+
+        // re-register parcel without owner/friends
+        registerTree(parcel);
+        registerCoords(parcel);
+        registerBuffer(parcel);
+        EstateRegistry.register(parcel.getEstate());
+
+//        if (PARCELS_BY_OWNER.containsKey(parcel.getOwnerId())) {
+//            List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
+//            if (!parcels.isEmpty()) {
+//                parcels.removeIf(p -> p.getId().equals(parcel.getId()));
+//            }
+//            // remove from friends
+//            parcel.getWhitelist().forEach(friend -> {
+//                if (PARCELS_BY_FRIENDS.containsKey(friend)) {
+//                    List<Parcel> friendsParcels = PARCELS_BY_FRIENDS.get(friend);
+//                    if (!friendsParcels.isEmpty()) {
+//                        friendsParcels.removeIf(p -> p.getId().equals(parcel.getId()));
+//                    }
+//                }
+//            });
+//            // remove owner
+//            parcel.setOwnerId(null);
+
+        return true;
     }
 
     /**
      * inflates the parcels dimensions by the config buffer radius setting
-     * @param parcel
-     * @return
      */
     public static Box inflateParcelBox(final Parcel parcel) {
         return switch(parcel.getType()) {
             case PLAYER, CITIZEN -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.parcelBufferRadius.get());
             case NATION -> ModUtil.inflate(parcel.getBox(), Config.SERVER.general.nationParcelBufferRadius.get());
             case ZONE -> parcel.getBox();
+            default -> parcel.getBox();
         };
     }
 
@@ -433,8 +664,6 @@ public class ParcelRegistry {
 
     /**
      * returns a parcel by id
-     * @param id
-     * @return
      */
     public static Optional<Parcel> findByParcelId(UUID id) {
         List<Parcel> parcels = new ArrayList<>(1);
@@ -465,6 +694,7 @@ public class ParcelRegistry {
      * @param nationId
      * @return
      */
+    @Deprecated
     public static List<Parcel> findByNationId(UUID nationId) {
         List<Parcel> parcels = new ArrayList<>(1);
         for (Parcel parcel : PARCELS_BY_COORDS.values()) {
@@ -476,6 +706,7 @@ public class ParcelRegistry {
         return parcels;
     }
 
+
     public static List<Parcel> findByNationName(String nationName) {
         return PARCELS_BY_COORDS.values().stream()
                 .filter(p -> (p instanceof NationParcel))
@@ -485,8 +716,24 @@ public class ParcelRegistry {
 
     public static List<Parcel> findChildrenByNationId(UUID nationId) {
         return PARCELS_BY_COORDS.values().stream()
-                .filter(p -> ((p instanceof CitizenParcel || p instanceof ZoneParcel)) && nationId.equals(p.getNationId()))
-                .toList();
+                .filter(p -> ((p instanceof CitizenParcel || p instanceof ZoneParcel)))
+                .map(p -> (NationalizedParcel) p)
+                .filter(nationalizedParcel -> nationalizedParcel.getNationEstate().getId().equals(nationId))
+                .collect(Collectors.toList());
+    }
+
+    public static Set<Parcel> findAllByEstateId(UUID estateId) {
+        return PARCELS_BY_COORDS.values().stream()
+                .filter(parcel -> parcel.getEstate().getId().equals(estateId))
+                .collect(Collectors.toSet());
+    }
+
+    public static Set<Parcel> findAllByNationEstateId(UUID nationEstateId) {
+        return PARCELS_BY_COORDS.values().stream()
+                .filter(parcel -> parcel instanceof NationalizedParcel)
+                .map(parcel -> (NationalizedParcel)parcel)
+                .filter(parcel -> parcel.getNationEstate().getId().equals(nationEstateId))
+                .collect(Collectors.toSet());
     }
 
     /**
@@ -925,52 +1172,20 @@ public class ParcelRegistry {
         return Optional.ofNullable(parcel);
     }
 
-//    @Deprecated
-//    public static boolean isProtectedAgainst(ICoords coords, UUID entityId) {
-//        return isProtectedAgainst(coords, coords, entityId);
-//    }
+    /**
+     * returns the most significant (largest area) parcel at coords,
+     * optionally filtered by type. used to find the containing nation/zone parcel.
+     */
+    public static Optional<Parcel> findMostSignificant(ICoords coords) {
+        return findMostSignificant(ParcelRegistry.find(coords));
+    }
 
-//    @Deprecated
-//    public static boolean isProtectedAgainst(ICoords coords1, ICoords coords2, UUID entityId) {
-//        List<IInterval<UUID>> intervals = TREE.getOverlapping(TREE.getRoot(), new CoordsInterval<>(coords1, coords2));
-//        if (intervals.isEmpty()) {
-//            return false;
-//        }
-//        else {
-//
-//            // interrogate each interval to determine if the uuid is the owner
-//            for (IInterval<UUID> interval : intervals) {
-//                // short circuit if owner or no owner
-//                ClaimMyLand.LOGGER.debug("isProtectedAgainst interval data -> {}", interval.getData());
-//                if (interval.getData() == null || interval.getData().equals(entityId)) {
-//                    break;
-//                }
-////                if (p.getData() == null) {
-////                    break; // was true. but if no owner, it is not protected against you? how does this work with CitizenParcels
-////                }
-//
-//                // get the parcel
-//                CoordsInterval<UUID> coordsInterval = (CoordsInterval<UUID>)interval;
-//                Parcel parcel = PARCELS_BY_COORDS.get(coordsInterval.getCoords1());
-//                ClaimMyLand.LOGGER.debug("isProtectedAgainst.parcelsByCoords -> {}, parcel -> {}", parcel.getMinCoords(), parcel);
-//
-//
-//                // cycle through whitelist
-    ////                if (!parcel.getWhitelist().isEmpty()) {
-    ////                    ClaimMyLand.LOGGER.debug("isProtectedAgainst whitelist is not null");
-    ////
-    ////                    for (PlayerData id : parcel.getWhitelist()) {
-    ////                        ClaimMyLand.LOGGER.debug("isProtectedAgainst compare whitelist id -> {} to uuid -> {}", id.getUuid(), uuid);
-    ////                        if (id.getUuid().equalsIgnoreCase(uuid)) {
-    ////                            return false;
-    ////                        }
-    ////                    }
-    ////                }
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
+    public static Optional<Parcel> findMostSignificant(List<Parcel> parcels, ParcelType... types) {
+        Set<ParcelType> typeSet = Set.of(types);
+        return parcels.stream()
+                .filter(p -> typeSet.isEmpty() || typeSet.contains(p.getType()))
+                .max(Comparator.comparingLong(Parcel::getArea));
+    }
 
     public static List<UUID> getOwnerIds() {
         return PARCELS_BY_OWNER.keySet().stream().toList();
@@ -995,19 +1210,103 @@ public class ParcelRegistry {
         return PARCELS_BY_COORDS.values().stream().filter(p -> p.getName().equalsIgnoreCase(name)).findFirst();
     }
 
+    public static void transferParcelOwnership(ServerLevel level, Parcel parcel, UUID newOwnerUuid) {
+        // unregister parcel
+        ParcelRegistry.unregisterParcel(parcel);
+
+        // create new estate and update parcel
+        // TODO use factory (might be a nation)
+
+        // save old estate
+        Estate oldEstate = parcel.getEstate();
+
+        Estate estate = EstateTypeRegistry.create(parcel.isNation() ? EstateTypeRegistry.NATION_ESTATE_TYPE : EstateTypeRegistry.ESTATE_TYPE);
+        estate.setOwnerId(newOwnerUuid);
+        estate.setName(oldEstate.getName());
+        estate.setParcelType(oldEstate.getParcelType());
+
+        parcel.setEstate(estate);
+        parcel.setOwnerTime(level.getGameTime());
+
+        // re-register parcel
+        ParcelRegistry.register(parcel);
+    }
+
+    @Deprecated
     public static boolean updateOwner(UUID parcelId, UUID ownerId) {
         Optional<Parcel> parcel = findByParcelId(parcelId);
         if (parcel.isPresent()) {
-            parcel.get().setOwnerId(ownerId);
-            if (!PARCELS_BY_OWNER.containsKey(ownerId)) {
-                // create new list entry
-                PARCELS_BY_OWNER.put(ownerId, new ArrayList<>());
+            // unregister owner for parcel
+            if (!ObjectUtils.isEmpty(parcel.get().getOwnerId())) {
+                ParcelRegistry.unregisterOwner(parcel.get());
             }
-            List<Parcel> parcels = PARCELS_BY_OWNER.get(ownerId);
-            parcels.add(parcel.get());
+            // unregister estate if it only has the one parcel
+            Estate estate = parcel.get().getEstate();
+            if (estate.findParcels().size() <= 1) {
+                EstateRegistry.unregister(estate);
+            }
+            // create a new estate
+            estate = new EstateContext();
+            // update estate
+            estate.setOwnerId(ownerId);
+            // update parcel
+            parcel.get().setEstate(estate);
+            // register parcel owner
+            ParcelRegistry.registerOwner(parcel.get());
+            // register estate
+            EstateRegistry.register(estate);
+
+//            parcel.get().setOwnerId(ownerId);
+//            if (!PARCELS_BY_OWNER.containsKey(ownerId)) {
+//                // create new list entry
+//                PARCELS_BY_OWNER.put(ownerId, new ArrayList<>());
+//            }
+//            List<Parcel> parcels = PARCELS_BY_OWNER.get(ownerId);
+//            parcels.add(parcel.get());
             return true;
         } else {
             return false;
         }
+
+
+    }
+
+    // new methods should replace repeated code elsewhere
+    public static void registerOwner(Parcel parcel) {
+        PARCELS_BY_OWNER.computeIfAbsent(parcel.getOwnerId(), k -> new ArrayList<>())
+                .add(parcel);
+    }
+
+    public static void unregisterOwner(Parcel parcel) {
+        if (ObjectUtils.isNotEmpty(parcel.getOwnerId())) {
+            List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
+            if (!parcels.isEmpty()) {
+                parcels.removeIf(p -> p.getId().equals(parcel.getId()));
+            }
+        }
+    }
+
+    public static void registerFriends(Parcel parcel) {
+        if (ObjectUtils.isNotEmpty(parcel.getWhitelist())) {
+            // add to parcels_by_friends
+            parcel.getWhitelist().forEach(friend ->
+                    PARCELS_BY_FRIENDS.computeIfAbsent(friend, k -> new ArrayList<>())
+                            .add(parcel)
+            );
+        }
+    }
+
+    public static void unregisterFriends(Parcel parcel) {
+        parcel.getWhitelist().forEach(friend -> {
+            List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
+            if (!parcelList.isEmpty()) {
+                parcelList.removeIf(p -> p.getId().equals(parcel.getId()));
+            }
+        });
+    }
+
+    // expose a detached parcel list
+    public static List<Parcel> getParcels() {
+        return new ArrayList<>(PARCELS_BY_COORDS.values());
     }
 }

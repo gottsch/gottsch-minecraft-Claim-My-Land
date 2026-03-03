@@ -5,6 +5,8 @@ import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
@@ -30,6 +32,12 @@ public class ModUtil {
     public static ResourceLocation getName(Item item) {
         // don't bother checking optional - if it is empty, then the block isn't registered and this shouldn't run anyway.
         ResourceLocation name = ForgeRegistries.ITEMS.getResourceKey(item).get().location();
+        return name;
+    }
+
+    public static ResourceLocation getName(EntityType<?> item) {
+        // don't bother checking optional - if it is empty, then the block isn't registered and this shouldn't run anyway.
+        ResourceLocation name = ForgeRegistries.ENTITY_TYPES.getResourceKey(item).get().location();
         return name;
     }
 
@@ -83,7 +91,6 @@ public class ModUtil {
       return absoluteSize.getX() * absoluteSize.getZ() * absoluteSize.getY();
     }
 
-    // TODO add to Box in GottschCore
     public static boolean intersects(Box box1, Box box2) {
         return toAABB(box1).intersects(toAABB(box2));
     }
@@ -103,16 +110,11 @@ public class ModUtil {
                 && box1.getMaxCoords().getZ() >= box2.getMinCoords().getZ();
     }
 
-    // TODO add to Box in GottschCore
     public static boolean contains(Box box1, Box box2) {
-//        AABB aabb = toAABB(box1);
         return contains(box1, box2.getMinCoords())
                 && contains(box1, box2.getMaxCoords());
-//        return aabb.contains(box2.getMinCoords().toVec3())
-//                && aabb.contains(box2.getMaxCoords().toVec3());
     }
 
-    // TODO move to GottschCore
     public static boolean contains(Box box, ICoords coords) {
         return coords.getX() >= box.getMinCoords().getX() && coords.getX() <= box.getMaxCoords().getX()
                 && coords.getY() >= box.getMinCoords().getY() && coords.getY() <= box.getMaxCoords().getY()
@@ -128,7 +130,6 @@ public class ModUtil {
 //    }
     /////////////////////
 
-    // TODO add to Box in GottschCore
     public static AABB toAABB(Box box) {
         return new AABB(box.getMinCoords().toPos(), box.getMaxCoords().toPos());
     }

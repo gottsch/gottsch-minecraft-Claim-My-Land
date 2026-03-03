@@ -36,6 +36,7 @@ import net.minecraft.world.level.storage.DimensionDataStorage;
 public class PersistedData extends SavedData {
 
 	private static final String PARCEL_REGISTRY = "parcel_registry";
+	private static final String PARCEL_REGISTRY_V2 = "parcel_registry_v2";
 	private static final String PLAYER_REGISTRY = "player_registry";
 	
 	/**
@@ -48,11 +49,13 @@ public class PersistedData extends SavedData {
 
 	public static PersistedData load(CompoundTag tag) {
 		ClaimMyLand.LOGGER.debug("loading world data...");
-		if (tag.contains(PARCEL_REGISTRY)) {
-			ParcelRegistry.load(tag.getCompound(PARCEL_REGISTRY));
-		}
-		if (tag.contains(PLAYER_REGISTRY)) {
-			PlayerRegistry.load(tag.getCompound(PLAYER_REGISTRY));
+//		if (tag.contains(PARCEL_REGISTRY)) {
+//			ParcelRegistry.load(tag.getCompound(PARCEL_REGISTRY));
+//		}
+		if (tag.contains(PARCEL_REGISTRY) && !tag.contains(PARCEL_REGISTRY_V2)) {
+			ParcelRegistry.convertV1ToV2(tag.getCompound(PARCEL_REGISTRY));
+		} else if (tag.contains(PARCEL_REGISTRY_V2)) {
+			ParcelRegistry.load(tag.getCompound(PARCEL_REGISTRY_V2));
 		}
 		return create();
 	}
@@ -60,8 +63,7 @@ public class PersistedData extends SavedData {
 	@Override
 	public CompoundTag save(CompoundTag tag) {
 		ClaimMyLand.LOGGER.debug("saving world data...");
-		tag.put(PARCEL_REGISTRY, ParcelRegistry.save(new CompoundTag()));
-		tag.put(PLAYER_REGISTRY, PlayerRegistry.save(new CompoundTag()));
+		tag.put(PARCEL_REGISTRY_V2, ParcelRegistry.save(new CompoundTag()));
 		return tag;
 	}
 	

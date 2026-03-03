@@ -21,28 +21,64 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.command.CommandHelper;
-import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstateContext;
 import mod.gottsch.forge.claimmyland.core.item.CitizenDeed;
 import mod.gottsch.forge.claimmyland.core.item.PlayerDeed;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Created by Mark Gottschling on Sep 30, 2024
  */
-public class ZoneParcel extends AbstractParcel {
+public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
+    // nation-ownership token
+    private NationEstate nationEstate;
 
-    public ZoneParcel() {
+    private ZoneParcel() {
+        super();
         setType(ParcelType.ZONE);
+        getEstate().setParcelType(getType());
+        this.nationEstate = new NationEstateContext();
+    }
+
+    private ZoneParcel(NationEstate nationEstate) {
+//        super(nationEstate);
+        setType(ParcelType.ZONE);
+        setNationEstate(nationEstate);
+
+        Estate estate = getEstate();
+        estate.setParcelType(getType());
+        estate.setName(estate.defaultName(nationEstate));
+        estate.setBlockWhitelist(nationEstate.getBlockWhitelist());
+        estate.setBlockTagWhitelist(nationEstate.getBlockTagWhitelist());
+        estate.setItemWhitelist(nationEstate.getItemWhitelist());
+        estate.setItemTagWhitelist(nationEstate.getItemTagWhitelist());
+        estate.setPlayerWhitelist(nationEstate.getPlayerWhitelist());
+        estate.setEntitySpawnTagWhitelist(nationEstate.getEntitySpawnTagWhitelist());
+        estate.setEntitySpawnWhitelist(nationEstate.getEntitySpawnWhitelist());
+    }
+
+    public static ZoneParcel create() {
+        return new ZoneParcel();
+    }
+
+
+    public static ZoneParcel create(NationParcel nation) {
+        return create((NationEstate) nation.getEstate());
+    }
+
+    public static ZoneParcel create(NationEstate estate) {
+        return new ZoneParcel(estate);
     }
 
     @Override
@@ -52,30 +88,11 @@ public class ZoneParcel extends AbstractParcel {
 
     @Override
     public boolean grantsAccess(Parcel virtualParcel) {
-        // get the nation this belongs to
-        List<Parcel> nations = ParcelRegistry.findByNationId(getNationId());
-        if (!nations.isEmpty()) {
-            NationParcel nation;
-            if (nations.size() > 1) {
-                Optional<Parcel> optionalNation = nations.stream().filter(n -> ModUtil.contains(n.getAbsoluteBox(), virtualParcel.getAbsoluteBox())).findFirst();
-                if (optionalNation.isEmpty()) {return false;}
-                else {
-                    nation = (NationParcel) optionalNation.get();
-                }
-            } else {
-                nation = (NationParcel) nations.get(0);
-            }
-
-            // a personal deed cannot be used in a closed-border nation
-            if (virtualParcel.getType() == ParcelType.PLAYER
-                    && nation.getBorderType() == NationBorderType.OPEN) {
-                return true;
-            } else {
-                if (virtualParcel.getType() == ParcelType.CITIZEN
-                        && virtualParcel.getNationId().equals(getNationId())) {
-                    return true;
-                }
-            }
+        if (virtualParcel.isPlayer()) {
+            return getAccessType() == NationAccessType.OPEN;
+        }
+        if (virtualParcel.isCitizen()) {
+            return getAccessType() == NationAccessType.OPEN || isSameNation((CitizenParcel) virtualParcel);
         }
         return false;
     }
@@ -89,17 +106,14 @@ public class ZoneParcel extends AbstractParcel {
         ClaimMyLand.LOGGER.debug("player does not have uuid access, check item...");
 
         // check what stack the player is holding
-        if (stack.getItem() instanceof PlayerDeed || stack.getItem() instanceof CitizenDeed) {
-            ClaimMyLand.LOGGER.debug("player DOES have item access...");
-            return true;
-        }
-        ClaimMyLand.LOGGER.debug("player does not have item access...");
-        return false;
+        boolean hasItemAccess = stack.getItem() instanceof PlayerDeed || stack.getItem() instanceof CitizenDeed;
+        ClaimMyLand.LOGGER.debug("player {} item access", hasItemAccess ? "has" : "does NOT have");
+        return hasItemAccess;
     }
 
     @Override
     public boolean hasAccessTo(Parcel otherParcel) {
-        return otherParcel.getType() == ParcelType.NATION;
+        return otherParcel.isNation();
     }
 
     @Override
@@ -109,40 +123,71 @@ public class ZoneParcel extends AbstractParcel {
 
     @Override
     public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
-        ClaimResult result = ClaimResult.FAILURE;
-
-        if (parentParcel.getType() == ParcelType.NATION
-            && getOwnerId().equals(parentParcel.getOwnerId())) {
-
-            // TODO somehow parcelBox is being 1 bigger on the x-axis and probably on the y-axis as well.
-            // ensure zone is completely contained within the nation
-            if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
-                return result;
-            }
-
-            // find overlaps of the parcel with buffered registry parcels.
-            // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
-            // NOTE filter out the zone and nation parcels
-            List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
-                    .filter(p -> !p.getId().equals(parentParcel.getId())
-                            && p.getType() != ParcelType.NATION)
-                    .toList();
-
-            if(Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
-                return result;
-            }
-
-            // add to the registry
-            ParcelRegistry.add(this);
-            CommandHelper.save(level);
-            result = ClaimResult.SUCCESS;
+        if (!parentParcel.isNation() || !getOwnerId().equals(parentParcel.getOwnerId())) {
+            return ClaimResult.FAILURE;
         }
-        return result;
+
+        // TODO parcelBox appears 1 block larger on x-axis (and possibly y-axis) — investigate
+        if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
+            return ClaimResult.FAILURE;
+        }
+
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
+                .filter(p -> !p.getId().equals(parentParcel.getId()) && !p.isNation())
+                .toList();
+
+        if (Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
+            return ClaimResult.INTERSECTS;
+        }
+
+        // TODO isValidParcel()
+        // update nation estate - inherit from parent parcel
+        setNationEstate((NationEstate) parentParcel.getEstate());
+
+        // register parcel
+        ParcelRegistry.register(this);
+        CommandHelper.save(level);
+        return ClaimResult.SUCCESS;
+    }
+
+    // NOTE due to Java's singular inheritance, Citizen and Zone parcels have to define
+    //  their own save() and load() methods even though they are duplicated code.
+    @Override
+    public void save(CompoundTag tag) {
+        ClaimMyLand.LOGGER.debug("saving nationalized parcel -> {}", this);
+
+        if (nationEstate == null || nationEstate.getId() == null) {
+            ClaimMyLand.LOGGER.warn("Unable to save parcel {} - missing a valid Nation Estate. This is an issue!", getId());
+            return;
+        }
+
+        saveNationEstate(tag);
+
+        super.save(tag);
+    }
+
+    @Override
+    public Parcel load(CompoundTag tag) {
+        if (!loadNationEstate(tag)) {
+            ClaimMyLand.LOGGER.warn("skipping parcel {} - invalid nation estate.", getId());
+            return this;
+        }
+        return super.load(tag);
     }
 
     @Override
     public int getBufferSize() {
         return 0;
+    }
+
+    @Override
+    public NationEstate getNationEstate() {
+        return nationEstate;
+    }
+
+    @Override
+    public void setNationEstate(NationEstate nationEstate) {
+        this.nationEstate = nationEstate;
     }
 
     @Override
