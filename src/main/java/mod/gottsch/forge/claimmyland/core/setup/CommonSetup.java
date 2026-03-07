@@ -21,11 +21,14 @@ package mod.gottsch.forge.claimmyland.core.setup;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.integration.journeymap.JourneyMapIntegration;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 
@@ -45,6 +48,12 @@ public class CommonSetup {
         // create a claimmyland specific log file
         Config.instance.addRollingFileAppender(ClaimMyLand.MOD_ID);
         ClaimMyLand.LOGGER.debug("file appender created");
+
+        CMLNetwork.register();  // ← ADD THIS
+
+        if (ModList.get().isLoaded("journeymap")) {
+            JourneyMapIntegration.init();
+        }
     }
 
     @SubscribeEvent

@@ -25,6 +25,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.EstateDisplayFormatter;
+import mod.gottsch.forge.claimmyland.core.command.helper.ParcelDisplayFormatter;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -88,7 +89,7 @@ public class ListParcelsSubCommand implements SubCommand {
     private static int list(CommandSourceStack source, UUID ownerUuid, boolean isOps) {
         List<Component> messages = new ArrayList<>();
 
-        EstateDisplayFormatter.formatParcelList(source.getLevel(), messages, ParcelRegistry.findByOwner(ownerUuid), isOps);
+        ParcelDisplayFormatter.formatParcelList(source.getLevel(), messages, ParcelRegistry.findByOwner(ownerUuid), isOps);
 
         messages.forEach(component -> {
             source.sendSuccess(() -> component, false);

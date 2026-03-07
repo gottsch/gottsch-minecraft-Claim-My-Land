@@ -1,6 +1,7 @@
 package mod.gottsch.forge.claimmyland;
 
 import com.google.common.reflect.TypeToken;
+import mod.gottsch.forge.claimmyland.client.hud.ParcelHud;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.ModBlockEntities;
 import mod.gottsch.forge.claimmyland.core.config.Config;
@@ -52,6 +53,7 @@ public class ClaimMyLand {
 
         // register 'ModSetup::init' to be called at mod setup time (server and client)
         modEventBus.addListener(CommonSetup::init);
+        MinecraftForge.EVENT_BUS.register(ParcelHud.class);  // static subscriber — Class, not new instance
 
         File saveDir = new File("world/data/claimmyland"); // TODO config option
         Type listType = new TypeToken<List<Parcel>>(){}.getType();
@@ -83,5 +85,9 @@ public class ClaimMyLand {
                 parcelSaver.tick();
             }
         }
+    }
+
+    public static RollingJsonSaver<List<Parcel>> getParcelSaver() {
+        return parcelSaver;
     }
 }

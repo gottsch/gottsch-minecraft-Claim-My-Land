@@ -21,20 +21,17 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandResponseFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -43,6 +40,8 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/22/2026
@@ -97,25 +96,29 @@ public class RemoveEstateSubCommand implements SubCommand {
 
             Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
             if (estate.isEmpty()) {
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.remove.failure")).withStyle(ChatFormatting.RED), false);
+                failure(source, "estate.remove.failure");
                 return -1;
             }
-            // TODO add canRemove(player|ownerUuid) to Estate?
+
             // ensure that the estate is a zone type
             if (!estate.get().isZone()) {
-                CommandHelper.failure(source, "estate.remove.not_zone.failure");
+                failure(source, "estate.remove.not_zone.failure");
                 return -1;
             }
+
+            // capture parcel size
+            int size = estate.get().findParcels().size();
 
             removeEstate(source, estate.get());
 
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.remove.success")).withStyle(ChatFormatting.GREEN), false);
-            CommandHelper.save(source.getLevel());
+            sendLines(source,
+                    CommandResponseFormatter.formatEstateDeleted(estate.get().getName(), estate.get().getId(), size));
+            save(source.getLevel());
             return 1;
 
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred renaming estate:", e);
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
             return -1;
         }
     }
@@ -126,32 +129,23 @@ public class RemoveEstateSubCommand implements SubCommand {
     public int remove(CommandSourceStack source, String ownerName, String estateName){
         Optional<UUID> owner = CommandHelper.getPlayerUuid(source, ownerName);
         if (owner.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+           sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
 
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source, owner.get(), estateName);
         if (estate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.remove.failure")).withStyle(ChatFormatting.RED), false);
+            sendFailure(source, "estate.remove.failure");
             return -1;
         }
+        // capture parcel size
+        int size = estate.get().findParcels().size();
 
         removeEstate(source, estate.get());
-//        // remove all parcels
-//        estate.get().findParcels().forEach(parcel -> {
-//            // remove the border
-//            BlockEntity blockEntity = source.getLevel().getBlockEntity(parcel.getCoords().toPos());
-//            if (blockEntity instanceof FoundationStoneBlockEntity) {
-//                ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder(source.getLevel(), parcel.getCoords());
-//            }
-//            // unregister the parcel
-//            ParcelRegistry.unregisterParcel(parcel);
-//        });
-//        // unregister the estate
-//        EstateRegistry.unregister(estate.get());
-//
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.remove.success")).withStyle(ChatFormatting.GREEN), false);
-        CommandHelper.save(source.getLevel());
+
+        sendLines(source,
+                CommandResponseFormatter.formatEstateDeleted(estate.get().getName(), estate.get().getId(), size));
+        save(source.getLevel());
         return 1;
     }
 
@@ -161,7 +155,7 @@ public class RemoveEstateSubCommand implements SubCommand {
             // remove the border
             removeBorder(source.getLevel(), parcel);
             // unregister the parcel
-            ParcelRegistry.unregisterParcel(parcel);
+            ParcelRegistry.unregisterParcel(source.getLevel(), parcel);
         });
 
         // if a Nation Estate then remove all Zone tenant estates and conver all Citizen tenant estates to Player
@@ -172,24 +166,8 @@ public class RemoveEstateSubCommand implements SubCommand {
                     .map(parcel -> (NationalizedParcel) parcel)
                     .forEach(nationalizedParcel -> {
                         removeBorder(source.getLevel(), nationalizedParcel);
-                        ParcelRegistry.unregisterParcel(nationalizedParcel);
-
-//                        if (nationalizedParcel.getType() == ParcelType.ZONE) {
-//                            removeBorder(source.getLevel(), nationalizedParcel);
-//                            ParcelRegistry.unregisterParcel(nationalizedParcel);
-//                            removeEstates.add(nationalizedParcel.getEstate());
-//                        } else if (nationalizedParcel.getType() == ParcelType.CITIZEN) {
-//                            // unregister citizen parcel
-//                            ParcelRegistry.unregisterParcel(nationalizedParcel);
-//                            // change type
-//                            Optional<Parcel> playerParcel = ParcelTypeRegistry.create(ParcelType.PLAYER, nationalizedParcel);
-//                            playerParcel.ifPresent(ParcelRegistry::register);
-//                        }
+                        ParcelRegistry.unregisterParcel(source.getLevel(), nationalizedParcel);
                     });
-            // remove estates (from the tenant zone parcels
-//            for (Estate removeEstate : removeEstates) {
-//                EstateRegistry.unregister(removeEstate);
-//            }
         }
 
         // unregister the estate (redundant)

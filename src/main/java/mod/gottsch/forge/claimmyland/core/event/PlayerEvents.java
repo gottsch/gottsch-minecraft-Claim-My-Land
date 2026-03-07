@@ -24,6 +24,7 @@ import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
 import mod.gottsch.forge.claimmyland.core.item.PlayerDeed;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -45,6 +46,7 @@ import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.item.ItemEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.MobSpawnEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.Event.Result;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
@@ -58,6 +60,22 @@ import java.util.UUID;
  */
 @EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
 public class PlayerEvents {
+
+    @SubscribeEvent
+    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            CMLNetwork.syncAllParcelsToPlayer(player);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            // ClientEvents already clears ClientParcelCache on the client side.
+            // Here we just resync the full registry for the new dimension.
+            CMLNetwork.syncAllParcelsToPlayer(player);
+        }
+    }
 
 	@SubscribeEvent
 	public static void onEntityJoinWorld(EntityJoinLevelEvent event) {

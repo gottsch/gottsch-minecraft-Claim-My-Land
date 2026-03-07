@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.item;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.CitizenPlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
@@ -67,7 +68,7 @@ public class CitizenTool extends BlockItem {
 
         Optional<Parcel> parentParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
         if (parentParcel.isEmpty() || !isValidParent(parentParcel.get())) {
-            sendError(context.getPlayer(), "citizen_placement.not_valid_parent");
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "citizen_placement.not_valid_parent");
             return InteractionResult.FAIL;
         }
 
@@ -88,7 +89,7 @@ public class CitizenTool extends BlockItem {
     private InteractionResult handleParcelCreation(UseOnContext context, BlockPlaceContext placeContext,
                                                    CompoundTag tag, Parcel parentParcel) {
         if (!tag.contains(COORDS1) || !tag.contains(COORDS2)) {
-            sendError(context.getPlayer(), "citizen_placement.begin_end_required");
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "citizen_placement.begin_end_required");
             return InteractionResult.SUCCESS;
         }
 
@@ -97,7 +98,7 @@ public class CitizenTool extends BlockItem {
         Box box = new Box(coords1, coords2);
 
         if (isBoxTooSmall(box)) {
-            sendError(context.getPlayer(), "parcel.add.failure_too_small");
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_too_small");
             return InteractionResult.SUCCESS;
         }
 
@@ -117,7 +118,7 @@ public class CitizenTool extends BlockItem {
                         : ((NationalizedParcel)parentParcel).getNationEstate()
                 );
         if (created.isEmpty()) {
-            sendError(context.getPlayer(), "unexpected_error");
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");
             return;
         }
 
@@ -128,10 +129,10 @@ public class CitizenTool extends BlockItem {
 
         ClaimResult claimResult = citizen.handleEmbeddedClaim(context.getLevel(), parentParcel, citizen.getBox());
         if (claimResult == ClaimResult.SUCCESS) {
-            sendSuccess(context.getPlayer(), "parcel.add.success");
+            PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
             CommandHelper.save(context.getLevel());
         } else {
-            sendError(context.getPlayer(), "parcel.add.failure_with_overlaps");
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
         }
     }
 
@@ -178,12 +179,12 @@ public class CitizenTool extends BlockItem {
         Optional<Parcel> parentAtCoords2 = ParcelRegistry.findLeastSignificant(coords2);
 
         if (parentAtCoords1.isEmpty() || parentAtCoords2.isEmpty()) {
-            sendError(context.getPlayer(), "unexpected_error");
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");
             return InteractionResult.SUCCESS;
         }
 
         if (!parentAtCoords1.get().getId().equals(parentAtCoords2.get().getId())) {
-            sendError(context.getPlayer(), "citizen_placement.not_same_zone");
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "citizen_placement.not_same_zone");
             return InteractionResult.SUCCESS;
         }
 
@@ -231,14 +232,6 @@ public class CitizenTool extends BlockItem {
 
     private ICoords loadCoords(CompoundTag tag, String key) {
         return Coords.EMPTY.load(tag.getCompound(key));
-    }
-
-    private void sendError(Player player, String langKey) {
-        player.sendSystemMessage(Component.translatable(LangUtil.chat(langKey)).withStyle(ChatFormatting.RED));
-    }
-
-    private void sendSuccess(Player player, String langKey) {
-        player.sendSystemMessage(Component.translatable(LangUtil.chat(langKey)).withStyle(ChatFormatting.GREEN));
     }
 
     private void clear(BlockPlaceContext context, CompoundTag tag) {

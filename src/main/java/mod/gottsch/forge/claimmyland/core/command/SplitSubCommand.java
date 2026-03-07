@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
@@ -37,6 +36,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.*;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/27/2026
@@ -86,15 +87,15 @@ public class SplitSubCommand implements SubCommand {
             return split(source, player.getScoreboardName(), estateName, parcelName);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred joing estates:", e);
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
             return -1;
         }
     }
 
     public static int split(CommandSourceStack source, String ownerName, String estateName, String parcelName) {
-        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> player = getPlayerUuid(source, ownerName);
         if (player.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
 
@@ -103,18 +104,18 @@ public class SplitSubCommand implements SubCommand {
 
         List<String> names = new ArrayList<>();
         if (estate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.split.failure");
             return -1;
         }
 
         Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(estate.get().getId());
         if (parcels.size() <= 1) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.single_parcel.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.split.single_parcel.failure");
             return -1;
         }
         Optional<Parcel> parcel = parcels.stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
         if (parcel.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.split.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.split.failure");
             return -1;
         }
 
@@ -131,6 +132,8 @@ public class SplitSubCommand implements SubCommand {
         // register estate
         EstateRegistry.register(estateContext);
 
+        sendSuccess(source, "estate.split.success");
+        save(source.getLevel());
         return 1;
     }
 }

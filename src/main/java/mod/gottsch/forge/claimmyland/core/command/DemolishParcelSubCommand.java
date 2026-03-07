@@ -32,18 +32,17 @@ import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.*;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * TODO shares a lot of code with remove - should have a common parent class
@@ -94,8 +93,8 @@ public class DemolishParcelSubCommand implements SubCommand {
             return demolishParcel(source, player.getScoreboardName(), estateName, parcelName);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred demonishing parcel:", e);
-            CommandHelper.unexceptedError(source);
-            return 0;
+            unexpectedError(source);
+            return -1;
         }
     }
 
@@ -113,15 +112,16 @@ public class DemolishParcelSubCommand implements SubCommand {
 
             ClaimMyLand.LOGGER.debug("command player -> {}", player.getName().getString());
             if (ownerUuid.isEmpty()) {
-                CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
-                return 0;
+                sendUnableToLocatePlayerMessage(source, ownerName);
+                return -1;
             }
             ClaimMyLand.LOGGER.debug("owner player uuid -> {}", ownerUuid.get());
 
             // get the parcel
             Optional<Parcel> optionalParcel = CommandHelper.findParcelByOwnerEstate(source, ownerUuid.get(), estateName, parcelName);
             if (optionalParcel.isEmpty()) {
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.unable_to_locate")).withStyle(ChatFormatting.RED), false);
+                failure(source,"parcel.unable_to_locate");
+                return -1;
             }
             Parcel parcel = optionalParcel.get();
 
@@ -154,22 +154,12 @@ public class DemolishParcelSubCommand implements SubCommand {
             // remove the parcel
             removeParcel(source, parcel);
 
-            // unregister the parcel
-//            ParcelRegistry.unregisterParcel(parcel);
-
-            // NOTE this will only work if the border stone is at coords
-            // remove any borders
-//            ICoords coords = parcel.getCoords();
-//            // check if there is a border stone
-//            BlockEntity be = source.getLevel().getBlockEntity(coords.toPos());
-//            if (be instanceof BorderStoneBlockEntity) {
-//                ((BorderStoneBlockEntity) be).removeParcelBorder(source.getLevel(), coords);
-//            }
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.success")).withStyle(ChatFormatting.GREEN), false);
+            sendSuccess(source, "parcel.demolish.success");
+            save(source.getLevel());
 
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred demolishing a parcels:", e);
-            source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error")).withStyle(ChatFormatting.RED));
+            failure(source, "unexpected_error");
         }
         return 1;
     }
@@ -179,7 +169,7 @@ public class DemolishParcelSubCommand implements SubCommand {
         // remove the border
         removeBorder(source.getLevel(), parcel);
         // unregister the parcel
-        ParcelRegistry.unregisterParcel(parcel);
+        ParcelRegistry.unregisterParcel(source.getLevel(), parcel);
 
         // if a Nation parcel then remove all Zone tenant estates and conver all Citizen tenant estates to Player
         if (parcel.getType() == ParcelType.NATION) {
@@ -191,19 +181,7 @@ public class DemolishParcelSubCommand implements SubCommand {
                     .map(p -> (NationalizedParcel) p)
                     .forEach(nationalizedParcel -> {
                         removeBorder(source.getLevel(), nationalizedParcel);
-                        ParcelRegistry.unregisterParcel(nationalizedParcel);
-
-//                        if (nationalizedParcel.getType() == ParcelType.ZONE) {
-//                            removeBorder(source.getLevel(), nationalizedParcel);
-//                            ParcelRegistry.unregisterParcel(nationalizedParcel);
-//                        } else if (nationalizedParcel.getType() == ParcelType.CITIZEN) {
-//
-//                            // unregister citizen parcel
-//                            ParcelRegistry.unregisterParcel(nationalizedParcel);
-//                            // change type
-//                            Optional<Parcel> playerParcel = ParcelTypeRegistry.create(ParcelType.PLAYER, nationalizedParcel);
-//                            playerParcel.ifPresent(ParcelRegistry::register);
-//                        }
+                        ParcelRegistry.unregisterParcel(source.getLevel(), nationalizedParcel);
                     });
         }
     }

@@ -65,6 +65,13 @@ public abstract class AbstractParcel implements Parcel {
     // TODO this probably can be moved into Parcel (replace PARCEL_TYPE)
     public static final String TYPE = "type";
 
+    //
+    public static final String DIMENSION_KEY = "dimension";
+
+    // default value — matches current hardcoded Overworld-only behaviour.
+    // TODO update this per-parcel when multi-dimension support is added in a future version.
+    public static final String DEFAULT_DIMENSION = "minecraft:overworld";
+
     // the unique id of the parcel
     private UUID id;
     private String name;
@@ -82,15 +89,7 @@ public abstract class AbstractParcel implements Parcel {
     private Box size;
     private ParcelType type;
 
-    // TODO move to Estate
-    @Deprecated(forRemoval = true, since = "2.0")
-    private long foundedTime;
-    @Deprecated(forRemoval = true, since = "2.0")
-    private long ownerTime;
-    // TODO abandonedTime doesn't sense anymore as only citizen parcels can be
-    //  relinquished
-    @Deprecated(forRemoval = true, since = "2.0")
-    private long abandonedTime;
+    private String dimension = DEFAULT_DIMENSION;
 
     /*
      * no-arg constructor
@@ -212,6 +211,8 @@ public abstract class AbstractParcel implements Parcel {
 
         tag.putString(TYPE, getType().getSerializedName());
 
+        tag.putString(DIMENSION_KEY, getDimension());
+
         CompoundTag coordsTag = new CompoundTag();
         getCoords().save(coordsTag);
         tag.put(COORDS_KEY, coordsTag);
@@ -220,9 +221,6 @@ public abstract class AbstractParcel implements Parcel {
         getSize().save(sizeTag);
         tag.put(SIZE_KEY, sizeTag);
 
-        tag.putLong("foundedTime", getFoundedTime());
-        tag.putLong("ownerTime", getOnwerTime());
-        tag.putLong("abandonedTime", getAbandonedTime());
     }
 
     @Override
@@ -259,21 +257,14 @@ public abstract class AbstractParcel implements Parcel {
         if (tag.contains(TYPE)) {
             setType(ParcelType.valueOf(tag.getString(TYPE)));
         }
+        if (tag.contains(DIMENSION_KEY)) {
+            setDimension(tag.getString(DIMENSION_KEY));
+        }
         if (tag.contains(COORDS_KEY)) {
             setCoords(Coords.EMPTY.load(tag.getCompound(COORDS_KEY)));
         }
         if (tag.contains(SIZE_KEY)) {
             setSize(Box.load(tag.getCompound(SIZE_KEY)));
-        }
-        // TODO move to estate
-        if (tag.contains("foundedTime")) {
-            setFoundedTime(tag.getLong("foundedTime"));
-        }
-        if (tag.contains("ownerTime")) {
-            setOwnerTime(tag.getLong("ownerTime"));
-        }
-        if (tag.contains("abandonedTime")) {
-            setRelinquishedTime(tag.getLong("abandonedTime"));
         }
 
         return this;
@@ -412,6 +403,16 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     @Override
+    public String getDimension() {
+        return dimension;
+    }
+
+    @Override
+    public void setDimension(String dimension) {
+        this.dimension = dimension;
+    }
+
+    @Override
     public Set<UUID> getWhitelist() {
         return getEstate().getPlayerWhitelist();
     }
@@ -510,36 +511,6 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     @Override
-    public Long getFoundedTime() {
-        return foundedTime;
-    }
-
-    @Override
-    public void setFoundedTime(Long foundedTime) {
-        this.foundedTime = foundedTime;
-    }
-
-    @Override
-    public Long getOnwerTime() {
-        return ownerTime;
-    }
-
-    @Override
-    public void setOwnerTime(Long ownerTime) {
-        this.ownerTime = ownerTime;
-    }
-
-    @Override
-    public Long getAbandonedTime() {
-        return abandonedTime;
-    }
-
-    @Override
-    public void setRelinquishedTime(Long abandonedTime) {
-        this.abandonedTime = abandonedTime;
-    }
-
-    @Override
     public String toString() {
         return "AbstractParcel{" +
                 ", id=" + id +
@@ -550,9 +521,6 @@ public abstract class AbstractParcel implements Parcel {
                 ", coords=" + coords +
                 ", size=" + size +
                 ", type=" + type +
-                ", foundedTime=" + foundedTime +
-                ", ownerTime=" + ownerTime +
-                ", abandonedTime=" + abandonedTime +
                 '}';
     }
 }

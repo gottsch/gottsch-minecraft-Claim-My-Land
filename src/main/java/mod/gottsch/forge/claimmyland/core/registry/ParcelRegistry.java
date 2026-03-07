@@ -25,8 +25,10 @@ import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.mojang.authlib.minecraft.client.ObjectMapper;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.cache.ParcelRegionCache;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.estate.*;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
@@ -42,6 +44,7 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -87,12 +90,11 @@ public class ParcelRegistry {
      */
     private static final Map<ICoords, Parcel> BUFFER_PARCELS_BY_COORDS = new HashMap<>();
 
-    /*
-     * nation caches
-     */
-    @Deprecated
-    private static final Multimap<UUID, Parcel> NATIONS_BY_ID = ArrayListMultimap.create();
+    private static final Map<UUID, Parcel> PARCELS_BY_ID = new HashMap<>();
 
+    private static final Map<UUID, Set<Parcel>> PARCELS_BY_ESTATE_ID = new HashMap<>();
+
+    public static final ParcelRegionCache REGION_CACHE = new ParcelRegionCache();
 
     // singleton
     private ParcelRegistry() {}
@@ -107,8 +109,27 @@ public class ParcelRegistry {
         BUFFER_PARCELS_BY_COORDS.clear();
         TREE.clear();
         BUFFER_TREE.clear();
-        NATIONS_BY_ID.clear();
+        ParcelChunkIndex.clear();
+        REGION_CACHE.invalidateAll();
     }
+
+    /**
+     * registers a parcel and notifies nearby clients.
+     * Use this overload from command and block entity code where ServerLevel
+     * and the claiming player are available.
+     */
+    public static synchronized Optional<Parcel> register(ServerLevel level, Parcel parcel, String ownerName) {
+        Optional<Parcel> result = register(parcel);
+        result.ifPresent(p -> CMLNetwork.syncParcelToTrackingPlayers(level, p, ownerName));
+        return result;
+    }
+
+    public static synchronized Optional<Parcel> register(ServerLevel level, Parcel parcel) {
+        Optional<Parcel> result = register(parcel);
+        result.ifPresent(p -> CMLNetwork.syncParcelToTrackingPlayers(level, p));
+        return result;
+    }
+
 
     /**
      *
@@ -188,6 +209,14 @@ public class ParcelRegistry {
 
     }
 
+    /**
+     * registers parcel in the chunk pre-filter index.
+     * called as part of the full registration sequence in {@link #register}.
+     */
+    public static synchronized void registerChunk(Parcel parcel) {
+        ParcelChunkIndex.index(parcel);
+    }
+
     public static String toJson() {
         Gson gson = new Gson();
         ObjectMapper mapper = new ObjectMapper(gson);
@@ -237,16 +266,7 @@ public class ParcelRegistry {
                     .forEach(np -> {
                         NationEstateContext estate = (NationEstateContext) np.getEstate();
                         // copy properties
-//                                        estate.setName(np.getName());
-//                                        estate.setOwnerId(np.getOwnerId());
-//                                        estate.setBlockWhitelist(np.getBlockWhitelist());
-//                                        estate.setBlockTagWhitelist(np.getBlockWhitelist());
-//                                        estate.setItemWhitelist(np.getBlockWhitelist());
-//                                        estate.setItemTagWhitelist(np.getItemTagWhitelist());
-//                                        estate.setPlayerWhitelist(np.getPlayerWhitelist());
-                        estate.setAccessType(NationAccessType.fromString(np.getBorderType().name()));
                         estate.setPlayerBlacklist(new HashSet<>(np.getBlacklist()));
-//                        EstateRegistry.register(estate);
                         if (estate.getOwnerId() != null) {
                             ParcelRegistry.register(np);
                         }
@@ -258,12 +278,7 @@ public class ParcelRegistry {
                     .forEach(p -> {
                         Estate estate = p.getEstate();
                         // setup default estate
-//                                        estate.setOwnerId(p.getOwnerId());
-//                                        estate.setBlockWhitelist(p.getBlockWhitelist());
-//                                        estate.setBlockTagWhitelist(p.getBlockWhitelist());
-//                                        estate.setItemWhitelist(p.getBlockWhitelist());
-//                                        estate.setItemTagWhitelist(p.getItemTagWhitelist());
-//                                        estate.setPlayerWhitelist(p.getPlayerWhitelist());
+
 
                         // setup the nation estate if a nation id exists
                         if (p instanceof NationalizedParcel nationalizedParcel) {
@@ -361,24 +376,15 @@ public class ParcelRegistry {
             });
         }
 
-        if (tag.contains("foundedTime")) {
-            parcel.setFoundedTime(tag.getLong("foundedTime"));
-        }
-        if (tag.contains("ownerTime")) {
-            parcel.setOwnerTime(tag.getLong("ownerTime"));
-        }
-        if (tag.contains("abandonedTime")) {
-            parcel.setRelinquishedTime(tag.getLong("abandonedTime"));
-        }
-
         // parcel specific properties
         if (parcel instanceof NationParcel nationParcel) {
+            NationEstateContext estate = (NationEstateContext) nationParcel.getEstate();
             if (tag.contains("borderType")) {
                 try {
-                    nationParcel.setBorderType(NationBorderType.valueOf(tag.getString("borderType")));
+                    estate.setAccessType(NationAccessType.valueOf(tag.getString("borderType")));
                 } catch(Exception e) {
                     ClaimMyLand.LOGGER.warn("unable to parse and load borderType - using default CLOSED");
-                    nationParcel.setBorderType(NationBorderType.CLOSED);
+                    estate.setAccessType(NationAccessType.CLOSED);
                 }
             }
 
@@ -431,8 +437,9 @@ public class ParcelRegistry {
             // add to the buffer tree
             registerBuffer(parcel);
 
+            registerChunk(parcel);
             // add to nations map
-            registerNation(parcel);
+//            registerNation(parcel);
 
             //register estate
             EstateRegistry.register(parcel.getEstate());
@@ -444,11 +451,11 @@ public class ParcelRegistry {
         return Optional.of(parcel);
     }
 
-    public static synchronized void registerNation(Parcel parcel) {
-        if (parcel.getType() == ParcelType.NATION) {
-            NATIONS_BY_ID.put(((NationParcel)parcel).getEstate().getId(), parcel);
-        }
-    }
+//    public static synchronized void registerNation(Parcel parcel) {
+//        if (parcel.getType() == ParcelType.NATION) {
+//            NATIONS_BY_ID.put(((NationParcel)parcel).getEstate().getId(), parcel);
+//        }
+//    }
 
     public static  synchronized void registerTree(Parcel parcel) {
         IInterval<UUID> interval = TREE.insert(
@@ -457,6 +464,9 @@ public class ParcelRegistry {
     }
 
     public static synchronized void registerCoords(Parcel parcel) {
+        PARCELS_BY_ID.put(parcel.getId(), parcel);
+        PARCELS_BY_ESTATE_ID.computeIfAbsent(parcel.getEstate().getId(), k -> new HashSet<>())
+                .add(parcel);
         PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
     }
 
@@ -466,43 +476,40 @@ public class ParcelRegistry {
      */
     public static synchronized void unregisterParcel(Parcel parcel) {
         // remove from the TREE
-//        TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
         unregisterTree(parcel);
-        // remove from PARCELS registries
-//        List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
-//        if (!parcels.isEmpty()) {
-//            parcels.removeIf(p -> p.getId().equals(parcel.getId()));
-//        }
+
         unregisterOwner(parcel);
 
         // remove from friends
-//        parcel.getWhitelist().forEach(friend -> {
-//            List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
-//            if (!parcelList.isEmpty()) {
-//                parcelList.removeIf(p -> p.getId().equals(parcel.getId()));
-//            }
-//        });
         unregisterFriends(parcel);
 
         // remove from coords (also removes ability of Estate finding parcel ie Estate.getParcels() )
         unregisterCoords(parcel);
-//        PARCELS_BY_COORDS.remove(parcel.getMinCoords());
 
         // remove from buffer map
         unregisterBuffer(parcel);
-//        Box inflatedBox = inflateParcelBox(parcel);
-//        BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
-//        // TODO test if this only deletes the one, or everything in this area.
-//        // remove from buffer tree
-//        BUFFER_TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId())));
+        // unindex the parcel
+        ParcelChunkIndex.unindex(parcel);
+
+        REGION_CACHE.invalidateByParcel(parcel.getId());
 
         // if nation remove from special map/registry
-        unregisterNation(parcel);
+//        unregisterNation(parcel);
 
         //remove the estate if no more parcels
         if (parcel.getEstate().findParcels().isEmpty()) {
             EstateRegistry.unregister(parcel.getEstate());
         }
+    }
+
+    /**
+     * Unregisters a parcel and notifies nearby clients.
+     * Use this overload from command and block entity code where ServerLevel
+     * is available.
+     */
+    public static synchronized void unregisterParcel(ServerLevel level, Parcel parcel) {
+        unregisterParcel(parcel);
+        CMLNetwork.removeParcelFromTracking(level, parcel);
     }
 
     public static synchronized void unregisterBuffer(Parcel parcel) {
@@ -514,6 +521,12 @@ public class ParcelRegistry {
     }
 
     public static synchronized void unregisterCoords(Parcel parcel) {
+        PARCELS_BY_ID.remove(parcel.getId());
+        Set<Parcel> estateSet = PARCELS_BY_ESTATE_ID.get(parcel.getEstate().getId());
+        if (estateSet != null) {
+            estateSet.remove(parcel);
+            if (estateSet.isEmpty()) PARCELS_BY_ESTATE_ID.remove(parcel.getEstate().getId());
+        }
         PARCELS_BY_COORDS.remove(parcel.getMinCoords());
     }
 
@@ -521,29 +534,29 @@ public class ParcelRegistry {
         TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
     }
 
-    public static synchronized void unregisterNation(Parcel parcel) {
-        if (parcel.getType() == ParcelType.NATION) {
-            NATIONS_BY_ID.remove(((NationParcel)parcel).getNationId(), parcel);
-
-            ParcelRegistry.findChildrenByNationId(parcel.getNationId())
-                    .forEach(p -> {
-                        // TODO calling this may cause Concurrent operation exceptions.
-                        if (p.getType() == ParcelType.ZONE) {
-                            ParcelRegistry.unregisterParcel(p);
-                        } else {
-                            p.setType(ParcelType.PLAYER);
-                            p.setNationId(null);
-                            // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
-                        }
-                    });
-        }
-    }
+//    public static synchronized void unregisterNation(Parcel parcel) {
+//        if (parcel.getType() == ParcelType.NATION) {
+//            NATIONS_BY_ID.remove(((NationParcel)parcel).getNationId(), parcel);
+//
+//            ParcelRegistry.findChildrenByNationId(parcel.getNationId())
+//                    .forEach(p -> {
+//                        // TODO calling this may cause Concurrent operation exceptions.
+//                        if (p.getType() == ParcelType.ZONE) {
+//                            ParcelRegistry.unregisterParcel(p);
+//                        } else {
+//                            p.setType(ParcelType.PLAYER);
+//                            p.setNationId(null);
+//                            // TODO remove borders if any this would have to be able to call the Border Entity Block - how?!
+//                        }
+//                    });
+//        }
+//    }
 
     /**
      * removes all parcels by player
      * @param ownerId
      */
-    public static synchronized void removeParcel(Level level, UUID ownerId) {
+    public static synchronized void removeParcel(ServerLevel level, UUID ownerId) {
 
         // get all parcels excluding zones as they will be handled when handling nations
         List<Parcel> parcels = Optional.ofNullable(PARCELS_BY_OWNER.get(ownerId))
@@ -553,81 +566,54 @@ public class ParcelRegistry {
 
         if (!parcels.isEmpty()) {
             for (Parcel parcel : parcels) {
-                unregisterParcel(parcel);
+                unregisterParcel(level, parcel);
             }
-            // TODO can this not be replace with removeParcel(parcel) ?
-//                // remove the border
-//                BlockEntity blockEntity = level.getBlockEntity(p.getCoords().toPos());
-//                if (blockEntity instanceof FoundationStoneBlockEntity) {
-//                    ((FoundationStoneBlockEntity)blockEntity).removeParcelBorder(level, p.getCoords());
-//                }
-//
-//                // remove nations parcels (and zones)
-//                removeFromNationsRegistry(p);
-//
-//                // remove from friends
-//                p.getWhitelist().forEach(friend -> {
-//                    List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
-//                    if (!parcelList.isEmpty()) {
-//                        parcelList.removeIf(fp -> fp.getId().equals(p.getId()));
-//                    }
-//                });
-//
-//                // remove from coords
-//                PARCELS_BY_COORDS.remove(p.getMinCoords());
-//                // remove from buffer map
-//                Box inflatedBox = inflateParcelBox(p);
-//                BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
-//            }
         }
-//        PARCELS_BY_OWNER.remove(ownerId);
-
-        // TODO needs to remove the estate if the estate only has the one parcel
     }
 
-    @Deprecated
-    public static boolean abandonParcel(UUID parcelId) {
-        Optional<Parcel> abandonedParcel = findByParcelId(parcelId);
-        return abandonedParcel.filter(ParcelRegistry::abandonParcel).isPresent();
-    }
-
-    @Deprecated
-    public static boolean abandonParcel(Parcel parcel) {
-        if (parcel == null) return false;
-        if (parcel.getType() != ParcelType.CITIZEN) return false;
-
-        // unregister parcel
-        ParcelRegistry.unregisterParcel(parcel);
-
-        // NOTE this will change if a "relinquish" flag is added instead of clearing ownership
-        // create new estate
-        parcel.setEstate(new EstateContext()); // NOTE estate will not have an owner assigned
-
-        // re-register parcel without owner/friends
-        registerTree(parcel);
-        registerCoords(parcel);
-        registerBuffer(parcel);
-        EstateRegistry.register(parcel.getEstate());
-
-//        if (PARCELS_BY_OWNER.containsKey(parcel.getOwnerId())) {
-//            List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
-//            if (!parcels.isEmpty()) {
-//                parcels.removeIf(p -> p.getId().equals(parcel.getId()));
-//            }
-//            // remove from friends
-//            parcel.getWhitelist().forEach(friend -> {
-//                if (PARCELS_BY_FRIENDS.containsKey(friend)) {
-//                    List<Parcel> friendsParcels = PARCELS_BY_FRIENDS.get(friend);
-//                    if (!friendsParcels.isEmpty()) {
-//                        friendsParcels.removeIf(p -> p.getId().equals(parcel.getId()));
-//                    }
-//                }
-//            });
-//            // remove owner
-//            parcel.setOwnerId(null);
-
-        return true;
-    }
+//    @Deprecated
+//    public static boolean abandonParcel(UUID parcelId) {
+//        Optional<Parcel> abandonedParcel = findByParcelId(parcelId);
+//        return abandonedParcel.filter(ParcelRegistry::abandonParcel).isPresent();
+//    }
+//
+//    @Deprecated
+//    public static boolean abandonParcel(Parcel parcel) {
+//        if (parcel == null) return false;
+//        if (parcel.getType() != ParcelType.CITIZEN) return false;
+//
+//        // unregister parcel
+//        ParcelRegistry.unregisterParcel(parcel);
+//
+//        // NOTE this will change if a "relinquish" flag is added instead of clearing ownership
+//        // create new estate
+//        parcel.setEstate(new EstateContext()); // NOTE estate will not have an owner assigned
+//
+//        // re-register parcel without owner/friends
+//        registerTree(parcel);
+//        registerCoords(parcel);
+//        registerBuffer(parcel);
+//        EstateRegistry.register(parcel.getEstate());
+//
+////        if (PARCELS_BY_OWNER.containsKey(parcel.getOwnerId())) {
+////            List<Parcel> parcels = PARCELS_BY_OWNER.get(parcel.getOwnerId());
+////            if (!parcels.isEmpty()) {
+////                parcels.removeIf(p -> p.getId().equals(parcel.getId()));
+////            }
+////            // remove from friends
+////            parcel.getWhitelist().forEach(friend -> {
+////                if (PARCELS_BY_FRIENDS.containsKey(friend)) {
+////                    List<Parcel> friendsParcels = PARCELS_BY_FRIENDS.get(friend);
+////                    if (!friendsParcels.isEmpty()) {
+////                        friendsParcels.removeIf(p -> p.getId().equals(parcel.getId()));
+////                    }
+////                }
+////            });
+////            // remove owner
+////            parcel.setOwnerId(null);
+//
+//        return true;
+//    }
 
     /**
      * inflates the parcels dimensions by the config buffer radius setting
@@ -665,15 +651,19 @@ public class ParcelRegistry {
     /**
      * returns a parcel by id
      */
+//    public static Optional<Parcel> findByParcelId(UUID id) {
+//        List<Parcel> parcels = new ArrayList<>(1);
+//        for (Parcel parcel : PARCELS_BY_COORDS.values()) {
+//            if (parcel.getId().equals(id)) {
+//                parcels.add(parcel);
+//                break;
+//            }
+//        }
+//        return parcels.isEmpty() ? Optional.empty() : Optional.of(parcels.get(0));
+//    }
+    // old findByParcelId() — O(n), new findByParcelId() → O(1):
     public static Optional<Parcel> findByParcelId(UUID id) {
-        List<Parcel> parcels = new ArrayList<>(1);
-        for (Parcel parcel : PARCELS_BY_COORDS.values()) {
-            if (parcel.getId().equals(id)) {
-                parcels.add(parcel);
-                break;
-            }
-        }
-        return parcels.isEmpty() ? Optional.empty() : Optional.of(parcels.get(0));
+        return Optional.ofNullable(PARCELS_BY_ID.get(id));
     }
 
     /**
@@ -722,10 +712,14 @@ public class ParcelRegistry {
                 .collect(Collectors.toList());
     }
 
+//    public static Set<Parcel> findAllByEstateId(UUID estateId) {
+//        return PARCELS_BY_COORDS.values().stream()
+//                .filter(parcel -> parcel.getEstate().getId().equals(estateId))
+//                .collect(Collectors.toSet());
+//    }
+
     public static Set<Parcel> findAllByEstateId(UUID estateId) {
-        return PARCELS_BY_COORDS.values().stream()
-                .filter(parcel -> parcel.getEstate().getId().equals(estateId))
-                .collect(Collectors.toSet());
+        return PARCELS_BY_ESTATE_ID.getOrDefault(estateId, Collections.emptySet());
     }
 
     public static Set<Parcel> findAllByNationEstateId(UUID nationEstateId) {
@@ -927,9 +921,9 @@ public class ParcelRegistry {
         return hasAccess(coords, coords, entityId, stack);
     }
 
-    public static boolean hasInteractAccess(ICoords coords, UUID entityId, ItemStack stack) {
-        return hasInteractAccess(coords, coords, entityId, stack);
-    }
+//    public static boolean hasInteractAccess(ICoords coords, UUID entityId, ItemStack stack) {
+//        return hasInteractAccess(coords, coords, entityId, stack);
+//    }
 
     @Deprecated
     // TODO keep for now, might refactor
@@ -942,205 +936,442 @@ public class ParcelRegistry {
     }
 
     public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
-        // this is the fastest lookup
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
-        if (!intervals.isEmpty()) {
-            Parcel parcel;
-            // convert to parcels
-            List<Parcel> parcels = getAsParcels(intervals);
-
-            if (parcels.isEmpty()) {
-                return true;
-            }
-            if (intervals.size() > 1) {
-                // find the least significant parcel
-                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
-                if (parcelOptional.isPresent()) {
-                    parcel = parcelOptional.get();
-                } else {
-                    // TODO add chat warning
-                    // TODO add log warning
-                    // TODO maybe do something like labelling as abandoned and has a timer before it is removed from registry.
-                    // this is a case where the interval still exists but the parcel has been removed
-                    TREE.delete(intervals.get(0));
-                    return true;
-                }
-            } else {
-                parcel = parcels.get(0);
-            }
-
-            // check player's access
-            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
-        }
-        return true;
+        return resolveParcelAt(coords1, coords2)
+                .map(parcel -> (itemStack != null && !itemStack.isEmpty())
+                        ? parcel.grantsAccess(entityId, itemStack)
+                        : parcel.grantsAccess(entityId))
+                .orElse(true);
     }
+
+    public static boolean hasAccess(ServerPlayer player, ICoords coords, String dimension) {
+        return resolveParcelCached(player, coords, dimension)
+                .map(parcel -> parcel.grantsAccess(player.getUUID()))
+                .orElse(true);
+    }
+
+    public static boolean hasAccess(ServerPlayer player, ICoords coords, String dimension, ItemStack itemStack) {
+        return resolveParcelCached(player, coords, dimension)
+                .map(parcel -> (itemStack != null && !itemStack.isEmpty())
+                        ? parcel.grantsAccess(player.getUUID(), itemStack)
+                        : parcel.grantsAccess(player.getUUID()))
+                .orElse(true);
+    }
+
+//    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
+//        // this is the fastest lookup
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
+//        if (!intervals.isEmpty()) {
+//            Parcel parcel;
+//            // convert to parcels
+//            List<Parcel> parcels = getAsParcels(intervals);
+//
+//            if (parcels.isEmpty()) {
+//                return true;
+//            }
+//            if (intervals.size() > 1) {
+//                // find the least significant parcel
+//                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
+//                if (parcelOptional.isPresent()) {
+//                    parcel = parcelOptional.get();
+//                } else {
+//                    // TODO add chat warning
+//                    // TODO add log warning
+//                    // TODO maybe do something like labelling as abandoned and has a timer before it is removed from registry.
+//                    // this is a case where the interval still exists but the parcel has been removed
+//                    TREE.delete(intervals.get(0));
+//                    return true;
+//                }
+//            } else {
+//                parcel = parcels.get(0);
+//            }
+//
+//            // check player's access
+//            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
+//        }
+//        return true;
+//    }
 
     /*
      *
      */
-    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
-        // this is the fastest lookup
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
-        if (!intervals.isEmpty()) {
-            Parcel parcel;
-            // convert to parcels
-            List<Parcel> parcels = getAsParcels(intervals);
+//    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
+//        // this is the fastest lookup
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
+//        if (!intervals.isEmpty()) {
+//            Parcel parcel;
+//            // convert to parcels
+//            List<Parcel> parcels = getAsParcels(intervals);
+//
+//            if (parcels.isEmpty()) {
+//                return true;
+//            }
+//            if (intervals.size() > 1) {
+//                // find the least significant parcel
+//                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
+//                if (parcelOptional.isPresent()) {
+//                    parcel = parcelOptional.get();
+//                } else {
+//                    // this is a case where the interval still exists but the parcel has been removed
+//                    TREE.delete(intervals.get(0));
+//                    return true;
+//                }
+//            } else {
+//                parcel = parcels.get(0);
+//            }
+//
+//            // if you have an item in your hand, do whitelist short-circuit tests
+//            if (itemStack != null && !itemStack.isEmpty()) {
+//                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", itemStack.getDisplayName().getString(), parcel);
+//                // test the item against the whitelisted item tags for the parcel
+//                for (String tagName : parcel.getItemTagWhitelist()) {
+//                    ResourceLocation location = new ResourceLocation(tagName);
+//                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
+//                    // get the tag from the resource key
+//                    if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) {
+//                        return true;
+//                    }
+//                }
+//
+//                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
+//                for (String itemName : parcel.getItemWhitelist()) {
+//                    ResourceLocation location = new ResourceLocation(itemName);
+//                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+//                    if (ModUtil.getName(itemStack.getItem()).equals(location)) {
+//                        return true;
+//                    }
+//                }
+//            }
+//
+//            // check player's access
+//            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
+//        }
+//        return true;
+//    }
 
-            if (parcels.isEmpty()) {
-                return true;
-            }
-            if (intervals.size() > 1) {
-                // find the least significant parcel
-                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
-                if (parcelOptional.isPresent()) {
-                    parcel = parcelOptional.get();
-                } else {
-                    // this is a case where the interval still exists but the parcel has been removed
-                    TREE.delete(intervals.get(0));
-                    return true;
-                }
-            } else {
-                parcel = parcels.get(0);
-            }
-
-            // if you have an item in your hand, do whitelist short-circuit tests
-            if (itemStack != null && !itemStack.isEmpty()) {
-                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", itemStack.getDisplayName().getString(), parcel);
-                // test the item against the whitelisted item tags for the parcel
-                for (String tagName : parcel.getItemTagWhitelist()) {
-                    ResourceLocation location = new ResourceLocation(tagName);
-                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
-                    // get the tag from the resource key
-                    if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) {
-                        return true;
+    public static boolean hasInteractAccess(ServerPlayer player, ICoords coords, String dimension, ItemStack itemStack) {
+        return resolveParcelCached(player, coords, dimension)
+                .map(parcel -> {
+                    if (itemStack != null && !itemStack.isEmpty()) {
+                        for (String tagName : parcel.getItemTagWhitelist()) {
+                            if (TagHelper.doesItemBelongToTag(itemStack.getItem(), new ResourceLocation(tagName))) return true;
+                        }
+                        for (String itemName : parcel.getItemWhitelist()) {
+                            if (ModUtil.getName(itemStack.getItem()).equals(new ResourceLocation(itemName))) return true;
+                        }
                     }
-                }
-
-                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
-                for (String itemName : parcel.getItemWhitelist()) {
-                    ResourceLocation location = new ResourceLocation(itemName);
-                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
-                    if (ModUtil.getName(itemStack.getItem()).equals(location)) {
-                        return true;
-                    }
-                }
-            }
-
-            // check player's access
-            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
-        }
-        return true;
+                    return (itemStack != null && !itemStack.isEmpty())
+                            ? parcel.grantsAccess(player.getUUID(), itemStack)
+                            : parcel.grantsAccess(player.getUUID());
+                })
+                .orElse(true);
     }
 
-    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
-        // this is the fastest lookup
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
-        if (!intervals.isEmpty()) {
-            Parcel parcel;
-            // convert to parcels
-            List<Parcel> parcels = getAsParcels(intervals);
+//    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
+//        // this is the fastest lookup
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
+//        if (!intervals.isEmpty()) {
+//            Parcel parcel;
+//            // convert to parcels
+//            List<Parcel> parcels = getAsParcels(intervals);
+//
+//            if (parcels.isEmpty()) {
+//                return true;
+//            }
+//            if (intervals.size() > 1) {
+//                // find the least significant parcel
+//                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
+//                if (parcelOptional.isPresent()) {
+//                    parcel = parcelOptional.get();
+//                } else {
+//                    // TODO add chat warning
+//                    // TODO add log warning
+//                    // TODO maybe do something like labelling as abandoned and has a timer before it is removed from registry.
+//                    // this is a case where the interval still exists but the parcel has been removed
+//                    TREE.delete(intervals.get(0));
+//                    return true;
+//                }
+//            } else {
+//                parcel = parcels.get(0);
+//            }
+//            return parcel.grantsAccess(entityId, heldItem);
+//        }
+//        return true;
+//    }
+//    @Deprecated
+//    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
+//        return resolveParcelAt(coords1, coords2)
+//                .map(parcel -> parcel.grantsAccess(entityId, heldItem))
+//                .orElse(true);
+//    }
 
-            if (parcels.isEmpty()) {
-                return true;
-            }
-            if (intervals.size() > 1) {
-                // find the least significant parcel
-                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
-                if (parcelOptional.isPresent()) {
-                    parcel = parcelOptional.get();
-                } else {
-                    // TODO add chat warning
-                    // TODO add log warning
-                    // TODO maybe do something like labelling as abandoned and has a timer before it is removed from registry.
-                    // this is a case where the interval still exists but the parcel has been removed
-                    TREE.delete(intervals.get(0));
-                    return true;
-                }
-            } else {
-                parcel = parcels.get(0);
-            }
-            return parcel.grantsAccess(entityId, heldItem);
-        }
-        return true;
-    }
 
+    //    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
+//        // TODO all this code getting the parcel is the same and can be extracted to its own method
+//
+//        // this is the fastest lookup
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
+//        if (!intervals.isEmpty()) {
+//            Parcel parcel;
+//            // convert to parcels
+//            List<Parcel> parcels = getAsParcels(intervals);
+//
+//            if (parcels.isEmpty()) {
+//                return true;
+//            }
+//            if (intervals.size() > 1) {
+//                // find the least significant parcel
+//                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
+//                if (parcelOptional.isPresent()) {
+//                    parcel = parcelOptional.get();
+//                } else {
+//                    // this is a case where the interval still exists but the parcel has been removed
+//                    TREE.delete(intervals.get(0));
+//                    return true;
+//                }
+//            } else {
+//                parcel = parcels.get(0);
+//            }
+//
+//            // TODO move Item and Tag whitelist back here from Parcel - can't control interact permission from Parcels
+//
+//            ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
+//            // TODO block tag and block could be merged into one list, where tags are prefixed with # and would have to be removed before checking
+//            // test the block against the whitelisted block tags for the parcel
+//            for (String tagName : parcel.getBlockTagWhitelist()) {
+//                ResourceLocation location = new ResourceLocation(tagName);
+//                ClaimMyLand.LOGGER.debug("creating tag for parcel block tag -> {}", location.toString());
+//                // get the tag from the resource key
+//                if (TagHelper.doesBlockBelongToTag(state.getBlock(), location)) {
+//                    return true;
+//                }
+//            }
+//
+//            // check BlockWhitelist
+//            ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getBlockWhitelist());
+//            for (String blockName : parcel.getBlockWhitelist()) {
+//                ResourceLocation location = new ResourceLocation(blockName);
+//                ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
+//                if (ModUtil.getName(state.getBlock()).equals(location)) {
+//                    return true;
+//                }
+//            }
+//
+//            // if you have an item in your hand, do whitelist short-circuit tests
+//            if (heldItem != null && !heldItem.isEmpty()) {
+//                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
+//                // test the item against the whitelisted item tags for the parcel
+//                for (String tagName : parcel.getItemTagWhitelist()) {
+//                    ResourceLocation location = new ResourceLocation(tagName);
+//                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
+//                    // get the tag from the resource key
+//                    if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
+//                        return true;
+//                    }
+//                }
+//
+//                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
+//                for (String itemName : parcel.getItemWhitelist()) {
+//                    ResourceLocation location = new ResourceLocation(itemName);
+//                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+//                    if (ModUtil.getName(heldItem.getItem()).equals(location)) {
+//                        return true;
+//                    }
+//                }
+//            }
+//
+//            return parcel.grantsAccess(entityId, heldItem);
+//        }
+//        return true;
+//    }
     public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
-        // TODO all this code getting the parcel is the same and can be extracted to its own method
+        return resolveParcelAt(coords1, coords2)
+                .map(parcel -> {
+                    ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
 
-        // this is the fastest lookup
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
-        if (!intervals.isEmpty()) {
-            Parcel parcel;
-            // convert to parcels
-            List<Parcel> parcels = getAsParcels(intervals);
-
-            if (parcels.isEmpty()) {
-                return true;
-            }
-            if (intervals.size() > 1) {
-                // find the least significant parcel
-                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
-                if (parcelOptional.isPresent()) {
-                    parcel = parcelOptional.get();
-                } else {
-                    // this is a case where the interval still exists but the parcel has been removed
-                    TREE.delete(intervals.get(0));
-                    return true;
-                }
-            } else {
-                parcel = parcels.get(0);
-            }
-
-            // TODO move Item and Tag whitelist back here from Parcel - can't control interact permission from Parcels
-
-            ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
-            // TODO block tag and block could be merged into one list, where tags are prefixed with # and would have to be removed before checking
-            // test the block against the whitelisted block tags for the parcel
-            for (String tagName : parcel.getBlockTagWhitelist()) {
-                ResourceLocation location = new ResourceLocation(tagName);
-                ClaimMyLand.LOGGER.debug("creating tag for parcel block tag -> {}", location.toString());
-                // get the tag from the resource key
-                if (TagHelper.doesBlockBelongToTag(state.getBlock(), location)) {
-                    return true;
-                }
-            }
-
-            // check BlockWhitelist
-            ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getBlockWhitelist());
-            for (String blockName : parcel.getBlockWhitelist()) {
-                ResourceLocation location = new ResourceLocation(blockName);
-                ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
-                if (ModUtil.getName(state.getBlock()).equals(location)) {
-                    return true;
-                }
-            }
-
-            // if you have an item in your hand, do whitelist short-circuit tests
-            if (heldItem != null && !heldItem.isEmpty()) {
-                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
-                // test the item against the whitelisted item tags for the parcel
-                for (String tagName : parcel.getItemTagWhitelist()) {
-                    ResourceLocation location = new ResourceLocation(tagName);
-                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
-                    // get the tag from the resource key
-                    if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
-                        return true;
+                    for (String tagName : parcel.getBlockTagWhitelist()) {
+                        ResourceLocation location = new ResourceLocation(tagName);
+                        ClaimMyLand.LOGGER.debug("creating tag for parcel block tag -> {}", location);
+                        if (TagHelper.doesBlockBelongToTag(state.getBlock(), location)) {
+                            return true;
+                        }
                     }
-                }
 
-                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
-                for (String itemName : parcel.getItemWhitelist()) {
-                    ResourceLocation location = new ResourceLocation(itemName);
-                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
-                    if (ModUtil.getName(heldItem.getItem()).equals(location)) {
-                        return true;
+                    ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getBlockWhitelist());
+                    for (String blockName : parcel.getBlockWhitelist()) {
+                        ResourceLocation location = new ResourceLocation(blockName);
+                        ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
+                        if (ModUtil.getName(state.getBlock()).equals(location)) {
+                            return true;
+                        }
                     }
-                }
-            }
 
-            return parcel.grantsAccess(entityId, heldItem);
+                    if (heldItem != null && !heldItem.isEmpty()) {
+                        ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
+
+                        for (String tagName : parcel.getItemTagWhitelist()) {
+                            ResourceLocation location = new ResourceLocation(tagName);
+                            ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location);
+                            if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
+                                return true;
+                            }
+                        }
+
+                        ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
+                        for (String itemName : parcel.getItemWhitelist()) {
+                            ResourceLocation location = new ResourceLocation(itemName);
+                            ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+                            if (ModUtil.getName(heldItem.getItem()).equals(location)) {
+                                return true;
+                            }
+                        }
+                    }
+
+                    return parcel.grantsAccess(entityId, heldItem);
+                })
+                .orElse(true);
+    }
+
+    public static boolean hasInteractAccess(UUID playerId, ICoords coords, String dimension, ItemStack itemStack) {
+        return resolveParcelCached(playerId, coords, dimension)
+                .map(parcel -> {
+                    if (itemStack != null && !itemStack.isEmpty()) {
+                        for (String tagName : parcel.getItemTagWhitelist()) {
+                            ResourceLocation location = new ResourceLocation(tagName);
+                            if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) return true;
+                        }
+                        for (String itemName : parcel.getItemWhitelist()) {
+                            if (ModUtil.getName(itemStack.getItem()).equals(new ResourceLocation(itemName))) return true;
+                        }
+                    }
+                    return (itemStack != null && !itemStack.isEmpty())
+                            ? parcel.grantsAccess(playerId, itemStack)
+                            : parcel.grantsAccess(playerId);
+                })
+                .orElse(true);
+    }
+
+    public static boolean hasInteractAccess(ServerPlayer player, ICoords coords, String dimension,
+                                            BlockState state, ItemStack heldItem) {
+        return resolveParcelCached(player, coords, dimension)
+                .map(parcel -> {
+                    ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}",
+                            state.getBlock().getName().getString(), parcel);
+
+                    for (String tagName : parcel.getBlockTagWhitelist()) {
+                        if (TagHelper.doesBlockBelongToTag(state.getBlock(), new ResourceLocation(tagName))) return true;
+                    }
+                    for (String blockName : parcel.getBlockWhitelist()) {
+                        if (ModUtil.getName(state.getBlock()).equals(new ResourceLocation(blockName))) return true;
+                    }
+                    if (heldItem != null && !heldItem.isEmpty()) {
+                        for (String tagName : parcel.getItemTagWhitelist()) {
+                            if (TagHelper.doesItemBelongToTag(heldItem.getItem(), new ResourceLocation(tagName))) return true;
+                        }
+                        for (String itemName : parcel.getItemWhitelist()) {
+                            if (ModUtil.getName(heldItem.getItem()).equals(new ResourceLocation(itemName))) return true;
+                        }
+                    }
+                    return parcel.grantsAccess(player.getUUID(), heldItem);
+                })
+                .orElse(true);
+    }
+
+    /**
+     * UUID-only variant. Checks cache, falls through to BST, updates server cache.
+     * Does NOT send a network packet — use the ServerPlayer overload from event
+     * handlers where the player object is available.
+     */
+    public static Optional<Parcel> resolveParcelCached(UUID playerId, ICoords coords, String dimension) {
+        Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
+        if (cached.isPresent()) {
+            return Optional.of(cached.get().getParcel());
         }
-        return true;
+
+        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
+
+        if (resolved.isPresent()) {
+            REGION_CACHE.update(playerId, resolved.get());
+        } else {
+            REGION_CACHE.invalidatePlayer(playerId);
+        }
+
+        return resolved;
+    }
+
+
+    /**
+     * ServerPlayer variant. Checks cache, falls through to BST, updates server
+     * cache, and syncs the result to the client via CacheSyncPacket.
+     * Use this from ModEvents where ServerPlayer is available.
+     */
+    public static Optional<Parcel> resolveParcelCached(ServerPlayer player, ICoords coords, String dimension) {
+        UUID playerId = player.getUUID();
+
+        Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
+        if (cached.isPresent()) {
+            // Cache hit — no BST, no packet needed (client already has this entry)
+            return Optional.of(cached.get().getParcel());
+        }
+
+        // Cache miss — query BST
+        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
+
+        if (resolved.isPresent()) {
+            REGION_CACHE.update(playerId, resolved.get());
+            // notify client so it can do instant protection checks
+            CMLNetwork.syncCacheToPlayer(player, resolved.get());
+        } else {
+            REGION_CACHE.invalidatePlayer(playerId);
+            // tell client they are in wilderness
+            CMLNetwork.syncWildernessToPlayer(player);
+        }
+
+        return resolved;
+    }
+
+    /**
+     * Tick-path variant used exclusively by the HUD sync in ModEvents.onPlayerTick().
+     *
+     * Unlike resolveParcelCached(), this always goes to the BST to ensure the
+     * least-significant (innermost) parcel is returned when the player is standing
+     * inside nested parcels (e.g. a citizen parcel inside a nation).
+     *
+     * Sends CacheSyncPacket only when the resolved parcel changes, using the
+     * parcel ID stored in REGION_CACHE as the change-detector.
+     */
+    public static void syncParcelToClient(ServerPlayer player, ICoords coords, String dimension) {
+        UUID playerId = player.getUUID();
+        Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.get(playerId);
+
+        // Early-exit only for true leaf parcel types — types that cannot contain
+        // child parcels. CITIZEN and PLAYER are both leaves:
+        //   PLAYER  — standalone parcel, cannot exist inside NATION or ZONE
+        //   CITIZEN — innermost parcel in the NATION → ZONE → CITIZEN hierarchy
+        // NATION and ZONE can both contain children, so the BST must run every tick
+        // while inside either of them to detect when the player enters a child parcel.
+        if (cached.isPresent() && cached.get().contains(coords, dimension)) {
+            ParcelType cachedType = cached.get().getParcel().getType();
+            if (cachedType == ParcelType.CITIZEN || cachedType == ParcelType.PLAYER) {
+                return;
+            }
+        }
+
+        // Cache miss, player outside cached bounds, or cached parcel is NATION/ZONE —
+        // query BST to find the innermost parcel at this position.
+        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
+
+        UUID newId    = resolved.map(Parcel::getId).orElse(null);
+        UUID cachedId = cached.map(e -> e.getParcel().getId()).orElse(null);
+
+        if (!Objects.equals(newId, cachedId)) {
+            if (resolved.isPresent()) {
+                REGION_CACHE.update(playerId, resolved.get());
+                CMLNetwork.syncCacheToPlayer(player, resolved.get());
+            } else {
+                REGION_CACHE.invalidatePlayer(playerId);
+                CMLNetwork.syncWildernessToPlayer(player);
+            }
+        }
     }
 
     /**
@@ -1191,12 +1422,6 @@ public class ParcelRegistry {
         return PARCELS_BY_OWNER.keySet().stream().toList();
     }
 
-    public static List<Parcel> getNations() {
-        List<Parcel> parcels = new ArrayList<>();
-        NATIONS_BY_ID.entries().forEach(e -> parcels.add(e.getValue()));
-        return parcels;
-    }
-
     public static int size() {
         return PARCELS_BY_COORDS.size();
     }
@@ -1211,25 +1436,24 @@ public class ParcelRegistry {
     }
 
     public static void transferParcelOwnership(ServerLevel level, Parcel parcel, UUID newOwnerUuid) {
-        // unregister parcel
-        ParcelRegistry.unregisterParcel(parcel);
+        REGION_CACHE.invalidateByParcel(parcel.getId());
 
-        // create new estate and update parcel
-        // TODO use factory (might be a nation)
+        // unregister parcel
+        ParcelRegistry.unregisterParcel(level, parcel);
 
         // save old estate
         Estate oldEstate = parcel.getEstate();
-
+        // create new estate and update parcel
         Estate estate = EstateTypeRegistry.create(parcel.isNation() ? EstateTypeRegistry.NATION_ESTATE_TYPE : EstateTypeRegistry.ESTATE_TYPE);
         estate.setOwnerId(newOwnerUuid);
         estate.setName(oldEstate.getName());
         estate.setParcelType(oldEstate.getParcelType());
+        estate.setRelinquished(false);
 
         parcel.setEstate(estate);
-        parcel.setOwnerTime(level.getGameTime());
 
         // re-register parcel
-        ParcelRegistry.register(parcel);
+        ParcelRegistry.register(level, parcel);
     }
 
     @Deprecated
@@ -1256,19 +1480,48 @@ public class ParcelRegistry {
             // register estate
             EstateRegistry.register(estate);
 
-//            parcel.get().setOwnerId(ownerId);
-//            if (!PARCELS_BY_OWNER.containsKey(ownerId)) {
-//                // create new list entry
-//                PARCELS_BY_OWNER.put(ownerId, new ArrayList<>());
-//            }
-//            List<Parcel> parcels = PARCELS_BY_OWNER.get(ownerId);
-//            parcels.add(parcel.get());
             return true;
         } else {
             return false;
         }
+    }
 
+    /*
+     * TODO updateOwner() methods are no longer called.
+     */
+    /**
+     * updates the owner of a parcel by creating a new estate and re-registering.
+     * broadcasts SyncParcelPacket to nearby clients.
+     */
+    public static synchronized void updateOwner(ServerLevel level, UUID parcelId, UUID newOwnerId) {
+        findByParcelId(parcelId).ifPresent(parcel -> updateOwner(level, parcel, newOwnerId));
+    }
 
+    public static synchronized void updateOwner(ServerLevel level, Parcel parcel, UUID newOwnerId) {
+        // unregister current owner
+        if (ObjectUtils.isNotEmpty(parcel.getOwnerId())) {
+            unregisterOwner(parcel);
+        }
+
+        // unregister estate if it only has this one parcel
+        Estate oldEstate = parcel.getEstate();
+        if (oldEstate.findParcels().size() <= 1) {
+            EstateRegistry.unregister(oldEstate);
+        }
+
+        // create new estate with the new owner
+        Estate newEstate = new EstateContext();
+        newEstate.setOwnerId(newOwnerId);
+
+        // update parcel
+        parcel.setEstate(newEstate);
+
+        // re-register owner and estate
+        registerOwner(parcel);
+        EstateRegistry.register(newEstate);
+
+        // broadcast updated parcel to nearby clients
+        CMLNetwork.syncParcelToTrackingPlayers(level, parcel);
     }
 
     // new methods should replace repeated code elsewhere
@@ -1303,6 +1556,31 @@ public class ParcelRegistry {
                 parcelList.removeIf(p -> p.getId().equals(parcel.getId()));
             }
         });
+    }
+
+    //    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true);
+//        if (intervals.isEmpty()) return Optional.empty();
+//        List<Parcel> parcels = getAsParcels(intervals);
+//        if (parcels.isEmpty()) {
+//            TREE.delete(intervals.get(0)); // stale interval cleanup
+//            return Optional.empty();
+//        }
+//        return intervals.size() > 1 ? findLeastSignificant(parcels) : Optional.of(parcels.get(0));
+//    }
+    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
+        // NOTE: resolveParcelAt() is called from hasAccess() / hasInteractAccess(),
+        // which do not currently receive a player UUID. The cache lookup by player
+        // is wired at the event-handler level (ModEvents) in a later step, where
+        // the UUID is available. This method remains the fallback BST path.
+        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true);
+        if (intervals.isEmpty()) return Optional.empty();
+        List<Parcel> parcels = getAsParcels(intervals);
+        if (parcels.isEmpty()) {
+            TREE.delete(intervals.get(0)); // stale interval cleanup
+            return Optional.empty();
+        }
+        return intervals.size() > 1 ? findLeastSignificant(parcels) : Optional.of(parcels.get(0));
     }
 
     // expose a detached parcel list

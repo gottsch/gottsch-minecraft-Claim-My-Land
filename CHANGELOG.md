@@ -7,7 +7,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.0.0] - 2025-03-02
+## [2.1.0] - 2026-03-06
+
+> **💡 Recommended:** Since this mod is heavily command-based, we recommend using [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
+
+### 🎉 Highlights
+
+- **JourneyMap integration** — claimed parcels now appear as coloured polygon overlays on the map
+- **Parcel HUD** — a small overlay in the bottom-left corner shows which parcel and estate you are standing in
+- **Formatted command responses** — all command and tool feedback is now consistently styled with colour, icons, and structured detail lines
+- **Unique estate names** — default estate names are now always unique per player and never produce duplicates after demolishing and re-claiming
+
+---
+
+### ➕ Added
+
+#### JourneyMap Integration (optional)
+- Parcel boundaries rendered as coloured polygon overlays on the JourneyMap fullscreen map and web map
+- Colour scheme matches estate type: Nation (blue), Citizen (light purple), Zone (yellow), Player (green)
+- Your own parcels render in vivid colours; other players' parcels render in muted/desaturated versions of the same hue so the type is still identifiable
+- Parcel and owner labels displayed on fullscreen and web maps; hidden on the minimap to reduce clutter
+- Overlays update live when parcels are claimed or demolished — no map reload required
+- Integration is fully optional: the mod loads and functions normally without JourneyMap installed
+
+#### Parcel HUD Overlay
+- Small semi-transparent panel in the bottom-left corner of the screen, sitting just above the hotbar
+- Displays estate name, parcel name, owner, and parcel type while standing inside a claimed parcel
+- Hidden automatically in wilderness, in spectator/F1 mode, and when the GUI is hidden (F1)
+- Parcel type label is colour-coded to match the JourneyMap overlay and command output convention
+
+#### Client-Side Parcel Caching & Networking
+- Server now syncs parcel data to clients via a lightweight packet layer
+- Client-side cache eliminates the block-break redraw glitch (blocks no longer visually break and reappear when protection cancels the event)
+- Full parcel registry synced to clients on login and dimension change
+- Per-parcel updates broadcast to nearby players when parcels are claimed or demolished
+
+#### Unique Estate & Parcel Default Names
+- Default estate names are now unique per player: `PlayerName-estate-1`, `PlayerName-estate-2`, etc.
+- Default parcel names are scoped to their estate: `PlayerName-parcel-1`, `PlayerName-parcel-2`, etc.
+- Counter is monotonically increasing — demolishing an estate and re-claiming never produces a duplicate name
+- Counter persists across server restarts via NBT
+
+---
+
+### ⚙️ Changed
+
+#### Formatted Command & Tool Responses
+- All command responses now use a consistent visual style: colour-coded header, separator line, bold title, and grey detail body
+- Success responses use ✔ green, failures use ✘ red, warnings use ⚠ yellow, info uses ℹ aqua
+- Whitelist add/remove responses show the entry name and the estate it was applied to
+- Multi-reason failure responses (e.g. join, relinquish) now display as a formatted bullet list rather than plain indented text
+- Tool and item messages (`ZoningTool`, `CitizenTool`, Deeds) use the same formatting system as commands
+
+#### Performance Improvements
+- Added chunk-index pre-filter (`ParcelChunkIndex`) in front of the 3D interval tree — block events in unclaimed chunks now exit in O(1) without touching the BST
+- `findByParcelId()` is now O(1) via a direct `UUID → Parcel` map (was O(n) linear scan)
+- `findAllByEstateId()` and `findAllByNationEstateId()` are now O(1) via an `EstateID → Parcels` multimap (was O(n))
+
+#### Dimension Validation
+- All nine inline `OVERWORLD` dimension checks in the event handler extracted to a single `isInProtectedDimension()` helper
+- Centralised in one place — ready for multi-dimension support in v2.2
+
+---
+
+### 🐛 Fixed
+
+- Fixed `DemolishEstateSubCommand` having an extra incorrect `.suggests()` in its command chain
+- Fixed default estate naming producing duplicate names after demolishing and re-claiming parcels
+- Fixed `hasAccess()` and `hasInteractAccess()` duplicating identical parcel-resolution logic — now share a single `resolveParcelAt()` helper
+- Fixed `syncAllParcelsToPlayer()` using the logging-in player's own name as the owner name for every parcel in the world
+
+---
+
+### 🗑️ Removed
+
+- Removed `NATIONS_BY_ID` multimap from `ParcelRegistry` (deprecated since 2.0)
+- Removed `abandonParcel()` and `updateOwner()` from `ParcelRegistry` (deprecated since 2.0)
+- Removed `findByNationId()` from `ParcelRegistry` (deprecated since 2.0)
+- Removed all deprecated constant fields from `CommandHelper`
+- Removed `getNations()` / `getNationById()` from `ParcelRegistry` — moved to `EstateRegistry` as on-demand stream filters
+
+---
+
+### 🔧 Technical / Developer Notes
+
+- New networking layer: `CMLNetwork`, `CacheSyncPacket`, `SyncParcelPacket`, `SyncAllParcelsPacket`, `RemoveParcelPacket`
+- New client-side classes: `ClientParcel` (record), `ClientParcelCache`, `ClientParcelRegistry`, `ParcelRegionCache`
+- New JourneyMap classes: `JourneyMapIntegration`, `JourneyMapOverlayHandler`, `ParcelPolygonOverlayFactory`
+- New command helpers: `CommandResponseFormatter`, `PlayerMessageHelper`, `ParcelDisplayFormatter`, `WhitelistFormatter`
+- New estate/parcel naming helpers: `EstateHelper`, `ParcelHelper`
+- `EstateTypeRegistry` gains a `CopyFactory` for estate copying that does not carry over whitelists
+- `AbstractEstate.copyFrom()` added for controlled field copying
+- `PlayerRegistry` gains a per-player estate name counter with NBT persistence
+- `Parcel` interface gains `nameAndRegister()` as the single commit point for naming, registration, and save
+- `ParcelRegistry.register()` and `unregisterParcel()` gain `ServerLevel` overloads that broadcast network packets without breaking existing call sites
+
+---
+
+## [2.0.0] - 2026-03-02
 
 > **💡 Recommended:** Since this mod is heavily command-based, we recommend using [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
 

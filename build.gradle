@@ -17,7 +17,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
 minecraft {
     mappings channel: mapping_channel, version: mapping_version
- 	
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
  	 // This property allows configuring Gradle's ProcessResources task(s) to run on IDE output locations before launching the game.
     // It is REQUIRED to be set to true for this template to function.
     // See https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
@@ -94,6 +94,12 @@ repositories {
     }
     maven { url 'https://maven.blamejared.com' }
 
+    // JourneyMap API releases are here
+    maven {
+        name = "JourneyMap (Public)"
+        url = "https://jm.gserv.me/repository/maven-public/"
+    }
+
     exclusiveContent {
         forRepository {
             maven {
@@ -120,9 +126,17 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 	implementation fg.deobf("gottsch:gottschcore:${minecraft_version}-${gottschcore_version}")
 
-    implementation fg.deobf("curse.maven:kotlin-for-forge-351264:7291067")
-    implementation fg.deobf("curse.maven:architectury-api-419699:5137938")
-    implementation fg.deobf("maven.modrinth:chat-plus:${chatplus_version}")
+    // JourneyMap — optional compile-time dependency only.
+    // JourneyMap API — compile against the stable API interface only.
+    compileOnly fg.deobf(group: 'info.journeymap', name: 'journeymap-api', version: project.journeymap_api_version, changing: true)
+
+    // JourneyMap mod — available at runtime in dev for in-game testing.
+//    runtimeOnly fg.deobf("curse.maven:journeymap-${project.jm_project_id}:${project.jm_file_id}")
+
+
+//    implementation fg.deobf("curse.maven:kotlin-for-forge-351264:7291067")
+//    implementation fg.deobf("curse.maven:architectury-api-419699:5137938")
+//    implementation fg.deobf("maven.modrinth:chat-plus:${chatplus_version}")
 
     implementation fg.deobf("curse.maven:treasure2-289760:6085216")
     implementation fg.deobf("curse.maven:jade-324717:5672013") // 1.20.1

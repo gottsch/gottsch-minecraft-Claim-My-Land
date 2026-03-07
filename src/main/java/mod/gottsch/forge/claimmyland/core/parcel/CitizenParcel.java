@@ -32,6 +32,7 @@ import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
@@ -159,9 +160,10 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
         }
 
         // add to the registry
-        ParcelRegistry.register(this);
-        CommandHelper.save(level);
-        return ClaimResult.SUCCESS;
+        return nameAndRegister(level);
+//        ParcelRegistry.register((ServerLevel)level,this);
+//        CommandHelper.save(level);
+//        return ClaimResult.SUCCESS;
     }
 
     @Override

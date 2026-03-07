@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
@@ -36,6 +35,8 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/25/2026
@@ -91,13 +92,13 @@ public class AccessTypeSubCommand implements SubCommand {
         try {
             Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
             if (ownerUuid.isEmpty()) {
-                CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+                sendUnableToLocatePlayerMessage(source, ownerName);
                 return -1;
             }
 
             Optional<Estate> optionalEstate = CommandHelper.getEstateByOwner(source, ownerUuid.get(), nationName);
             if (optionalEstate.isEmpty()) {
-                CommandHelper.failure(source,"parcel.nation.unable_to_locate");
+                failure(source,"estate.nation.unable_to_locate");
                 return -1;
             }
 
@@ -106,16 +107,16 @@ public class AccessTypeSubCommand implements SubCommand {
 
             // players version needs to validate that the player owns the nation
             if (!optionalEstate.get().getOwnerId().equals(ownerUuid.get())) {
-                CommandHelper.failure(source, "parcel.nation.not_owner");
+                failure(source, "estate.nation.not_owner");
                 return -1;
             }
 
             ((NationEstateContext)optionalEstate.get()).setAccessType(accessType);;
-            CommandHelper.save(source.getLevel());
+            save(source.getLevel());
 
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred changing nation border type:", e);
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
         }
         return 1;
     }

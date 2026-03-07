@@ -46,12 +46,6 @@ import java.util.UUID;
 public class NationParcel extends AbstractParcel implements INationParcel {
 
     @Deprecated(forRemoval = true, since = "2.0")
-    private static final String BORDER_TYPE_KEY = "border_type";
-
-    // deprecated - moved to Estate
-    @Deprecated(forRemoval = true, since = "2.0")
-    private NationBorderType borderType;
-    @Deprecated(forRemoval = true, since = "2.0")
     private List<UUID> blacklist;
 
     /**
@@ -107,24 +101,7 @@ public class NationParcel extends AbstractParcel implements INationParcel {
 
     @Override
     public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
-        ClaimResult result = ClaimResult.FAILURE; //false; //
-
-        if ((parentParcel.getType() == ParcelType.NATION)
-                && ObjectUtils.isEmpty(parentParcel.getOwnerId())) {
-
-            if (ModUtil.getVolume(parcelBox) >= parentParcel.getArea()) {
-                ParcelRegistry.updateOwner(parentParcel.getId(), getOwnerId());
-                // update owner of any zones
-                List<Parcel> zones = ParcelRegistry.findChildrenByNationId(getEstate().getId()).stream()
-                        .filter(p -> p.getType() == ParcelType.ZONE).toList();
-                zones.forEach(z -> {
-                    ParcelRegistry.updateOwner(z.getId(), getOwnerId());
-                });
-                result = ClaimResult.SUCCESS;
-            } else {
-                result = ClaimResult.INSUFFICIENT_SIZE;
-            }
-        }
+        ClaimResult result = ClaimResult.FAILURE;
         return result;
     }
 
@@ -142,18 +119,6 @@ public class NationParcel extends AbstractParcel implements INationParcel {
     @Override
     public int getBufferSize() {
         return Config.SERVER.general.nationParcelBufferRadius.get();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public NationBorderType getBorderType() {
-        return borderType;
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setBorderType(NationBorderType borderType) {
-        this.borderType = borderType;
     }
 
     @Deprecated(forRemoval = true, since = "2.0")

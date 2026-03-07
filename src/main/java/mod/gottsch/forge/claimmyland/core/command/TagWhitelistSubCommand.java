@@ -46,16 +46,6 @@ public class TagWhitelistSubCommand extends WhitelistSubCommand {
         return SharedSuggestionProvider.suggest(tags, builder);
     };
 
-//    private static final SuggestionProvider<CommandSourceStack> CURRENT_BLOCK_TAGS = (source, builder) -> {
-//		String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
-//		Optional<Set<String>> list = Optional.empty();
-//		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-//		if (ownerUuid.isPresent()) {
-//			list = getEstateWhitelistByType(source.getSource(), ownerUuid.get(), estateName, WhitelistType.BLOCK_TAG);
-//		}
-//		return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
-//	};
-
     static final SuggestionProvider<CommandSourceStack> CURRENT_ITEM_TAGS = (source, builder) -> {
         String parcelName = StringArgumentType.getString(source, ESTATE_NAME);
         Optional<Set<String>> list = Optional.empty();

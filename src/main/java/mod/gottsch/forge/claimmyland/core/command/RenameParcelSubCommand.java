@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
@@ -91,7 +90,7 @@ public class RenameParcelSubCommand implements SubCommand {
             return rename(source, player.getScoreboardName(), estateName, parcelName, newName);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred renaming parcel:", e);
-            CommandHelper.unexceptedError(source);
+            CommandHelper.unexpectedError(source);
             return 0;
         }
     }

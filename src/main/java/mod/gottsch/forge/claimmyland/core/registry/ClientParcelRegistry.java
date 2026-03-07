@@ -1,6 +1,6 @@
 /*
  * This file is part of  Claim My Land.
- * Copyright (c) 2025 Mark Gottschling (gottsch)
+ * Copyright (c) 2026 Mark Gottschling (gottsch)
  *
  * All rights reserved.
  *
@@ -19,257 +19,154 @@
  */
 package mod.gottsch.forge.claimmyland.core.registry;
 
-import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.gottschcore.bst.CoordsInterval;
-import mod.gottsch.forge.gottschcore.bst.CoordsIntervalTree;
-import mod.gottsch.forge.gottschcore.bst.IInterval;
-import mod.gottsch.forge.gottschcore.spatial.Box;
-import mod.gottsch.forge.gottschcore.spatial.ICoords;
+import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.function.Predicate;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Parcel Registry that resides on the client side.
- * WHY DID I WANT THIS? Probably for something of a cache for the HUD.
- * @author by Mark Gottschling on 3/11/2025
+ * Client-side registry of all known parcels, populated by
+ * {@link mod.gottsch.forge.claimmyland.core.network.SyncParcelPacket} and
+ * {@link mod.gottsch.forge.claimmyland.core.network.SyncAllParcelsPacket}.
+ *
+ * <p>Used by the HUD overlay for look-based parcel queries. Intentionally
+ * simple — flat list with linear scan. The client holds far fewer parcels
+ * than the server and queries are infrequent (once per render frame at most),
+ * so a BST would add complexity without meaningful benefit.</p>
+ *
+ * <p><b>Thread safety:</b> uses {@link CopyOnWriteArrayList} so the render
+ * thread can iterate safely while the network thread writes.</p>
+ *
+ * @author Mark Gottschling on 3/3/2026
  */
 public class ClientParcelRegistry {
-    /*
-     * interval binary spanning tree. main data structure for searchable areas in 3 dimensions.
-     * note - this bst does not contain parcels but only area (min coords -> max coords) of the parcel and the id of the owner.
-     */
-    private static final CoordsIntervalTree<UUID> TREE = new CoordsIntervalTree<UUID>();
 
-    /*
-     * map of parcels by coords. main storage of parcels.
-     * note - the min coords are used as the key.
-     */
-    private static final Map<ICoords, Parcel> PARCELS_BY_COORDS = new HashMap<>();
+    private static final Logger LOGGER = LogManager.getLogger();
 
-    /*
-     * the game time was the registry was last updated
-     */
-    private long lastGameTime;
+    // CopyOnWriteArrayList — reads (render thread) never block,
+    // writes (network/main thread) are infrequent.
+    private static final CopyOnWriteArrayList<ClientParcel> PARCELS = new CopyOnWriteArrayList<>();
 
+    // Singleton — no instances
     private ClientParcelRegistry() {}
 
-    public static synchronized void clear() {
-        TREE.clear();
-        PARCELS_BY_COORDS.clear();
+    // -------------------------------------------------------------------------
+    // Write
+    // -------------------------------------------------------------------------
+
+    /**
+     * Adds or replaces a parcel. If a parcel with the same ID already exists
+     * it is replaced — handles re-sync after a parcel is modified.
+     */
+    public static void register(ClientParcel parcel) {
+        // Remove existing entry with same ID (re-sync / update case)
+        PARCELS.removeIf(p -> p.parcelId().equals(parcel.parcelId()));
+        PARCELS.add(parcel);
+        LOGGER.debug("ClientParcelRegistry: registered parcel '{}' [{}]",
+                parcel.parcelName(), parcel.parcelId());
     }
 
     /**
-     * add the parcel to the registries/maps
-     * @param parcel
-     * @return
+     * Registers a list of parcels in bulk. Used by SyncAllParcelsPacket on login.
+     * Replaces any existing entries with matching IDs.
      */
-    public static Optional<Parcel> add(Parcel parcel) {
-        ClaimMyLand.LOGGER.debug("adding parcel to client registry -> {}", parcel);
-
-        // add to parcels by coords
-        PARCELS_BY_COORDS.put(parcel.getMinCoords(), parcel);
-
-        // add to BST
-        Box box = new Box(parcel.getMinCoords(), parcel.getMaxCoords());
-        IInterval<UUID> interval = TREE.insert(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId()));
-
-        return interval != null ? Optional.of(parcel) : Optional.empty();
+    public static void registerAll(List<ClientParcel> parcels) {
+        parcels.forEach(ClientParcelRegistry::register);
+        LOGGER.debug("ClientParcelRegistry: bulk registered {} parcel(s)", parcels.size());
     }
 
     /**
-     * removes a parcel from the registries/maps
-     * @param parcel
+     * Removes a parcel by ID. Called when the server sends a RemoveParcelPacket.
      */
-    public static void removeParcel(Parcel parcel) {
-        // remove from the TREE
-        TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
-
-        // remove from coords
-        PARCELS_BY_COORDS.remove(parcel.getMinCoords());
-    }
-
-    /**
-     * returns a parcel by id
-     * @param id
-     * @return
-     */
-    public static Optional<Parcel> findByParcelId(UUID id) {
-        List<Parcel> parcels = new ArrayList<>(1);
-        for (Parcel parcel : PARCELS_BY_COORDS.values()) {
-            if (parcel.getId().equals(id)) {
-                parcels.add(parcel);
-                break;
-            }
+    public static void unregister(UUID parcelId) {
+        boolean removed = PARCELS.removeIf(p -> p.parcelId().equals(parcelId));
+        if (removed) {
+            LOGGER.debug("ClientParcelRegistry: unregistered parcel [{}]", parcelId);
         }
-        return parcels.isEmpty() ? Optional.empty() : Optional.of(parcels.get(0));
     }
 
     /**
-     * returns a parcel by a predicate
+     * Clears all parcels. Call on dimension change or disconnect so stale
+     * data is not shown on the HUD after a world transition.
      */
-    public static List<Parcel> findByPredicate(Predicate<Parcel> predicate) {
-        List<Parcel> parcels = new ArrayList<>();
-        PARCELS_BY_COORDS.values().forEach(parcel -> {
-            if (predicate.test(parcel)) {
-                parcels.add(parcel);
-            }
-        });
-        return parcels;
+    public static void clear() {
+        int size = PARCELS.size();
+        PARCELS.clear();
+        LOGGER.debug("ClientParcelRegistry: cleared ({} parcel(s) removed)", size);
     }
+
+    // -------------------------------------------------------------------------
+    // Read
+    // -------------------------------------------------------------------------
 
     /**
-     * find()/findBuffer() variants are slower versions of findRaw() since it requires looking up the parcel from the internal map.
-     * @param coords
-     * @return
+     * Returns the parcel at the given block coords in the given dimension,
+     * or empty if the coords are in wilderness.
+     *
+     * <p>Linear scan — acceptable given the expected client-side parcel count
+     * and the infrequency of HUD look-based queries.</p>
+     *
+     * <p>When multiple parcels overlap (e.g. a citizen parcel inside a nation),
+     * returns the smallest by volume — matching the server-side
+     * {@code findLeastSignificant()} behaviour.</p>
      */
-    public static List<Parcel> find(ICoords coords) {
-        return find(coords, coords);
-    }
+    public static Optional<ClientParcel> findAt(int x, int y, int z, String dimension) {
+        ClientParcel result = null;
+        long smallestVolume = Long.MAX_VALUE;
 
-    public static List<Parcel> find(Box box) {
-        return find(box.getMinCoords(), box.getMaxCoords());
-    }
-
-    public static List<Parcel> find(ICoords coords1, ICoords coords2) {
-        return find(coords1, coords2, false);
-    }
-
-    public static List<Parcel> find(ICoords coords1, ICoords coords2, boolean findFast) {
-        return find(coords1, coords2, findFast, true);
-    }
-
-    public static List<Parcel> find(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, findFast, includeBorder);
-        return getAsParcels(intervals);
-    }
-
-    /**
-     * returns a parcel list from the given interval list
-     * @param intervals
-     * @return
-     */
-    private static List<Parcel> getAsParcels(List<IInterval<UUID>> intervals) {
-        List<Parcel> parcels = new ArrayList<>();
-        intervals.forEach(i -> {
-            // find the parcel from the map
-            Parcel p = PARCELS_BY_COORDS.get(((CoordsInterval<UUID>)i).getCoords1());
-            if (p != null) {
-                parcels.add(p);
-            }
-        });
-        return parcels;
-    }
-
-    public static List<Box> findBoxes(ICoords coords) {
-        return findBoxes(coords, coords);
-    }
-
-    public static List<Box> findBoxes(Box box) {
-        return findBoxes(box.getMinCoords(), box.getMaxCoords());
-    }
-
-    public static List<Box> findBoxes(ICoords coords1, ICoords coords2) {
-        return findBoxes(coords1, coords2, false);
-    }
-
-    public static List<Box> findBoxes(ICoords coords1, ICoords coords2, boolean findFast) {
-        return findBoxes(coords1, coords2, findFast, true);
-    }
-
-    /**
-     * returns a box list within the given coords
-     * @param coords1
-     * @param coords2
-     * @param findFast
-     * @param includeBorder
-     * @return
-     */
-    public static List<Box> findBoxes(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, findFast, includeBorder);
-        List<Box> boxes = new ArrayList<>();
-
-        // need to check against the PARCELS_BY_COORDS map to ensure it hasn't been deleted.
-        intervals.forEach(i -> {
-            // find the parcel from the map
-            Parcel p = PARCELS_BY_COORDS.get(((CoordsInterval<UUID>)i).getCoords1());
-            if (p != null) {
-                boxes.add(new Box(((CoordsInterval<UUID>)i).getCoords1(), ((CoordsInterval<UUID>)i).getCoords2()));
-            }
-        });
-
-        return boxes;
-    }
-
-    /**
-     * the findRaw() interrogates the interval tree directly.
-     * this is the fastest search as it does not have to convert to any other object.
-     * @param coords1
-     * @param coords2
-     * @param findFast
-     * @param includeBorder
-     * @return
-     */
-    private static List<IInterval<UUID>> findRaw(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        return TREE.getOverlapping(TREE.getRoot(), new CoordsInterval<UUID>(coords1, coords2), findFast, includeBorder);
-    }
-
-    public static boolean intersectsParcel(ICoords coords) {
-        return intersectsParcel(coords, coords);
-    }
-
-    public static boolean intersectsParcel(ICoords coords1, ICoords coords2) {
-        return intersectsParcel(coords1, coords2, true);
-    }
-
-    /**
-     * Used to determine if the provided area intersects with a parcel
-     * @param coords1
-     * @param coords2
-     * @param includeBorders
-     * @return
-     */
-    public static boolean intersectsParcel(ICoords coords1, ICoords coords2, boolean includeBorders) {
-        List<Box> parcels = findBoxes(coords1, coords2, true, includeBorders);
-        return !parcels.isEmpty();
-    }
-
-    /**
-     * returns the parcel with the least area of all parcels at the given coords
-     * @param coords
-     * @return
-     */
-    public static Optional<Parcel> findLeastSignificant(ICoords coords) {
-        return findLeastSignificant(ParcelRegistry.find(coords));
-    }
-
-    public static Optional<Parcel> findLeastSignificant(List<Parcel> parcels) {
-        Parcel parcel = null;
-        if (parcels.isEmpty()) {
-            return Optional.empty();
-        }
-        else if (parcels.size() == 1) {
-            parcel = parcels.get(0);
-        } else {
-            parcel = parcels.get(0);
-            for (Parcel p : parcels) {
-                if (p != parcel) {
-                    if (p.getArea() < parcel.getArea()) {
-                        parcel = p;
-                    }
+        for (ClientParcel parcel : PARCELS) {
+            if (parcel.contains(x, y, z, dimension)) {
+                long volume = (long)(parcel.maxX() - parcel.minX() + 1)
+                        * (parcel.maxY() - parcel.minY() + 1)
+                        * (parcel.maxZ() - parcel.minZ() + 1);
+                if (volume < smallestVolume) {
+                    smallestVolume = volume;
+                    result = parcel;
                 }
             }
         }
-        return Optional.ofNullable(parcel);
+        return Optional.ofNullable(result);
     }
 
     /**
-     * not case-sensitive
-     * @param name
-     * @return
+     * Returns all parcels that contain the given coords in the given dimension.
+     * Useful for HUD detail views showing the full containment hierarchy
+     * (e.g. citizen parcel inside a nation).
      */
-    public static Optional<Parcel> findByName(String name) {
-        return PARCELS_BY_COORDS.values().stream().filter(p -> p.getName().equalsIgnoreCase(name)).findFirst();
+    public static List<ClientParcel> findAllAt(int x, int y, int z, String dimension) {
+        List<ClientParcel> results = new ArrayList<>();
+        for (ClientParcel parcel : PARCELS) {
+            if (parcel.contains(x, y, z, dimension)) {
+                results.add(parcel);
+            }
+        }
+        return results;
+    }
+
+    /**
+     * Returns a parcel by ID, or empty if not found.
+     */
+    public static Optional<ClientParcel> findById(UUID parcelId) {
+        for (ClientParcel parcel : PARCELS) {
+            if (parcel.parcelId().equals(parcelId)) {
+                return Optional.of(parcel);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Returns an unmodifiable snapshot of all registered parcels.
+     * Safe to iterate from any thread.
+     */
+    public static List<ClientParcel> getAll() {
+        return Collections.unmodifiableList(new ArrayList<>(PARCELS));
+    }
+
+    /** Returns the number of registered parcels. */
+    public static int size() {
+        return PARCELS.size();
     }
 }

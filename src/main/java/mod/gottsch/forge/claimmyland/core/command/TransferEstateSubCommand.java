@@ -23,8 +23,10 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandResponseFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -38,6 +40,8 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Optional;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/22/2026
@@ -91,7 +95,7 @@ public class TransferEstateSubCommand implements SubCommand {
         if (playerUuid.isPresent()) {
             return transfer(source, playerUuid.get(), estateName, newOwnerName);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+           sendUnableToLocatePlayerMessage(source);
         }
         return -1;
     }
@@ -105,7 +109,7 @@ public class TransferEstateSubCommand implements SubCommand {
         if (ownerUuid.isPresent()) {
             return transfer(source, ownerUuid.get(), estateName, newOwnerName);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return -1;
     }
@@ -113,27 +117,31 @@ public class TransferEstateSubCommand implements SubCommand {
     public static int transfer(CommandSourceStack source, UUID ownerUuid, String estateName, String newOwnerName) {
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
         if (estate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.transfer.failure"))
-                    .withStyle(ChatFormatting.RED), false);
-            return 1;
+            failure(source,  "estate.transfer.failure");
+            return -1;
         }
 
         if (StringUtils.isBlank(newOwnerName)) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, newOwnerName);
+            sendUnableToLocatePlayerMessage(source, newOwnerName);
             return -1;
         }
 
         Optional<UUID> newOwnerUuid = CommandHelper.getPlayerUuid(source, newOwnerName);
         if (newOwnerUuid.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, newOwnerName);
+            sendUnableToLocatePlayerMessage(source, newOwnerName);
             return -1;
         }
 
         transfer(source.getLevel(), estate.get(), newOwnerUuid.get());
 
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.transfer.success"))
-                .withStyle(ChatFormatting.GREEN), false);
-        CommandHelper.save(source.getLevel());
+        sendLines(source,
+                CommandResponseFormatter.formatOwnershipTransferred(
+                        estateName,
+                        estate.get().getId(),
+                        getPlayerName(source, ownerUuid).orElseGet(ownerUuid::toString),
+                        newOwnerName));
+
+        save(source.getLevel());
         return 1;
     }
 
@@ -142,20 +150,8 @@ public class TransferEstateSubCommand implements SubCommand {
 
         // update owner time for all parcels
         long gameTime = level.getGameTime();
-        newEstate.findParcels().forEach(parcel -> parcel.setOwnerTime(gameTime));
-    }
-
-    // TODO needs to go somewhere common - CommandHelper? or ParcelRegistry?
-    private static void transferParcelOwnership(ServerLevel level, Parcel parcel, UUID newOwnerUuid) {
-        // unregister parcel
-        ParcelRegistry.unregisterParcel(parcel);
-
-        // create new estate and update parcel
-        Estate estate = new EstateContext(newOwnerUuid);
-        parcel.setEstate(estate);
-        parcel.setOwnerTime(level.getGameTime());
-
-        // re-register parcel
-        ParcelRegistry.register(parcel);
+        newEstate.findParcels().forEach(parcel -> {
+            CMLNetwork.syncParcelToTrackingPlayers(level, parcel);
+        });
     }
 }

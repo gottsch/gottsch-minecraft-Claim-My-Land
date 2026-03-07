@@ -125,20 +125,22 @@ public class PlayerParcel extends AbstractClaimableParcel {
         }
 
         CitizenParcel citizenParcel = (CitizenParcel) optionalCitizenParcel.get();
-        citizenParcel.setEstate(getEstate()); // TODO need to update estate with parcelType
+        citizenParcel.setEstate(getEstate());
         citizenParcel.getEstate().setParcelType(ParcelType.CITIZEN);
         citizenParcel.setNationEstate(((NationalizedParcel) parentParcel).getNationEstate());
         citizenParcel.setId(getId());
-        citizenParcel.setName(getName());//citizenParcel.defaultName((ServerLevel) level, getOwnerId()));
         citizenParcel.setSize(getSize());
         citizenParcel.setCoords(getCoords());
         citizenParcel.setOwnerId(getOwnerId());
 
-        ParcelRegistry.register(citizenParcel);
-        CommandHelper.save(level);
+        // register the player before the parcel to save a network call to Mojang API.
         PlayerRegistry.register(level, getOwnerId());
 
-        return ClaimResult.SUCCESS;
+        return citizenParcel.nameAndRegister(level);
+//        ParcelRegistry.register((ServerLevel)level, citizenParcel);
+//        CommandHelper.save(level);
+
+//        return ClaimResult.SUCCESS;
     }
 
     @Override

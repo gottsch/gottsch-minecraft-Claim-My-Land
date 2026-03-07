@@ -22,8 +22,8 @@ package mod.gottsch.forge.claimmyland.core.item;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.FoundationStone;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.gui.chat.ChatMessages;
 import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
@@ -118,8 +118,9 @@ public abstract class Deed extends Item {
         }
         Parcel parcel = optionalParcel.orElseThrow(IllegalStateException::new);
 
+        // NOTE don't need to name the parcel yet
         // update the Estate name using the player
-        parcel.getEstate().setName(parcel.getEstate().defaultName(player));
+//        parcel.getEstate().setName(parcel.getEstate().defaultName(player));
 
         // update parcel properties if deed contains them
         if (tag.contains(PARCEL_ID)) {
@@ -162,9 +163,8 @@ public abstract class Deed extends Item {
      */
     protected boolean validateWorldPlacement(Level level, BlockPos pos, Box size, Player player) {
         if (level.isOutsideBuildHeight(pos.offset(size.getMinCoords().toPos()))
-                        || level.isOutsideBuildHeight(pos.offset(size.getMaxCoords().toPos()))) {
-            player.sendSystemMessage((Component.translatable(LangUtil.chat("parcel.outside_world_boundaries"))
-                    .withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.ITALIC})));
+                || level.isOutsideBuildHeight(pos.offset(size.getMaxCoords().toPos()))) {
+            PlayerMessageHelper.sendFailure(player, "parcel.outside_world_boundaries");
             return false;
         }
         return true;
@@ -179,8 +179,7 @@ public abstract class Deed extends Item {
         // gather the number of parcels the player has
         List<Parcel> parcels = ParcelRegistry.findByOwner(player.getUUID());
         if (parcels.size() >= Config.SERVER.general.parcelsPerPlayer.get() && !player.hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) {
-            // TODO create a class ChatHelper that has premade color formatters
-            player.sendSystemMessage(Component.translatable(LangUtil.chat("parcel.max_reached")).withStyle(ChatFormatting.RED));
+            PlayerMessageHelper.sendFailure(player, "parcel.max_reached");
             return false;
         }
         return true;
@@ -216,7 +215,7 @@ public abstract class Deed extends Item {
         // create a parcel object from the deed itemStack and context info
         Optional<Parcel> optionalParcel = createParcel(context.getItemInHand(), targetCoords, context.getPlayer());
         if (optionalParcel.isEmpty()) {
-            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.invalid")).withStyle(ChatFormatting.RED));
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.invalid");
             return InteractionResult.FAIL;
         }
 
@@ -225,7 +224,7 @@ public abstract class Deed extends Item {
         // validate that the parcel's owner id == player id
         if (!parcel.isOwner(context.getPlayer().getUUID())) {
             // send not owner of deed message
-            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.not_owner")).withStyle(ChatFormatting.RED));
+            PlayerMessageHelper.sendFailure(context.getPlayer(),"deed.not_owner");
             return InteractionResult.FAIL;
         }
 
@@ -240,7 +239,7 @@ public abstract class Deed extends Item {
 
                 // ensure deed/parcel has access to the block entity
                 if (!parcel.hasAccessTo(foundationStoneBlockEntity)) {
-                    context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("foundation_stone.incorrect_deed")).withStyle(ChatFormatting.RED));
+                    PlayerMessageHelper.sendFailure(context.getPlayer(),"foundation_stone.incorrect_deed");
                     return InteractionResult.FAIL;
                 }
 
@@ -253,12 +252,6 @@ public abstract class Deed extends Item {
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
 
                 if (claimResult.isSuccess()) {
-                    if (parcel.getFoundedTime() == 0) {
-                        parcel.setFoundedTime(context.getLevel().getGameTime());
-                    }
-                    parcel.setOwnerTime(context.getLevel().getGameTime());
-                    // clear abandonedTime (if any)
-                    parcel.setRelinquishedTime(0L);
 
                     // register user name
                     PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());
@@ -286,23 +279,30 @@ public abstract class Deed extends Item {
                     // TODO add particle effects or place construction tap around border or border display block
 
                     // send success message
-                    context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.claim.success"),
+                    PlayerMessageHelper.sendSuccess(context.getPlayer(),
+                            "deed.claim.success",
+                            "deed.claim.success.detail",
                             parcel.getMinCoords().toShortString(),
-                            ModUtil.getSize(parcel.getBox()).toShortString()).withStyle(ChatFormatting.GREEN));
+                            ModUtil.getSize(parcel.getBox()).toShortString());
 
                 } else {
                     // send the respective failure message.
                     switch (claimResult) {
                         case INTERSECTS -> {
-                            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.claim.intersects")).withStyle(ChatFormatting.RED));
+                            PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.claim.intersects");
                         }
                         case INSUFFICIENT_SIZE -> {
-                            context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.claim.insufficient_size"),
+                            PlayerMessageHelper.sendFailure(context.getPlayer(),
+                                    "deed.claim.insufficient_size",
+                                    "deed.claim.insufficient_size.detail",
                                     parcel.getSize(),
-                                    ModUtil.getSize(((FoundationStoneBlockEntity) blockEntity).getRelativeBox()).toShortString()).withStyle(ChatFormatting.RED));
+                                    ModUtil.getSize(((FoundationStoneBlockEntity) blockEntity).getRelativeBox()).toShortString());
                         }
                         default -> {
-                            ChatMessages.unableToClaim(context.getPlayer(), parcel.getMinCoords(),
+                            PlayerMessageHelper.sendFailure(context.getPlayer(),
+                                    "deed.claim.unable_to_claim",
+                                    "deed.claim.unable_to_claim.detail",
+                                    parcel.getMinCoords(),
                                     ModUtil.getSize(parcel.getBox()));
                         }
                     }
@@ -315,16 +315,16 @@ public abstract class Deed extends Item {
              */
             Block foundationStone = getFoundationStone();
             if (foundationStone == null) {
-               context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("foundation_stone.unable_to_locate")).withStyle(ChatFormatting.RED));
-               ClaimMyLand.LOGGER.warn("unable to location foundation stone for deed -> {}", parcel.getDeedId());
-               return InteractionResult.FAIL;
+                PlayerMessageHelper.sendFailure(context.getPlayer(), "foundation_stone.unable_to_locate");
+                ClaimMyLand.LOGGER.warn("unable to location foundation stone for deed -> {}", parcel.getDeedId());
+                return InteractionResult.FAIL;
             }
 
             // validate size of Deed's dimensions
             // an Ops or mod could create a Deed via NBT with wrong values
             Box size = getSize(context.getItemInHand().getOrCreateTag());
             if (size.getSize().getX() < 2 || size.getSize().getY() < 2 || size.getSize().getZ() < 2) {
-                context.getPlayer().sendSystemMessage(Component.translatable(LangUtil.chat("deed.too_small")).withStyle(ChatFormatting.RED));
+                PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.too_small");
                 return InteractionResult.FAIL;
             }
 
@@ -527,10 +527,7 @@ public abstract class Deed extends Item {
     }
 
     public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        // TODO update to use getParcelType()
-//        if (stack.getTag() != null && stack.getTag().contains(Deed.PARCEL_TYPE)) {
-            tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
-//        }
+        tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
 
         if (stack.getTag() != null && stack.getTag().contains(Deed.SIZE)) {
             appendSizeHoverText(stack, level, tooltip, flag);

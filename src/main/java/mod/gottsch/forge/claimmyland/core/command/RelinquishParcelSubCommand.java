@@ -24,6 +24,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandResponseFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
@@ -33,12 +34,13 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
 import java.util.UUID;
 
-import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.failure;
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 
 /**
@@ -98,16 +100,16 @@ public class RelinquishParcelSubCommand implements SubCommand {
 
     // ops version
     public static int relinquishParcel(CommandSourceStack source, String ownerName, String estateName, String parcelName) {
-        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> player = getPlayerUuid(source, ownerName);
         if (player.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
 
         // get the original estate
         Optional<Estate> optionalEstate = CommandHelper.getEstateByOwner(source, player.get(), estateName);
         if (optionalEstate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.relinquish.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "parcel.relinquish.failure");
             return -1;
         }
         Estate estate = optionalEstate.get();
@@ -115,27 +117,22 @@ public class RelinquishParcelSubCommand implements SubCommand {
         // get the parcel in the estate
         Optional<Parcel> optionalParcel = estate.findParcels().stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
         if (optionalParcel.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.relinquish.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "parcel.relinquish.failure");
             return -1;
         }
         Parcel parcel = optionalParcel.get();
 
-        if (!parcel.getEstate().canRelinquish(parcel)) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.relinquish.disallowed.failure")).withStyle(ChatFormatting.RED), false);
-
-            // get and format invalid reasons
-            Component reasons = Component.translatable(LangUtil.chat("parcel.relinquish.disallowed.reasons"));
-            for (String s : reasons.getString().split("~")) {
-                source.sendSuccess(() -> Component.literal(LangUtil.INDENT2)
-                        .append(Component.translatable(s).withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC)), false);
-            }
-
+        if (!estate.canRelinquish()) {
+            CommandHelper.sendLines(source,
+                    CommandResponseFormatter.formatFailureWithReasons(
+                            "estate.relinquish.disallowed.failure",
+                            "estate.relinquish.disallowed.reasons"));
             return -1;
         }
 
         try {
             // unregister parcel
-            ParcelRegistry.unregisterParcel(parcel);
+            ParcelRegistry.unregisterParcel(source.getLevel(), parcel);
 
             // save old estate
             Estate oldEstate = parcel.getEstate();
@@ -153,12 +150,11 @@ public class RelinquishParcelSubCommand implements SubCommand {
             parcel.setEstate(newEstate);
 
             // re-register parcel
-            ParcelRegistry.register(parcel);
+            ParcelRegistry.register(source.getLevel(), parcel);
 
             // set the abandon time
-            parcel.setRelinquishedTime(source.getLevel().getGameTime());
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.relinquish.success")).withStyle(ChatFormatting.GREEN), false);
-            CommandHelper.save(source.getLevel());
+            sendSuccess(source, "parcel.relinquish.success");
+            save(source.getLevel());
 
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("unable to relinquish parcel -> {}", parcel.getId());

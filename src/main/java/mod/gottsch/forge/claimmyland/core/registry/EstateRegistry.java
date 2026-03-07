@@ -5,6 +5,7 @@ import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
 import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -119,9 +120,36 @@ public class EstateRegistry {
                 .anyMatch(estate -> estate.getName().equalsIgnoreCase(name));
     }
 
-    public static Optional<Estate> findByName(String nationName) {
+    public static Optional<Estate> findByName(String name) {
         return ESTATES_BY_ID.values().stream()
-                .filter(estate -> estate.getName().equalsIgnoreCase(nationName))
+                .filter(estate -> estate.getName().equalsIgnoreCase(name))
+                .findFirst();
+    }
+
+    /**
+     * returns all Nation estates, derived directly from the primary estate store.
+     */
+    public static List<Estate> findNations() {
+        return ESTATES_BY_ID.values().stream()
+                .filter(Estate::isNation)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * convenience overload - get a single nation estate by its ID.
+     */
+    public Optional<Estate> findNationById(UUID estateId) {
+        Estate estate = ESTATES_BY_ID.get(estateId);
+        if (estate != null && estate.isNation()) {
+            return Optional.of(estate);
+        }
+        return Optional.empty();
+    }
+
+    public static Optional<Estate> findNationByName(String name) {
+        return ESTATES_BY_ID.values().stream()
+                .filter(Estate::isNation)
+                .filter(estate -> estate.getName().equalsIgnoreCase(name))
                 .findFirst();
     }
 }

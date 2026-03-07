@@ -67,6 +67,7 @@ public interface SubCommand {
     static final String OWNER_NAME = "owner_name";
     static final String OTHER_ESTATE_NAME = "other_estate_name";
     static final String PARCEL_NAME = "parcel_name";
+    static final String POS = "pos";
     static final String RELINQUISH = "relinquish";
     static final String REMOVE = "remove";
     static final String RENAME = "rename";
@@ -249,7 +250,7 @@ public interface SubCommand {
 
     static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_NAMES_MINUS_SELF = (source, builder) -> {
         ServerPlayer owner = source.getSource().getPlayerOrException();
-        String primaryEstateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
+        String primaryEstateName = StringArgumentType.getString(source, ESTATE_NAME);
         List<String> estates = new ArrayList<>();
 
         estates = EstateRegistry.findByOwner(owner.getUUID()).stream()
@@ -321,7 +322,7 @@ public interface SubCommand {
 
     static final SuggestionProvider<CommandSourceStack> OWNER_ESTATE_PARCEL_NAMES_MORE_THAN_ONE = (source, builder) -> {
         ServerPlayer owner = source.getSource().getPlayerOrException();
-        String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
+        String estateName = StringArgumentType.getString(source, ESTATE_NAME);
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source.getSource(), owner.getUUID(), estateName);
 
         List<String> names = new ArrayList<>();

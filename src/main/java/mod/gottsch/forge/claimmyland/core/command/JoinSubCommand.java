@@ -21,11 +21,12 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandResponseFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelHelper;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -40,6 +41,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/23/2026
@@ -90,7 +93,7 @@ public class JoinSubCommand implements SubCommand {
             return join(source, player.getScoreboardName(), mainEstateName, otherEstateName);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred joining estates:", e);
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
             return 0;
         }
     }
@@ -106,7 +109,7 @@ public class JoinSubCommand implements SubCommand {
     public static int join(CommandSourceStack source, String ownerName, String mainEstateName, String otherEstateName) {
         Optional<UUID> owner = CommandHelper.getPlayerUuid(source, ownerName);
         if (owner.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
         // didn't use CommandHelper.getEstateByOwner() because that would search 2x for the estates
@@ -116,24 +119,18 @@ public class JoinSubCommand implements SubCommand {
 
         if (estate.isEmpty() || otherEstate.isEmpty()) {
             // TODO could not locate
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.join.failure");
             return -1;
         }
 
         // test is the estates are like-estates ie only player estate can join player estates
         if (!estate.get().canJoin(otherEstate.get())) {
-            source.sendSuccess(
-                    () -> Component.translatable(LangUtil.chat("estate.join.invalid.failure")).withStyle(ChatFormatting.RED), false);
-
-            // get and format invalid reasons
-            Component reasons = Component.translatable(LangUtil.chat("estate.join.invalid.reasons"));
-            for (String s : reasons.getString().split("~")) {
-                source.sendSuccess(() -> Component.literal(LangUtil.INDENT2)
-                        .append(Component.translatable(s).withStyle(ChatFormatting.GOLD, ChatFormatting.ITALIC)).append(LangUtil.NEWLINE), false);
-            }
+            CommandHelper.sendLines(source,
+                    CommandResponseFormatter.formatFailureWithReasons(
+                            "estate.join.invalid.failure",
+                            "estate.join.invalid.reasons"));
             return -1;
         }
-
 
         // find all parcels belonging to mainEstate
         Set<Parcel> mainParcels = estate.get().findParcels();
@@ -141,15 +138,13 @@ public class JoinSubCommand implements SubCommand {
         Set<Parcel> parcels = otherEstate.get().findParcels();//ParcelRegistry.findAllByEstateId(otherEstate.get().getId());
 
         if (!shareContainingParcel(mainParcels, parcels)) {
-            source.sendSuccess(() -> Component.translatable(
-                    LangUtil.chat("estate.join.different.zone.failure")
-            ).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.join.different.zone.failure");
             return -1;
         }
 
         parcels.forEach(parcel -> {
             // unregister the target parcel
-            ParcelRegistry.unregisterParcel(parcel);
+            ParcelRegistry.unregisterParcel(source.getLevel(), parcel);
             // update the estate
             parcel.setEstate(estate.get());
 
@@ -157,18 +152,19 @@ public class JoinSubCommand implements SubCommand {
                     .anyMatch(parcel1 -> parcel1.getName().equalsIgnoreCase(parcel.getName()));
 
             if (nameExists) {
-                parcel.setName(parcel.defaultName(source.getLevel(), owner.get()));
+//                parcel.setName(parcel.defaultName(source.getLevel(), owner.get()));
+                parcel.setName(ParcelHelper.buildName(source.getLevel(), parcel.getEstate()));
             }
 
             // re-register the target parcel
-            ParcelRegistry.register(parcel);
+            ParcelRegistry.register(source.getLevel(), parcel);
         });
 
         // remove other estate
         EstateRegistry.unregister(otherEstate.get());
 
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.join.success")).withStyle(ChatFormatting.GREEN), false);
-        CommandHelper.save(source.getLevel());
+        sendSuccess(source, "estate.join.success");
+        save(source.getLevel());
 
         return 1;
     }
