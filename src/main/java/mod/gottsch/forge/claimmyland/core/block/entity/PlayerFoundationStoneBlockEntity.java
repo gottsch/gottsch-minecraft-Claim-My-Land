@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Create by Mark Gottschling on Sep 18, 2204
+ * @author Mark Gottschling on Sep 18, 2204
  */
 public class PlayerFoundationStoneBlockEntity extends FoundationStoneBlockEntity {
 

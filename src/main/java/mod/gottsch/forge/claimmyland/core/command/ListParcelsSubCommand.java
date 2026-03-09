@@ -25,6 +25,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.EstateDisplayFormatter;
+import mod.gottsch.forge.claimmyland.core.command.helper.ParcelDisplayFormatter;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -35,6 +36,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/19/2026
@@ -69,18 +72,18 @@ public class ListParcelsSubCommand implements SubCommand {
             return list(source, player.getUUID(), false);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred listing estates:", e);
-            CommandHelper.failure(source, "unexpected_error");
+            failure(source, "unexpected_error");
         }
         return 1;
     }
 
     // ops version
     private static int list(CommandSourceStack source, String ownerName) {
-        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> ownerUuid = getPlayerUuid(source, ownerName);
         if (ownerUuid.isPresent()) {
             return list(source, ownerUuid.get(), true);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return 1;
     }
@@ -88,11 +91,9 @@ public class ListParcelsSubCommand implements SubCommand {
     private static int list(CommandSourceStack source, UUID ownerUuid, boolean isOps) {
         List<Component> messages = new ArrayList<>();
 
-        EstateDisplayFormatter.formatParcelList(source.getLevel(), messages, ParcelRegistry.findByOwner(ownerUuid), isOps);
+        ParcelDisplayFormatter.formatParcelList(source.getLevel(), messages, ParcelRegistry.findByOwner(ownerUuid), isOps);
+        sendLines(source, messages);
 
-        messages.forEach(component -> {
-            source.sendSuccess(() -> component, false);
-        });
         return 1;
     }
 }

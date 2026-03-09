@@ -42,7 +42,6 @@ public abstract class AbstractEstate implements Estate {
     // the unique id of the claim
     private UUID id;
     private String name;
-    // NOTE this is a moot property
     private ResourceLocation type;
     private ParcelType parcelType;
 
@@ -65,24 +64,40 @@ public abstract class AbstractEstate implements Estate {
     }
 
     public AbstractEstate(Player player) {
-        setId(UUID.randomUUID());
+        this();
+//        setId(UUID.randomUUID());
         setOwnerId(player.getUUID());
-        setName(defaultName(player));
-        initEntitySpawnTags();
+//        setName(defaultName(player));
+//        initEntitySpawnTags();
     }
 
     public AbstractEstate(UUID ownerId) {
-        setId(UUID.randomUUID());
+        this();
+//        setId(UUID.randomUUID());
         setOwnerId(ownerId);
-        setName(defaultName(ownerId));
-        initEntitySpawnTags();
+//        setName(defaultName(ownerId));
+//        initEntitySpawnTags();
     }
 
-    public AbstractEstate(UUID ownerId, String estateName) {
-        setId(UUID.randomUUID());
-        setOwnerId(ownerId);
-        setName(estateName);
-        initEntitySpawnTags();
+//    public AbstractEstate(UUID ownerId, String estateName) {
+//        setId(UUID.randomUUID());
+//        setOwnerId(ownerId);
+//        setName(estateName);
+//        initEntitySpawnTags();
+//    }
+
+    public AbstractEstate copyFrom(Estate source) {
+        setOwnerId(source.getOwnerId());
+        setParcelType(source.getParcelType());
+        setRelinquished(source.isRelinquished());
+        setPlayerWhitelist(new HashSet<>(source.getPlayerWhitelist()));
+        setBlockWhitelist(new HashSet<>(source.getBlockWhitelist()));
+        setBlockTagWhitelist(new HashSet<>(source.getBlockTagWhitelist()));
+        setItemWhitelist(new HashSet<>(source.getItemWhitelist()));
+        setItemTagWhitelist(new HashSet<>(source.getItemTagWhitelist()));
+        setEntitySpawnWhitelist(new HashSet<>(source.getEntitySpawnWhitelist()));
+        setEntitySpawnTagWhitelist(new HashSet<>(source.getEntitySpawnTagWhitelist()));
+        return this;
     }
 
     private void initEntitySpawnTags() {
@@ -93,27 +108,31 @@ public abstract class AbstractEstate implements Estate {
 
     @Override
     public String defaultName() {
-        return getId().toString() + "-estate-1";
+//        return getId().toString() + "-estate-1";
+        return "Estate-" + getId().toString().substring(0, 8);
     }
 
-    @Override
-    public String defaultName(Player player) {
-        // checks against the ClaimRegistry for any claims by ownerID
-        Set<Estate> estates = EstateRegistry.findByOwner(player.getUUID());
-        return player.getScoreboardName() + "-estate-" + (estates.size() + 1);
-    }
+    // TODO rename to generateName()
+//    @Override
+//    public String defaultName(Player player) {
+//        // checks against the ClaimRegistry for any claims by ownerID
+////        Set<Estate> estates = EstateRegistry.findByOwner(player.getUUID());
+////        return player.getScoreboardName() + "-estate-" + (estates.size() + 1);
+//        int index = PlayerRegistry.nextEstateNameIndex(player.getUUID());
+//        return player.getScoreboardName() + "-estate-" + index;
+//    }
 
+    // TODO rename to generateName()
     @Override
     public String defaultName(UUID ownerId) {
-        if (ObjectUtils.isEmpty(ownerId)) {
-            return defaultName();
-        }
-
         Optional<String> name = PlayerRegistry.getNameFromUUIDSynchronized(ownerId);
-        Set<Estate> estates = EstateRegistry.findByOwner(ownerId);
-        return name.orElseGet(ownerId::toString) + "-estate-" + (estates.size() + 1);
+        int index = PlayerRegistry.nextEstateNameIndex(ownerId);
+        return name.orElseGet(ownerId::toString) + "-estate-" + index;
+//        Set<Estate> estates = EstateRegistry.findByOwner(ownerId);
+//        return name.orElseGet(ownerId::toString) + "-estate-" + (estates.size() + 1);
     }
 
+    // TODO rename to generateName()
     @Override
     public String defaultName(Estate estate) {
         Set<Estate> estates = EstateRegistry.findByOwner(estate.getOwnerId());

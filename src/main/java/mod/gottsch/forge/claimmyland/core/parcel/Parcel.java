@@ -19,15 +19,18 @@
  */
 package mod.gottsch.forge.claimmyland.core.parcel;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.estate.EstateHelper;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -195,8 +198,6 @@ public interface Parcel {
      */
     default public ClaimResult handleClaim(Level level, Box parcelBox) {
 
-//        Box parcelBox = blockEntity.getAbsoluteBox();
-
         // TODO all this can be replace with hasBoxToBufferedBoxIntersections
         // find overlaps of the parcel with buffered registry parcels.
         // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
@@ -231,9 +232,51 @@ public interface Parcel {
         }
 
         // add to the registry
-        ParcelRegistry.register(this);
-        CommandHelper.save(level);
+        return nameAndRegister(level);
+//        ParcelRegistry.register((ServerLevel)level, this);
+//        CommandHelper.save(level);
+//
+//        return ClaimResult.SUCCESS;
+    }
 
+
+    default public ClaimResult handleClaim(Level level, Box parcelBox, ServerPlayer claimingPlayer) {
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox);
+        if (!overlaps.isEmpty()) {
+            for (Parcel overlapParcel : overlaps) {
+                if (getId().equals(overlapParcel.getId())) {
+                    return ClaimResult.FAILURE;
+                }
+                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
+                        return ClaimResult.INTERSECTS;
+                    }
+                } else {
+                    return ClaimResult.INTERSECTS;
+                }
+            }
+        }
+//        ParcelRegistry.register((ServerLevel) level, this, claimingPlayer.getScoreboardName());
+//        CommandHelper.save(level);
+//        return ClaimResult.SUCCESS;
+        return nameAndRegister(level, claimingPlayer.getScoreboardName());
+    }
+
+    default ClaimResult nameAndRegister(Level level) {
+        ClaimMyLand.LOGGER.debug("nameAndRegister() called for parcel -> {}", getId());
+        getEstate().setName(EstateHelper.buildName((ServerLevel) level, getOwnerId()));
+        setName(ParcelHelper.buildName((ServerLevel) level, getEstate()));
+        ParcelRegistry.register((ServerLevel) level, this);
+        CommandHelper.save(level);
+        return ClaimResult.SUCCESS;
+    }
+
+    default ClaimResult nameAndRegister(Level level, String playerName) {
+        getEstate().setName(EstateHelper.buildName((ServerLevel) level, getOwnerId()));
+        setName(ParcelHelper.buildName((ServerLevel) level, getEstate()));
+        ParcelRegistry.register((ServerLevel) level, this, playerName);
+        CommandHelper.save(level);
         return ClaimResult.SUCCESS;
     }
 
@@ -288,11 +331,6 @@ public interface Parcel {
     Estate getEstate();
     void setEstate(Estate estate);
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    UUID getNationId();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setNationId(UUID nationId);
-
     UUID getOwnerId();
 
     void setOwnerId(UUID ownerId);
@@ -323,45 +361,6 @@ public interface Parcel {
     Set<UUID> getPlayerWhitelist();
     void setPlayerWhitelist(Set<UUID> whitelist);
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<UUID> getWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setWhitelist(List<UUID> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getBlockTagWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockTagWhitelist(List<String> blockTagWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockTagWhitelist(Set<String> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getBlockWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockWhitelist(List<String> blockWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockWhitelist(Set<String> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getItemTagWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemTagWhitelist(List<String> itemTagWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemTagWhitelist(Set<String> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getItemWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemWhitelist(List<String> itemWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemWhitelist(Set<String> whitelist);
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    Long getFoundedTime();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setFoundedTime(Long foundedTime);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Long getOnwerTime();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setOwnerTime(Long occupiedTime);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Long getAbandonedTime();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setRelinquishedTime(Long time);
+    String getDimension();
+    void setDimension(String dimension);
 }

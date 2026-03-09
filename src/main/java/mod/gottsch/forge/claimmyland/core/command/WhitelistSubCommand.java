@@ -21,15 +21,12 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
-import mod.gottsch.forge.claimmyland.core.command.helper.EstateDisplayFormatter;
+import mod.gottsch.forge.claimmyland.core.command.helper.WhitelistFormatter;
 import mod.gottsch.forge.claimmyland.core.command.helper.WhitelistType;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.blocks.BlockInput;
@@ -42,6 +39,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
 
 import java.util.*;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/20/2026
@@ -182,7 +181,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
         if (playerUuid.isPresent()) {
             return listFromEstate(source, playerUuid.get(), estateName, type);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+            sendUnableToLocatePlayerMessage(source);
         }
         return -1;
     }
@@ -195,7 +194,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
         if (ownerUuid.isPresent()) {
             return listFromEstate(source, ownerUuid.get(), estateName, type);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return -1;
     }
@@ -208,14 +207,12 @@ public abstract class WhitelistSubCommand implements SubCommand {
         Optional<Set<String>> whitelist = WhitelistSubCommand.getEstateWhitelistByType(source, ownerUuid, estateName, type);
 
         whitelist.ifPresentOrElse(data -> {
-                    List<Component> messages = EstateDisplayFormatter
+                    List<Component> messages = WhitelistFormatter
                             .formatStandAloneGenericWhitelist(data, type, type.getTitle() + " - " + estateName, null);
 
-                    messages.forEach(component -> {
-                        source.sendSuccess(() -> component, false);
-                    });
+                    CommandHelper.sendLines(source, messages);
                 },
-                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".list.failure")).withStyle(ChatFormatting.RED), false)
+                () -> failure(source, "estate." + type.name().toLowerCase() + ".list.failure")
         );
         return 1;
     }
@@ -233,7 +230,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
                 return addToEstate(source, ownerName, estateName, ModUtil.getName(item.asItem()), WhitelistType.ITEM);
             }
         } catch(Exception e) {
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
         }
         return 1;
     }
@@ -246,7 +243,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
         if (ownerUuid.isPresent()) {
             return addToEstate(source, ownerUuid.get(), estateName, value, type);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return -1;
     }
@@ -256,15 +253,9 @@ public abstract class WhitelistSubCommand implements SubCommand {
      */
     public int addToEstate(CommandSourceStack source, String estateName, BlockInput blockInput, WhitelistType type) {
         try {
-//            ItemStack itemStack = blockInput.createItemStack(1, false);
-//            ItemLike item = itemStack.getItem();
-//            if (type == WhitelistType.BLOCK && item instanceof BlockItem blockItem) {
-                return addToEstate(source, estateName, ModUtil.getName(blockInput.getState().getBlock()), WhitelistType.BLOCK);
-//            } else {
-//                return addToEstate(source, estateName, ModUtil.getName(item.asItem()), WhitelistType.ITEM);
-//            }
+            return addToEstate(source, estateName, ModUtil.getName(blockInput.getState().getBlock()), WhitelistType.BLOCK);
         } catch(Exception e) {
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
         }
         return 1;
     }
@@ -279,7 +270,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
                 return addToEstate(source, estateName, ModUtil.getName(item.asItem()), WhitelistType.ITEM);
             }
         } catch(Exception e) {
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
         }
         return 1;
     }
@@ -288,7 +279,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
         try {
             return addToEstate(source, estateName, ModUtil.getName(entity.getType()), WhitelistType.ENTITY);
         } catch(Exception e) {
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
         }
         return 1;
     }
@@ -301,7 +292,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
         if (playerUuid.isPresent()) {
             return addToEstate(source, playerUuid.get(), estateName, value, type);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+            sendUnableToLocatePlayerMessage(source);
         }
         return -1;
     }
@@ -315,8 +306,10 @@ public abstract class WhitelistSubCommand implements SubCommand {
         whitelist.ifPresentOrElse(action -> {
                     action.add(value.toString());
                     CommandHelper.save(source.getLevel());
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".add.success")).withStyle(ChatFormatting.GREEN), false);
-                }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".add.failure")).withStyle(ChatFormatting.RED), false)
+//                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".add.success")).withStyle(ChatFormatting.GREEN), false);
+                    sendSuccess(source, "estate." + type.name().toLowerCase() + ".add.success");
+//                }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".add.failure")).withStyle(ChatFormatting.RED), false)
+                }, () -> failure(source, "estate." + type.name().toLowerCase() + ".add.failure")
         );
         return 1;
     }
@@ -329,7 +322,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
         if (playerUuid.isPresent()) {
             return removeFromEstate(source, playerUuid.get(), estateName, tagName, type);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+            sendUnableToLocatePlayerMessage(source);
         }
         return -1;
     }
@@ -342,7 +335,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
         if (ownerUuid.isPresent()) {
             return removeFromEstate(source, ownerUuid.get(), estateName, tagName, type);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return -1;
     }
@@ -356,115 +349,18 @@ public abstract class WhitelistSubCommand implements SubCommand {
         whitelist.ifPresentOrElse(action -> {
                     if (action.remove(tagName.toString())) {
                         CommandHelper.save(source.getLevel());
-                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.success")).withStyle(ChatFormatting.GREEN), false);
+//                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.success")).withStyle(ChatFormatting.GREEN), false);
+                        sendSuccess(source, "estate." + type.name().toLowerCase() + ".remove.success");
                     } else {
                         // TODO could be specific that it didn't match
-                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.failure")).withStyle(ChatFormatting.RED), false);
+//                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.failure")).withStyle(ChatFormatting.RED), false);
+                        failure(source, "estate." + type.name().toLowerCase() + ".add.failure");
                     }
-                }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.failure")).withStyle(ChatFormatting.RED), false)
+                },
+//                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate." + type.name().toLowerCase() + ".remove.failure")).withStyle(ChatFormatting.RED), false)
+                () -> failure(source, "estate." + type.name().toLowerCase() + ".add.failure")
         );
         return 1;
     }
 
-//    public LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext buildContext, WhitelistType type) {
-//        return Commands.literal(type.getCommand())
-//                ///// WHITELIST ADD /////
-//                .then(Commands.literal(ADD)
-//                        .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
-//                                .suggests(OWNER_ESTATE_NAMES)
-//                                .then(Commands.argument(ITEM, ItemArgument.item(buildContext))
-//                                        .executes(source -> {
-//                                            return addToEstate(source.getSource(),
-//                                                    StringArgumentType.getString(source, ESTATE_NAME),
-//                                                    ItemArgument.getItem(source, ITEM),
-//                                                    type);
-//                                        })
-//                                )
-//                        )
-//                )
-//
-//                ///// WHITELIST REMOVE /////
-//                .then(Commands.literal(REMOVE)
-//                        .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
-//                                .suggests(OWNER_ESTATE_NAMES)
-//                                .then(Commands.argument(TAG_NAME, ResourceLocationArgument.id())
-//                                        .suggests(CURRENT_BLOCKS)
-//                                        .executes(source -> {
-//                                            return removeFromEstate(source.getSource(),
-//                                                    StringArgumentType.getString(source, ESTATE_NAME),
-//                                                    ResourceLocationArgument.getId(source, TAG_NAME),
-//                                                    type);
-//                                        })
-//                                )
-//
-//                        )
-//                )
-//                ///// TYPE LIST /////
-//                .then(Commands.literal(LIST)
-//                        .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
-//                                .suggests(OWNER_ESTATE_NAMES)
-//                                .executes(source -> {
-//                                    return listFromEstate(source.getSource(),
-//                                            StringArgumentType.getString(source, ESTATE_NAME),
-//                                            type);
-//                                })
-//                        )
-//                );
-//    }
-//
-//    public LiteralArgumentBuilder<CommandSourceStack> buildOps(CommandBuildContext buildContext, WhitelistType type) {
-//        return Commands.literal(type.getCommand())
-//                ///// WHITELIST ADD /////
-//                .then(Commands.literal(ADD)
-//                        .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
-//                                .suggests(OPS_OWNER_NAMES)
-//                                .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
-//                                        .suggests(OPS_OWNER_ESTATE_NAMES)
-//                                        .then(Commands.argument(ITEM, ItemArgument.item(buildContext))
-//                                                .executes(source -> {
-//                                                    return addToEstate(source.getSource(),
-//                                                            StringArgumentType.getString(source, OWNER_NAME),
-//                                                            StringArgumentType.getString(source, ESTATE_NAME),
-//                                                            ItemArgument.getItem(source, ITEM),
-//                                                            type);
-//                                                })
-//                                        )
-//                                )
-//                        )
-//                )
-//                ///// WHITELIST REMOVE /////
-//                .then(Commands.literal(REMOVE)
-//                        .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
-//                                .suggests(OPS_OWNER_NAMES)
-//                                .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
-//                                        .suggests(OPS_OWNER_ESTATE_NAMES)
-//                                        .then(Commands.argument(TAG_NAME, ResourceLocationArgument.id())
-//                                                .suggests(OPS_CURRENT_BLOCKS)
-//                                                .executes(source -> {
-//                                                    return removeFromEstate(source.getSource(),
-//                                                            StringArgumentType.getString(source, OWNER_NAME),
-//                                                            StringArgumentType.getString(source, ESTATE_NAME),
-//                                                            ResourceLocationArgument.getId(source, TAG_NAME),
-//                                                            type);
-//                                                })
-//                                        )
-//                                )
-//                        )
-//                )
-//                ///// TYPE LIST /////
-//                .then(Commands.literal(LIST)
-//                        .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
-//                                .suggests(OPS_OWNER_NAMES)
-//                                .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
-//                                        .suggests(OPS_OWNER_ESTATE_NAMES)
-//                                        .executes(source -> {
-//                                            return listFromEstate(source.getSource(),
-//                                                    StringArgumentType.getString(source, OWNER_NAME),
-//                                                    StringArgumentType.getString(source, ESTATE_NAME),
-//                                                    type);
-//                                        })
-//                                )
-//                        )
-//                );
-//    }
 }

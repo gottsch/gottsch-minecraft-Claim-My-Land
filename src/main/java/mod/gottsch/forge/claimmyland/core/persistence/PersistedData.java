@@ -29,7 +29,7 @@ import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
 
 /**
- * 
+ *
  * @author Mark Gottschling on Sep 14, 2024
  *
  */
@@ -38,9 +38,9 @@ public class PersistedData extends SavedData {
 	private static final String PARCEL_REGISTRY = "parcel_registry";
 	private static final String PARCEL_REGISTRY_V2 = "parcel_registry_v2";
 	private static final String PLAYER_REGISTRY = "player_registry";
-	
+
 	/**
-	 * 
+	 *
 	 * @return
 	 */
 	public static PersistedData create() {
@@ -52,9 +52,10 @@ public class PersistedData extends SavedData {
 //		if (tag.contains(PARCEL_REGISTRY)) {
 //			ParcelRegistry.load(tag.getCompound(PARCEL_REGISTRY));
 //		}
-		if (tag.contains(PARCEL_REGISTRY) && !tag.contains(PARCEL_REGISTRY_V2)) {
-			ParcelRegistry.convertV1ToV2(tag.getCompound(PARCEL_REGISTRY));
-		} else if (tag.contains(PARCEL_REGISTRY_V2)) {
+//		if (tag.contains(PARCEL_REGISTRY) && !tag.contains(PARCEL_REGISTRY_V2)) {
+//			ParcelRegistry.convertV1ToV2(tag.getCompound(PARCEL_REGISTRY));
+//		} else
+		if (tag.contains(PARCEL_REGISTRY_V2)) {
 			ParcelRegistry.load(tag.getCompound(PARCEL_REGISTRY_V2));
 		}
 		return create();
@@ -66,7 +67,7 @@ public class PersistedData extends SavedData {
 		tag.put(PARCEL_REGISTRY_V2, ParcelRegistry.save(new CompoundTag()));
 		return tag;
 	}
-	
+
 	/**
 	 * @param world
 	 * @return

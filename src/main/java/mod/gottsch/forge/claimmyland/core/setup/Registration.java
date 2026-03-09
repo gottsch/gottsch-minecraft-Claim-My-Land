@@ -29,7 +29,7 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 
 /**
- * Created by Mark Gottschling on Sep 14, 2024
+ * @author Mark Gottschling on Sep 14, 2024
  */
 public class Registration {
     /*

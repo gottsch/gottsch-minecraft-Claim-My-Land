@@ -19,195 +19,247 @@
 package mod.gottsch.forge.claimmyland.core.command.helper;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.mojang.brigadier.suggestion.SuggestionProvider;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.parcel.NationAccessType;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
-import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
-import mod.gottsch.forge.claimmyland.core.tags.ModTags;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
-import java.util.*;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /**
- * 
- * @author Mark Gottschling Sep 16, 2024
+ * coordination utilities for command implementations: player/estate lookup,
+ * persistence, and the single gateway for sending formatted output to the player.
  *
+ * <p><b>sending contract:</b> all command output must go through
+ * {@link #sendLines}, {@link #sendSuccess}, {@link #sendFailure}, or
+ * {@link #sendWarning}. Commands must never call
+ * {@code source.sendSuccess()} / {@code source.sendFailure()} directly.</p>
+ *
+ * <p><b>future direction (v2.x):</b> the {@code send*} methods here will migrate
+ * to a default method on the {@code SubCommand} interface, at which point
+ * {@code CommandHelper} will become a pure lookup/coordination class.</p>
+ *
+ * @author Mark Gottschling 9/16/2024
  */
 public class CommandHelper {
 
-	@Deprecated
-	public static final String DEED = "deed";
-	public static final String PARCEL = "parcel";
-	public static final String ESTATE = "estate";
-	@Deprecated
-	public static final String ADD = "add";
-	@Deprecated
-	public static final String REMOVE = "remove";
-	@Deprecated
-	public static final String LIST = "list";
-	@Deprecated
-	public static final String DETAILS = "details";
-	@Deprecated
-	public static final String RENAME = "rename";
-	@Deprecated
-	public static final String TRANSFER = "transfer";
-	@Deprecated
-	public static final String JOIN = "join";
-	public static final String SPLIT = "split";
-	public static final String CLEAR = "clear";
-	public static final String GENERATE = "generate";
-	@Deprecated
-	public static final String NEW = "new";
-	@Deprecated
-	public static final String DEED_TYPE = "deed_type";
-	@Deprecated
-	public static final String POS = "pos";
-	@Deprecated
-	public static final String X_SIZE = "x_size";
-	@Deprecated
-	public static final String Y_SIZE_UP = "y_size_up";
-	@Deprecated
-	public static final String Y_SIZE_DOWN = "y_size_down";
-	@Deprecated
-	public static final String Z_SIZE = "z_size";
-	@Deprecated
-	public static final String OWNER_NAME = "owner_name";
-	@Deprecated
-	public static final String NEW_OWNER_NAME = "new_owner_name";
-	@Deprecated
-	public static final String FRIEND_NAME = "friend_name";
-	@Deprecated
-	public static final String ESTATE_NAME = "estate_name";
-	@Deprecated
-	public static final String OTHER_ESTATE_NAME = "other_estate_name";
-	@Deprecated
-	public static final String PARCEL_NAME = "parcel_name";
-	@Deprecated
-	public static final String NEW_NAME = "new_name";
-	public static final String BACKUP = "backup";
-	public static final String RESTORE = "restore";
-	public static final String WHITELIST = "whitelist";
-	@Deprecated
-	public static final String BLOCK_TAG = "block_tags";
-	@Deprecated
-	public static final String BLOCKS = "blocks";
-	@Deprecated
-	public static final String ITEM_TAG = "item_tags";
-	@Deprecated
-	public static final String ITEMS = "items";
-	@Deprecated
-	public static final String FRIENDS = "friends";
-	public static final String PLAYERS = "players";
-	@Deprecated
-	public static final String TAG_NAME = "tag_name";
-	@Deprecated
-	public static final String BY_OWNER = "by_owner";
-	public static final String BY_NATION = "by_nation";
-	@Deprecated
-	public static final String NATION_NAME = "nation_name";
-	@Deprecated
-	public static final String ABANDON = "abandon";
-	@Deprecated
-	public static final String BY_ABANDONED = "by_abandoned";
-	public static final String FROM_PARCEL = "from_parcel";
-	public static final String BY_RELINQUISHED = "by_relinquished";
-	@Deprecated
-	public static final String DEMOLISH = "demolish";
-	@Deprecated
-	public static final String ITEM = "item";
-	public static final String GIVE = "give";
-	public static final String GIVE_ITEM = "give_item";
-	public static final String CLAIMED_BY = "claimed_by";
-
-	@Deprecated
-	public static final SuggestionProvider<CommandSourceStack> ACCESS_TYPES = (source, builder) -> {
-		return SharedSuggestionProvider.suggest(Arrays.stream(NationAccessType.values()).map(NationAccessType::getSerializedName), builder);
-	};
-
-	public static final SuggestionProvider<CommandSourceStack> BLOCK_TAGS = (source, builder) -> {
-		List<String> tags = new ArrayList<>();
-		ModTags.Blocks.BLOCK_TAG_WHITELISTS.forEach(tagKey -> {
-			tags.add(tagKey.location().toString());
-		});
-		return SharedSuggestionProvider.suggest(tags, builder);
-	};
-
-	public static final SuggestionProvider<CommandSourceStack> ITEM_TAGS = (source, builder) -> {
-		List<String> tags = new ArrayList<>();
-		ModTags.Items.ITEM_TAG_WHITELISTS.forEach(tagKey -> {
-			tags.add(tagKey.location().toString());
-		});
-		return SharedSuggestionProvider.suggest(tags, builder);
-	};
-
-	@Deprecated
-	public static final SuggestionProvider<CommandSourceStack> PLAYER_NAMES = (source, builder) -> {
-		List<String> names = source.getSource().getLevel().getServer().getPlayerList().getPlayers().stream().map(p -> p.getName().getString()).toList();
-		return SharedSuggestionProvider.suggest(names, builder);
-	};
-
-//	@Deprecated
-//	public static final SuggestionProvider<CommandSourceStack> CURRENT_FRIENDS_NAMES = (source, builder) -> {
-//		String estateName = StringArgumentType.getString(source, CommandHelper.ESTATE_NAME);
-//		Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-//		List<String> list = new ArrayList<>();
-//
-//		if (ownerUuid.isPresent()) {
-//			Optional<Set<UUID>> friendsUuids = FriendsWhitelistCommandsDelegate.getFriendsWhitelist(source.getSource(), ownerUuid.get(), estateName);
-//			friendsUuids.ifPresent(uuids -> uuids.forEach(uuid -> {
-//				Optional<String> name = CommandHelper.getPlayerName(source.getSource(), uuid);
-//				name.ifPresent(list::add);
-//			}));
-//		}
-//		return SharedSuggestionProvider.suggest(list, builder);
-//	};
+	// =====================================================================
+	// SENDING GATEWAY
+	// all command output flows through these methods. direct calls to
+	// source.sendSuccess() / source.sendFailure() in command classes are
+	// prohibited — use these helpers instead.
+	// =====================================================================
 
 	/**
-	 * marks persistent data as dirty so that minecraft will auto save it.
-	 * @param level
+	 * sends every line in the supplied list to the player via
+	 * {@code source.sendSuccess()}. This is the single gateway through which
+	 * all formatted command output is delivered.
+	 *
+	 * @param source the command source
+	 * @param lines  the pre-built lines from any formatter
+	 */
+	public static void sendLines(CommandSourceStack source, List<Component> lines) {
+		for (Component line : lines) {
+			source.sendSuccess(() -> line, false);
+		}
+	}
+
+	/**
+	 * sends error lines: the first line goes through {@code source.sendFailure()}
+	 * so it is flagged in the operator feedback log; all subsequent lines go
+	 * through {@code source.sendSuccess()} so they are visible to the player.
+	 *
+	 * <p>this is intentional — visual colouring (red bold) is already embedded
+	 * in the Component styles produced by {@link CommandResponseFormatter}.</p>
+	 *
+	 * @param source the command source
+	 * @param lines  the pre-built lines from {@link CommandResponseFormatter#formatError}
+	 */
+	private static void sendErrorLines(CommandSourceStack source, List<Component> lines) {
+		if (lines.isEmpty()) return;
+		source.sendFailure(lines.get(0));
+		lines.subList(1, lines.size()).forEach(line -> source.sendSuccess(() -> line, false));
+	}
+
+	/**
+	 * sends a boxed green success response (shorthand — title line only, no body).
+	 * use for simple outcomes where the title is self-explanatory.
+	 *
+	 * @param source   the command source
+	 * @param titleKey lang key for the title (e.g. "parcel.demolish.success")
+	 */
+	public static void sendSuccess(CommandSourceStack source, String titleKey) {
+		sendLines(source, CommandResponseFormatter.formatSuccess(titleKey));
+	}
+
+	/**
+	 * sends a boxed green success response with a body line.
+	 *
+	 * @param source   the command source
+	 * @param titleKey lang key for the bold white title
+	 * @param bodyKey  lang key for the grey body message
+	 * @param bodyArgs optional format arguments for the body translation
+	 */
+	public static void sendSuccess(CommandSourceStack source, String titleKey, String bodyKey, Object... bodyArgs) {
+		sendLines(source, CommandResponseFormatter.formatSuccess(titleKey, bodyKey, bodyArgs));
+	}
+
+	/**
+	 * sends a boxed red error response (shorthand — title line only, no body).
+	 * Use for simple failures where the title is self-explanatory.
+	 *
+	 * <p>routes through {@code source.sendFailure()} for the first (header) line
+	 * so it is flagged correctly in the operator feedback log, then
+	 * {@code source.sendSuccess()} for the body lines so they reach the player.</p>
+	 *
+	 * @param source   the command source
+	 * @param titleKey lang key for the title (e.g. "estate.demolish.failure")
+	 */
+	public static void sendFailure(CommandSourceStack source, String titleKey) {
+		sendErrorLines(source, CommandResponseFormatter.formatFailure(titleKey));
+	}
+
+	/**
+	 * sends a boxed red error response with a body line.
+	 *
+	 * @param source   the command source
+	 * @param titleKey lang key for the bold white title
+	 * @param bodyKey  lang key for the grey body message
+	 * @param bodyArgs optional format arguments for the body translation
+	 */
+	public static void sendFailure(CommandSourceStack source, String titleKey, String bodyKey, Object... bodyArgs) {
+		sendErrorLines(source, CommandResponseFormatter.formatFailure(titleKey, bodyKey, bodyArgs));
+	}
+
+	/**
+	 * sends a boxed yellow warning response (shorthand — title line only, no body).
+	 *
+	 * @param source   the command source
+	 * @param titleKey lang key for the title
+	 */
+	public static void sendWarning(CommandSourceStack source, String titleKey) {
+		sendLines(source, CommandResponseFormatter.formatWarning(titleKey));
+	}
+
+	/**
+	 * sends a boxed yellow warning response with a body line.
+	 *
+	 * @param source   the command source
+	 * @param titleKey lang key for the bold white title
+	 * @param bodyKey  lang key for the grey body message
+	 * @param bodyArgs optional format arguments for the body translation
+	 */
+	public static void sendWarning(CommandSourceStack source, String titleKey, String bodyKey, Object... bodyArgs) {
+		sendLines(source, CommandResponseFormatter.formatWarning(titleKey, bodyKey, bodyArgs));
+	}
+
+	// =====================================================================
+	// CONVENIENCE MESSAGE WRAPPERS
+	// these cover the common cases that appear across many commands. all
+	// delegate to sendFailure / sendLines above — never to source directly.
+	// =====================================================================
+
+	/**
+	 * sends the standard "unexpected error" failure message.
+	 * Use in catch blocks where no more specific message is available.
+	 */
+	public static void unexpectedError(CommandSourceStack source) {
+		sendFailure(source, "unexpected_error");
+	}
+
+	/**
+	 * sends a boxed red error response for the given lang key.
+	 * prefer the typed {@link #sendFailure(CommandSourceStack, String)} overload;
+	 * this exists for backward compatibility with existing call sites.
+	 *
+	 * @param source the command source
+	 * @param key    the lang key passed to {@link LangUtil#chat(String)}
+	 */
+	public static void failure(CommandSourceStack source, String key) {
+		sendFailure(source, key);
+	}
+
+	/**
+	 * sends the standard "unable to locate player" failure message with the
+	 * player name embedded.
+	 *
+	 * @param source the command source
+	 * @param name   the player name that could not be found
+	 */
+	public static void sendUnableToLocatePlayerMessage(CommandSourceStack source, String name) {
+		sendFailure(source, "unable_locate_player", "unable_locate_player.body", name);
+	}
+
+	/**
+	 * sends the standard "unable to locate player" failure message without a
+	 * specific name (used when the name is not available at the call site).
+	 *
+	 * @param source the command source
+	 */
+	public static void sendUnableToLocatePlayerMessage(CommandSourceStack source) {
+		sendFailure(source, "unable_locate_player");
+	}
+
+	/**
+	 * sends the standard "deed generate failure" failure message.
+	 *
+	 * @param source     the command source
+	 * @param nationName the nation name involved (currently unused in the message
+	 *                   body but retained for future use)
+	 */
+	public static void sendUnableToGenerateDeedMessage(CommandSourceStack source, String nationName) {
+		sendFailure(source, "deed.generate.failure");
+	}
+
+	// =====================================================================
+	// LOOKUP / COORDINATION UTILITIES
+	// =====================================================================
+
+	/**
+	 * Marks persistent data as dirty so Minecraft will auto-save it.
+	 *
+	 * @param level the current server level
 	 */
 	public static void save(Level level) {
 		PersistedData savedData = PersistedData.get(level);
-		// mark data as dirty
 		if (savedData != null) {
 			savedData.setDirty();
 		}
 	}
 
-	public static Optional<Parcel> findParcelByOwnerEstate(CommandSourceStack source, UUID ownerUuid, String estateName, String parcelName) {
+	public static Optional<Parcel> findParcelByOwnerEstate(CommandSourceStack source,
+														   UUID ownerUuid,
+														   String estateName,
+														   String parcelName) {
 		Optional<Estate> optionalEstate = getEstateByOwner(source, ownerUuid, estateName);
 		return optionalEstate.flatMap(estate -> estate.findParcels().stream()
-				.filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst());
+				.filter(p -> p.getName().equalsIgnoreCase(parcelName))
+				.findFirst());
 	}
 
-	// deprecated because you have to have the estate because parcels can share the same name if in different estates.
-	@Deprecated
-	public static Optional<Parcel> getParcelByOwner(CommandSourceStack source, UUID ownerUuid, String parcelName) {
-		return getParcelsByOwner(source, ownerUuid).stream().filter(p -> p.getName().equalsIgnoreCase(parcelName)).findFirst();
+	public static Optional<Estate> getEstateByOwner(CommandSourceStack source,
+													UUID ownerUuid,
+													String estateName) {
+		return getEstatesByOwner(source, ownerUuid).stream()
+				.filter(e -> e.getName().equalsIgnoreCase(estateName))
+				.findFirst();
 	}
 
-	public static List<Parcel> getParcelsByOwner(CommandSourceStack source, UUID playerUuid) {
-		return ParcelRegistry.findByOwner(playerUuid);
-	}
-	public static Optional<Estate> getEstateByOwner(CommandSourceStack source, UUID ownerUuid, String estateName) {
-		return getEstatesByOwner(source, ownerUuid).stream().filter(e -> e.getName().equalsIgnoreCase(estateName)).findFirst();
-	}
 	public static Set<Estate> getEstatesByOwner(CommandSourceStack source, UUID playerUuid) {
 		return EstateRegistry.findByOwner(playerUuid);
 	}
 
-	/*
-	 * get command player
+	/**
+	 * Returns the calling player, throwing {@link CommandSyntaxException} if the
+	 * source is not a player entity.
 	 */
 	public static ServerPlayer getPlayer(CommandSourceStack source) throws CommandSyntaxException {
 		return source.getPlayerOrException();
@@ -216,327 +268,16 @@ public class CommandHelper {
 	public static Optional<UUID> getPlayerUuid(CommandSourceStack source) {
 		try {
 			return Optional.of(getPlayer(source).getUUID());
-		} catch(CommandSyntaxException e) {
+		} catch (CommandSyntaxException e) {
 			return Optional.empty();
 		}
 	}
 
-	// TODO these should move to PlayerRegistry taking in SeverLevel.
-	/*
-	 * get player using extended search
-	 * 1. online
-	 * 2. PlayerRegistry
-	 * 3. offline
-	 */
 	public static Optional<UUID> getPlayerUuid(CommandSourceStack source, String playerName) {
-//		// get the online player
-//		ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(playerName);
-//		if (player == null) {
-//			// get the player from the player registry
-//			return PlayerRegistry.get(playerName).or(() -> {
-//				if (Config.SERVER.general.allowMojangNameCalls.get()) {
-//					Optional<UUID> playerUuid = PlayerRegistry.getUUIDFromNameSynchronized(playerName);
-//					// before returning, update PlayerRegistry with the UUID/name mapping
-//					playerUuid.ifPresent(ownerUuid -> PlayerRegistry.update(ownerUuid, playerName));
-//					return playerUuid;
-//				} else {
-//					return Optional.empty();
-//				}
-//			});
-//		}
-//		return Optional.of(player.getUUID());
 		return PlayerRegistry.getPlayerUuid(source.getLevel(), playerName);
 	}
 
 	public static Optional<String> getPlayerName(CommandSourceStack source, UUID playerUuid) {
-//		// get the online player
-//		ServerPlayer player = source.getServer().getPlayerList().getPlayer(playerUuid);
-//		if (player == null) {
-//			// get the player from the player registry
-//			return PlayerRegistry.get(playerUuid).or(() -> {
-//				if (Config.SERVER.general.allowMojangNameCalls.get()) {
-//					Optional<String> playerName = PlayerRegistry.getNameFromUUIDSynchronized(playerUuid);
-//					// before returning, update PlayerRegistry with the UUID/name mapping
-//					playerName.ifPresent(name -> PlayerRegistry.update(playerUuid, name));
-//					return playerName;
-//				} else {
-//					return Optional.empty();
-//				}
-//			});
-//		}
-//		return Optional.of(player.getName().getString());
 		return PlayerRegistry.getPlayerName(source.getLevel(), playerUuid);
 	}
-
-	public static void sendNewLineMessage(CommandSourceStack source) {
-		source.sendSuccess(() -> Component.translatable(LangUtil.NEWLINE), false);
-	}
-
-	public static void sendUnableToLocatePlayerMessage(CommandSourceStack source, String name) {
-		source.sendSuccess(() -> Component.translatable(LangUtil.chat("unable_locate_player"), name).withStyle(ChatFormatting.RED), false);
-	}
-	public static void sendUnableToLocatePlayerMessage(CommandSourceStack source) {
-		source.sendSuccess(() -> Component.translatable(LangUtil.chat("unable_locate_player")).withStyle(ChatFormatting.RED), false);
-	}
-
-	public static void sendUnableToGenerateDeedMessage(CommandSourceStack source, String nationName) {
-		source.sendSuccess(() -> Component.translatable(LangUtil.chat(" deed.generate.failure")).withStyle(ChatFormatting.RED), false);
-	}
-
-	/**
-	 * convenience chat method
-	 * @param source
-	 */
-	public static void unexceptedError(CommandSourceStack source) {
-		failure(source, "unexpected_error");
-	}
-
-	public static void failure(CommandSourceStack source, String key) {
-		source.sendFailure(Component.translatable(LangUtil.chat(key)).withStyle(ChatFormatting.RED));
-	}
-
-	///// SUGGESTIONS /////
-//	static final SuggestionProvider<CommandSourceStack> SUGGEST_UUID = (source, builder) -> {
-//		// NOTE use to find the player's name by UUID
-//		//		source.getSource().getServer().getPlayerList()
-//
-//
-//		return SharedSuggestionProvider.suggest(ProtectionRegistries.block().findByClaim(p -> !p.getOwner().getUuid().isEmpty()).stream()
-//				.map(i -> String.format("%s [%s]",
-//						(i.getOwner().getName() == null) ? "" : i.getOwner().getName(),
-//								(i.getOwner().getUuid() == null) ? "" : i.getOwner().getUuid())), builder);
-//	};
-//
-//	static final SuggestionProvider<CommandSourceStack> GIVABLE_ITEMS = (source, builder) -> {
-//		List<String> items = Arrays.asList(
-//				"Property Lever",
-//				"Remove Claim Stake"
-//				);
-//		return SharedSuggestionProvider.suggest(items, builder);
-//	};
-//
-//	/**
-//	 *
-//	 * @param source
-//	 * @return
-//	 */
-//	static int unavailable(CommandSourceStack source) {
-//		source.sendSuccess(Component.translatable(LangUtil.message("option_unavailable")), false);
-//		return 1;
-//	}
-//
-//
-//
-//	/**
-//	 *
-//	 * @param source
-//	 * @param oldName
-//	 * @param newName
-//	 * @return
-//	 */
-//	public static int rename(CommandSourceStack source, String oldName, String newName) {
-//		ServerPlayer player = null;
-//		try {
-//			player = source.getPlayerOrException();
-//		}
-//		catch(CommandSyntaxException 	e) {
-//			source.sendFailure(Component.translatable(LangUtil.message("unable_locate_player")));
-//			return 1;
-//		}
-//		List<Property> claims = ProtectionRegistries.block().getProtections(player.getStringUUID());
-//		List<Property> namedClaims = claims.stream().filter(claim -> claim.getName().equalsIgnoreCase(oldName)).collect(Collectors.toList());
-//		if (namedClaims.isEmpty()) {
-//			source.sendFailure(Component.translatable(LangUtil.message("property.name.unknown"))
-//					.append(Component.translatable(oldName.toUpperCase()).withStyle(ChatFormatting.AQUA)));
-//			return 1;
-//		}
-//		namedClaims.get(0).setName(newName.toUpperCase());
-//
-//		source.sendSuccess(Component.translatable(LangUtil.message("property.rename.success"))
-//				.append(Component.translatable(newName.toUpperCase()).withStyle(ChatFormatting.AQUA)), false);
-//
-//		saveData(source.getLevel());
-//		// NOTE it is not necessary to send message to client as rename() method is called from server
-//		// and server registry is used to lookup rename() etc.
-//
-//		return 1;
-//	}
-//
-//	/**
-//	 *
-//	 * @param source
-//	 * @return
-//	 */
-//	public static int list(CommandSourceStack source) {
-//		ServerPlayer player;
-//		try {
-//			player = source.getPlayerOrException();
-//			return list(source, player);
-//		}
-//		catch(CommandSyntaxException 	e) {
-//			source.sendFailure(Component.translatable(LangUtil.message("unable_locate_player")));
-//		}
-//		return 1;
-//	}
-//
-//	/**
-//	 *
-//	 * @param source
-//	 * @param player
-//	 * @return
-//	 */
-//	public static int list(CommandSourceStack source, ServerPlayer player) {
-//		List<Component> messages = new ArrayList<>();
-//		messages.add(Component.literal(""));
-//		messages.add(Component.translatable(LangUtil.message("property.list"), player.getName().getString()).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD, ChatFormatting.WHITE));
-//		messages.add(Component.literal(""));
-//
-//		List<Component> components = formatList(messages, ProtectionRegistries.block().getProtections(player.getStringUUID()));
-//		components.forEach(component -> {
-//			source.sendSuccess(component, false);
-//		});
-//		return 1;
-//	}
-//
-//	/**
-//	 *
-//	 * @param messages
-//	 * @param list
-//	 * @return
-//	 */
-//	static List<Component> formatList(List<Component> messages, List<Property> list) {
-//
-//		if (list.isEmpty()) {
-//			messages.add(Component.translatable(LangUtil.message("property.list.empty")).withStyle(ChatFormatting.AQUA));
-//		}
-//		else {
-//			list.forEach(claim -> {
-//				messages.add(Component.translatable(claim.getName().toUpperCase() + ": ").withStyle(ChatFormatting.AQUA)
-//						.append(Component.translatable(String.format("(%s) to (%s)",
-//								formatCoords(claim.getBox().getMinCoords()),
-//								formatCoords(claim.getBox().getMaxCoords()))).withStyle(ChatFormatting.GREEN)
-//						)
-//						.append(Component.translatable(", size: (" + formatCoords(claim.getBox().getSize()) + ")").withStyle(ChatFormatting.WHITE))
-//				);
-//
-////				[STYLE].withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/tp @s " + blockpos.getX() + " " + s1 + " " + blockpos.getZ())).withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.translatable("chat.coordinates.tooltip"))
-//			});
-//		}
-//		return messages;
-//	}
-//
-//	/**
-//	 *
-//	 * @param source
-//	 * @param registryName
-//	 * @return
-//	 */
-//	// TODO update to take in a Player param
-//	static int give(CommandSourceStack source, String name) {
-//		try {
-//			Item givableItem = null;
-//			switch (name.toLowerCase()) {
-//			case "property lever":
-//				givableItem = ProtectItItems.PROPERTY_LEVER.get();
-//				break;
-//			case "remove claim stake":
-//				givableItem = ProtectItItems.REMOVE_CLAIM.get();
-//				break;
-//			}
-//			if (givableItem == null) {
-//				source.sendSuccess(Component.translatable(LangUtil.message("non_givable_item")), false);
-//				return 1;
-//			}
-//			source.getPlayerOrException().getInventory().add(new ItemStack(givableItem));
-//		}
-//		catch(Exception e) {
-//			ProtectIt.LOGGER.error("error on give -> ", e);
-//		}
-//		return 1;
-//	}
-//
-//	/**
-//	 *
-//	 * @param source
-//	 */
-//	static void saveData(ServerLevel level) {
-//		PersistedData savedData = PersistedData.get(level);
-//		if (savedData != null) {
-//			savedData.setDirty();
-//		}
-//	}
-//
-//	public static String formatCoords(ICoords coords) {
-//		return String.format("%s, %s, %s", coords.getX(), coords.getY(), coords.getZ());
-//	}
-//
-//	/**
-//	 *
-//	 * @param uuid
-//	 * @return
-//	 */
-//	static String parseNameUuid(String uuid) {
-//		String output = "";
-//		// parse out the uuid
-//		if (uuid.contains("[")) {
-//			// find between square brackets
-//			Pattern p = Pattern.compile("\\[([^\"]*)\\]");
-//			Matcher m = p.matcher(uuid);
-//			// get first occurence
-//			if (m.find()) {
-//				output = m.group(1);
-//			}
-//		}
-//		return output;
-//	}
-//
-//	/**
-//	 *
-//	 * @param owner
-//	 * @param property
-//	 * @return
-//	 */
-//	public static Optional<Property> getProperty(UUID owner, UUID property) {
-//		// get the owner's properties
-//		List<Property> claims = ProtectionRegistries.block().getProtections(owner.toString());
-//		// get the named property
-//		List<Property> namedClaims = claims.stream().filter(claim -> claim.getUuid().equals(property)).collect(Collectors.toList());
-//		if (namedClaims.isEmpty()) {
-//			return Optional.empty();
-//		}
-//		return Optional.ofNullable(namedClaims.get(0));
-//	}
-//
-//	/**
-//	 *
-//	 * @param c1
-//	 * @param c2
-//	 * @return
-//	 */
-//	public static Optional<Tuple<ICoords, ICoords>> validateCoords(ICoords c1, ICoords c2) {
-//		Optional<Tuple<ICoords, ICoords>> coords = Optional.of (new Tuple<ICoords, ICoords>(c1, c2));
-//		if (!isDownField(c1, c2)) {
-//			// attempt to flip coords and test again
-//			if (isDownField(c2, c1)) {
-//				coords = Optional.of(new Tuple<ICoords, ICoords>(c2, c1));
-//			}
-//			else {
-//				coords = Optional.empty();
-//			}
-//		}
-//		return coords;
-//	}
-//
-//	/**
-//	 * TODO When updating to allow Y values, update this method to include Y check
-//	 * @param from
-//	 * @param to
-//	 * @return
-//	 */
-//	public static boolean isDownField(ICoords from, ICoords to) {
-//		if (to.getX() >= from.getX() && to.getZ() >= from.getZ()) {
-//			return true;
-//		}
-//		return false;
-//	}
 }

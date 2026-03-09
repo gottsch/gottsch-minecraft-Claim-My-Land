@@ -34,7 +34,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.Optional;
 
 /**
- * Created by Mark Gottschling on Sep 20, 2024
+ * @author Mark Gottschling on Sep 20, 2024
  */
 public class BorderStoneBlockItem extends BlockItem {
     public BorderStoneBlockItem(Block block, Properties properties) {

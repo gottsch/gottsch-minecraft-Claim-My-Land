@@ -65,6 +65,13 @@ public abstract class AbstractParcel implements Parcel {
     // TODO this probably can be moved into Parcel (replace PARCEL_TYPE)
     public static final String TYPE = "type";
 
+    //
+    public static final String DIMENSION_KEY = "dimension";
+
+    // default value — matches current hardcoded Overworld-only behaviour.
+    // TODO update this per-parcel when multi-dimension support is added in a future version.
+    public static final String DEFAULT_DIMENSION = "minecraft:overworld";
+
     // the unique id of the parcel
     private UUID id;
     private String name;
@@ -82,15 +89,7 @@ public abstract class AbstractParcel implements Parcel {
     private Box size;
     private ParcelType type;
 
-    // TODO move to Estate
-    @Deprecated(forRemoval = true, since = "2.0")
-    private long foundedTime;
-    @Deprecated(forRemoval = true, since = "2.0")
-    private long ownerTime;
-    // TODO abandonedTime doesn't sense anymore as only citizen parcels can be
-    //  relinquished
-    @Deprecated(forRemoval = true, since = "2.0")
-    private long abandonedTime;
+    private String dimension = DEFAULT_DIMENSION;
 
     /*
      * no-arg constructor
@@ -153,7 +152,7 @@ public abstract class AbstractParcel implements Parcel {
             return true;
         } else {
             // or the owner's whitelist has access
-            return getWhitelist().stream().anyMatch(uuid -> uuid.equals(entityId));
+            return getEstate().getPlayerWhitelist().stream().anyMatch(uuid -> uuid.equals(entityId));
         }
     }
 
@@ -212,6 +211,8 @@ public abstract class AbstractParcel implements Parcel {
 
         tag.putString(TYPE, getType().getSerializedName());
 
+        tag.putString(DIMENSION_KEY, getDimension());
+
         CompoundTag coordsTag = new CompoundTag();
         getCoords().save(coordsTag);
         tag.put(COORDS_KEY, coordsTag);
@@ -220,9 +221,6 @@ public abstract class AbstractParcel implements Parcel {
         getSize().save(sizeTag);
         tag.put(SIZE_KEY, sizeTag);
 
-        tag.putLong("foundedTime", getFoundedTime());
-        tag.putLong("ownerTime", getOnwerTime());
-        tag.putLong("abandonedTime", getAbandonedTime());
     }
 
     @Override
@@ -259,21 +257,14 @@ public abstract class AbstractParcel implements Parcel {
         if (tag.contains(TYPE)) {
             setType(ParcelType.valueOf(tag.getString(TYPE)));
         }
+        if (tag.contains(DIMENSION_KEY)) {
+            setDimension(tag.getString(DIMENSION_KEY));
+        }
         if (tag.contains(COORDS_KEY)) {
             setCoords(Coords.EMPTY.load(tag.getCompound(COORDS_KEY)));
         }
         if (tag.contains(SIZE_KEY)) {
             setSize(Box.load(tag.getCompound(SIZE_KEY)));
-        }
-        // TODO move to estate
-        if (tag.contains("foundedTime")) {
-            setFoundedTime(tag.getLong("foundedTime"));
-        }
-        if (tag.contains("ownerTime")) {
-            setOwnerTime(tag.getLong("ownerTime"));
-        }
-        if (tag.contains("abandonedTime")) {
-            setRelinquishedTime(tag.getLong("abandonedTime"));
         }
 
         return this;
@@ -346,20 +337,6 @@ public abstract class AbstractParcel implements Parcel {
         this.estate = estate;
     }
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public UUID getNationId() {
-//        return nationId;
-        return getEstate().getId();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setNationId(UUID nationId) {
-        // legacy
-        this.nationId = nationId;
-    }
-
     @Override
     public UUID getOwnerId() {
         return getEstate().getOwnerId();
@@ -412,15 +389,16 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     @Override
-    public Set<UUID> getWhitelist() {
-        return getEstate().getPlayerWhitelist();
+    public String getDimension() {
+        return dimension;
     }
 
-    @Deprecated(forRemoval = true, since = "2.0")
     @Override
-    public void setWhitelist(List<UUID> whitelist) {
-        setPlayerWhitelist(new HashSet<>(whitelist));
+    public void setDimension(String dimension) {
+        this.dimension = dimension;
     }
+
+
 
     /*
      * convenience method
@@ -435,69 +413,7 @@ public abstract class AbstractParcel implements Parcel {
         getEstate().setPlayerWhitelist(whitelist);
     }
 
-    @Override
-    public Set<String> getBlockTagWhitelist() {
-        return getEstate().getBlockTagWhitelist();
-    }
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setBlockTagWhitelist(List<String> blockTagWhitelist) {
-        setBlockTagWhitelist(new HashSet<>(blockTagWhitelist));
-    }
-
-    @Override
-    public void setBlockTagWhitelist(Set<String> whitelist) {
-        getEstate().setBlockTagWhitelist(whitelist);
-    }
-
-    @Override
-    public Set<String> getBlockWhitelist() {
-        return getEstate().getBlockWhitelist();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setBlockWhitelist(List<String> blockWhitelist) {
-        setBlockWhitelist(new HashSet<>(blockWhitelist));
-    }
-
-    @Override
-    public void setBlockWhitelist(Set<String> whitelist) {
-        getEstate().setBlockWhitelist(whitelist);
-    }
-
-    @Override
-    public Set<String> getItemTagWhitelist() {
-        return getEstate().getItemTagWhitelist();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setItemTagWhitelist(List<String> itemTagWhitelist) {
-        setItemTagWhitelist(new HashSet<>(itemTagWhitelist));
-    }
-
-    @Override
-    public void setItemTagWhitelist(Set<String> whitelist) {
-        getEstate().setItemTagWhitelist(whitelist);
-    }
-
-    @Override
-    public Set<String> getItemWhitelist() {
-        return getEstate().getItemWhitelist();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setItemWhitelist(List<String> itemWhitelist) {
-        setItemWhitelist(new HashSet<>(itemWhitelist));
-    }
-
-    @Override
-    public void setItemWhitelist(Set<String> whitelist) {
-        getEstate().setItemWhitelist(whitelist);
-    }
 
     @Override
     public ParcelType getType() {
@@ -507,36 +423,6 @@ public abstract class AbstractParcel implements Parcel {
     @Override
     public void setType(ParcelType type) {
         this.type = type;
-    }
-
-    @Override
-    public Long getFoundedTime() {
-        return foundedTime;
-    }
-
-    @Override
-    public void setFoundedTime(Long foundedTime) {
-        this.foundedTime = foundedTime;
-    }
-
-    @Override
-    public Long getOnwerTime() {
-        return ownerTime;
-    }
-
-    @Override
-    public void setOwnerTime(Long ownerTime) {
-        this.ownerTime = ownerTime;
-    }
-
-    @Override
-    public Long getAbandonedTime() {
-        return abandonedTime;
-    }
-
-    @Override
-    public void setRelinquishedTime(Long abandonedTime) {
-        this.abandonedTime = abandonedTime;
     }
 
     @Override
@@ -550,9 +436,6 @@ public abstract class AbstractParcel implements Parcel {
                 ", coords=" + coords +
                 ", size=" + size +
                 ", type=" + type +
-                ", foundedTime=" + foundedTime +
-                ", ownerTime=" + ownerTime +
-                ", abandonedTime=" + abandonedTime +
                 '}';
     }
 }

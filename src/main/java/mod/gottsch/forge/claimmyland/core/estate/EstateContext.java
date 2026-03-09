@@ -19,13 +19,9 @@
 
 package mod.gottsch.forge.claimmyland.core.estate;
 
-import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
-import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -49,15 +45,5 @@ public class EstateContext extends AbstractEstate {
     public ResourceLocation getType() {
         return EstateTypeRegistry.ESTATE_TYPE;
     }
-
-//    @Override
-//    public boolean canJoin(Estate estate) {
-//        Parcel p1 = getParcels().iterator().next();
-//        Parcel p2 = estate.getParcels().iterator().next();
-//        return !getId().equals(estate.getId())
-//                && getOwnerId().equals(estate.getOwnerId())
-//                && p1.getType() == p2.getType()
-//                && !isRelinquished() && !estate.isRelinquished();
-//    }
 
 }

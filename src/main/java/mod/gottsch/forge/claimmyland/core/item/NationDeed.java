@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.item;
 
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
@@ -59,7 +60,7 @@ public class NationDeed extends Deed {
         Optional<Parcel> optionalParcel = super.createParcel(deedStack, coords, player);
 
         if (optionalParcel.isEmpty()) {
-            player.sendSystemMessage(Component.translatable(LangUtil.chat("nation_deed.unable_create")).withStyle(ChatFormatting.RED));
+            PlayerMessageHelper.sendFailure(player, "nation_deed.unable_create");
             return optionalParcel;
         }
 
@@ -87,8 +88,7 @@ public class NationDeed extends Deed {
         if (level.isOutsideBuildHeight(size.getMinCoords().getY())
             || level.isOutsideBuildHeight(size.getMaxCoords().getY())) {
 
-            player.sendSystemMessage((Component.translatable(LangUtil.chat("parcel.outside_world_boundaries"))
-                    .withStyle(new ChatFormatting[]{ChatFormatting.DARK_RED, ChatFormatting.ITALIC})));
+            PlayerMessageHelper.sendFailure(player, "parcel.outside_world_boundaries");
             return false;
         }
         return true;

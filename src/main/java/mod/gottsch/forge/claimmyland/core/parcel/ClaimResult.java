@@ -19,6 +19,9 @@
  */
 package mod.gottsch.forge.claimmyland.core.parcel;
 
+/**
+ * @author Mark Gottschling on Sep 14, 2024
+ */
 public enum ClaimResult {
     SUCCESS,
     INTERSECTS,

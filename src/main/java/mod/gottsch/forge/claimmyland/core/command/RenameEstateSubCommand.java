@@ -21,10 +21,11 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandResponseFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
@@ -36,6 +37,8 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/19/2026
@@ -81,7 +84,7 @@ public class RenameEstateSubCommand implements SubCommand {
             return rename(source, player.getScoreboardName(), estateName, newName);
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred renaming estate:", e);
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
             return 0;
         }
     }
@@ -89,7 +92,7 @@ public class RenameEstateSubCommand implements SubCommand {
     public static int rename(CommandSourceStack source, String ownerName, String estateName, String newName) {
         Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
         if (player.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
 
@@ -97,19 +100,34 @@ public class RenameEstateSubCommand implements SubCommand {
         Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(estateName)).findFirst();
 
         if (estate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.rename.failure");
             return -1;
         }
 
         if (EstateRegistry.hasName(newName)) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.exists.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.rename.exists.failure");
             return -1;
         }
 
+        String oldName = estate.get().getName();
+        UUID estateId = estate.get().getId();
+
         // NOTE temp replace spaces with underscore. future, update commands to use quoted values for names - StringArgumentType.escapeIfRequired(value);
         estate.get().setName(newName.replace(" ", "_"));
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.rename.success")).withStyle(ChatFormatting.GREEN), false);
-        CommandHelper.save(source.getLevel());
+        estate.get().findParcels().forEach(parcel ->
+                CMLNetwork.syncParcelToTrackingPlayers(source.getLevel(), parcel));
+
+        // TRACKING_CHUNK excludes the executing player — send directly to them.
+        ServerPlayer serverPlayer = source.getLevel().getServer().getPlayerList().getPlayer(player.get());
+        if (serverPlayer != null) {
+            estate.get().findParcels().forEach(parcel ->
+                    CMLNetwork.syncParcelToPlayer(source.getLevel(), serverPlayer, parcel));
+        }
+
+        sendLines(source,
+                CommandResponseFormatter.formatEstateRenamed(oldName, newName.replace(" ", "_"), estateId));
+
+        save(source.getLevel());
 
         return 1;
     }

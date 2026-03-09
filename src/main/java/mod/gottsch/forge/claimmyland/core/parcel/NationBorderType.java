@@ -4,7 +4,7 @@ import net.minecraft.util.StringRepresentable;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Created by Mark Gottschling on Sep 20, 2024
+ * @author Mark Gottschling on Sep 20, 2024
  */
 @Deprecated
 public enum NationBorderType implements StringRepresentable {

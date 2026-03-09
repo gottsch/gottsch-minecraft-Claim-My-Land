@@ -35,6 +35,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
+
 /**
  * @author by Mark Gottschling on 2/18/2026
  */
@@ -69,18 +71,18 @@ public class ListEstateSubCommand implements SubCommand {
             return list(source, player.getUUID(), false);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred listing estates:", e);
-            CommandHelper.failure(source, "unexpected_error");
+            failure(source, "unexpected_error");
         }
         return 1;
     }
 
     // ops version
     private static int list(CommandSourceStack source, String ownerName) {
-        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> ownerUuid = getPlayerUuid(source, ownerName);
         if (ownerUuid.isPresent()) {
             return list(source, ownerUuid.get(), true);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return 1;
     }
@@ -89,10 +91,8 @@ public class ListEstateSubCommand implements SubCommand {
         List<Component> messages = new ArrayList<>();
 
         EstateDisplayFormatter.formatEstateList(source.getLevel(), messages, EstateRegistry.findByOwner(ownerUuid), isOps);
+        sendLines(source, messages);
 
-        messages.forEach(component -> {
-            source.sendSuccess(() -> component, false);
-        });
         return 1;
     }
 }

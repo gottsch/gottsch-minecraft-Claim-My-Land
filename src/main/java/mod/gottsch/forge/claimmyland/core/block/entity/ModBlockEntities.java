@@ -26,7 +26,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.RegistryObject;
 
 /**
- * Created by Mark Gottschling on Sep 14, 2024
+ * @author Mark Gottschling on Sep 14, 2024
  */
 public class ModBlockEntities {
 

@@ -24,6 +24,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.EstateDisplayFormatter;
+import mod.gottsch.forge.claimmyland.core.command.helper.WhitelistFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import net.minecraft.ChatFormatting;
@@ -34,6 +35,8 @@ import net.minecraft.network.chat.Component;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/20/2026
@@ -115,7 +118,7 @@ public class FriendsWhitelistSubCommand implements SubCommand {
                                                 .executes(source -> {
                                                     return removeFromEstate(source.getSource(),
                                                             StringArgumentType.getString(source, OWNER_NAME),
-                                                            StringArgumentType.getString(source, ESTATE_NAME), StringArgumentType.getString(source, CommandHelper.FRIEND_NAME));
+                                                            StringArgumentType.getString(source, ESTATE_NAME), StringArgumentType.getString(source, FRIEND_NAME));
                                                 })
                                         )
                                 )
@@ -145,13 +148,13 @@ public class FriendsWhitelistSubCommand implements SubCommand {
         // refactored way
         Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source);
         if (ownerUuid.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+            sendUnableToLocatePlayerMessage(source);
             return -1;
         }
 
         Optional<UUID> friendUuid = CommandHelper.getPlayerUuid(source, friendsName);
         if (friendUuid.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, friendsName);
+            sendUnableToLocatePlayerMessage(source, friendsName);
             return -1;
         }
 
@@ -164,13 +167,13 @@ public class FriendsWhitelistSubCommand implements SubCommand {
     public static int addToEstate(CommandSourceStack source, String ownerName, String estateName, String friendsName) {
         Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
         if (ownerUuid.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+            sendUnableToLocatePlayerMessage(source);
             return -1;
         }
 
         Optional<UUID> friendUuid = CommandHelper.getPlayerUuid(source, friendsName);
         if (friendUuid.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, friendsName);
+            sendUnableToLocatePlayerMessage(source, friendsName);
             return -1;
         }
 
@@ -182,15 +185,18 @@ public class FriendsWhitelistSubCommand implements SubCommand {
      */
     private static int addToEstate(CommandSourceStack source, UUID ownerUuid, String estateName, UUID friendUuid) {
         if (ownerUuid.equals(friendUuid)) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.add.same_name.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.whitelist.add.same_name.failure");
             return -1;
         }
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
         estate.ifPresentOrElse(action -> {
                     action.getPlayerWhitelist().add(friendUuid);
                     CommandHelper.save(source.getLevel());
-                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.add.success")).withStyle(ChatFormatting.GREEN), false);
-                }, () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.add.failure")).withStyle(ChatFormatting.RED), false)
+                    sendSuccess(source, "estate.whitelist.add.success");
+//                    source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.add.success")).withStyle(ChatFormatting.GREEN), false);
+                },
+                () -> failure(source, "estate.whitelist.add.failure")
+//                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.add.failure")).withStyle(ChatFormatting.RED), false)
         );
         return 1;
     }
@@ -206,10 +212,10 @@ public class FriendsWhitelistSubCommand implements SubCommand {
             if (friendUuid.isPresent()) {
                 return removeFromEstate(source,ownerUuid.get(), estateName, friendUuid.get());
             } else {
-                CommandHelper.sendUnableToLocatePlayerMessage(source, friendsName);
+                sendUnableToLocatePlayerMessage(source, friendsName);
             }
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+            sendUnableToLocatePlayerMessage(source);
         }
         return -1;
     }
@@ -224,10 +230,10 @@ public class FriendsWhitelistSubCommand implements SubCommand {
             if (friendsUuid.isPresent()) {
                 return removeFromEstate(source, ownerUuid.get(), estateName, friendsUuid.get());
             } else {
-                CommandHelper.sendUnableToLocatePlayerMessage(source, friendsName);
+                sendUnableToLocatePlayerMessage(source, friendsName);
             }
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return -1;
     }
@@ -239,13 +245,16 @@ public class FriendsWhitelistSubCommand implements SubCommand {
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
         estate.ifPresentOrElse(action -> {
                     if (action.getPlayerWhitelist().remove(friendsUuid)) {
-                        CommandHelper.save(source.getLevel());
-                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.remove.success")).withStyle(ChatFormatting.GREEN), false);
+                        save(source.getLevel());
+                        sendSuccess(source, "estate.whitelist.remove.success");
+//                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.remove.success")).withStyle(ChatFormatting.GREEN), false);
                     } else {
-                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.remove.failure")).withStyle(ChatFormatting.RED), false);
+                        failure(source, "estate.whitelist.remove.failure");
+//                        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.remove.failure")).withStyle(ChatFormatting.RED), false);
                     }
                 },
-                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.remove.failure")).withStyle(ChatFormatting.RED), false)
+                () -> failure(source, "estate.whitelist.remove.failure")
+//                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.remove.failure")).withStyle(ChatFormatting.RED), false)
         );
         return 1;
     }
@@ -258,7 +267,7 @@ public class FriendsWhitelistSubCommand implements SubCommand {
         if (playerUuid.isPresent()) {
             return listFromEstate(source, playerUuid.get(), estateName);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source);
+            sendUnableToLocatePlayerMessage(source);
         }
         return -1;
     }
@@ -271,7 +280,7 @@ public class FriendsWhitelistSubCommand implements SubCommand {
         if (ownerUuid.isPresent()) {
             return listFromEstate(source, ownerUuid.get(), estateName);
         } else {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
         }
         return -1;
     }
@@ -282,12 +291,13 @@ public class FriendsWhitelistSubCommand implements SubCommand {
     public static int listFromEstate(CommandSourceStack source, UUID ownerUuid, String estateName) {
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
         estate.ifPresentOrElse(action -> {
-                    List<Component> messages = EstateDisplayFormatter
+                    List<Component> messages = WhitelistFormatter
                             .formatStandAlonePlayerWhitelist(source.getLevel(), action.getPlayerWhitelist(), "PLAYER WHITELIST - " + estateName, action.getId());
 
-                    messages.forEach(component -> {
-                        source.sendSuccess(() -> component, false);
-                    });
+                    sendLines(source, messages);
+//                    messages.forEach(component -> {
+//                        source.sendSuccess(() -> component, false);
+//                    });
                 },
 //                {
 //                    CommandHelper.sendNewLineMessage(source);
@@ -301,7 +311,8 @@ public class FriendsWhitelistSubCommand implements SubCommand {
 //                        friendsName.ifPresent(s -> source.sendSuccess(() -> Component.literal(s).withStyle(ChatFormatting.GREEN), false));
 //                    });
 //                },
-                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.list.failure")).withStyle(ChatFormatting.RED), false)
+                () -> failure(source, "estate.whitelist.list.failure")
+//                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.list.failure")).withStyle(ChatFormatting.RED), false)
         );
         return 1;
     }

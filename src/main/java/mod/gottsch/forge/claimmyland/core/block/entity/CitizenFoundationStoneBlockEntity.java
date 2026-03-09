@@ -19,7 +19,6 @@
  */
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
-import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.BorderBlock;
 import mod.gottsch.forge.claimmyland.core.block.BorderStatus;
 import mod.gottsch.forge.claimmyland.core.block.BufferBlock;
@@ -32,7 +31,6 @@ import mod.gottsch.forge.claimmyland.core.parcel.ZoneParcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
-import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -41,7 +39,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Create by Mark Gottschling on Sep 23, 2204
+ * @author Mark Gottschling on Sep 23, 2204
  */
 public class CitizenFoundationStoneBlockEntity extends FoundationStoneBlockEntity {
 

@@ -24,6 +24,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.command.helper.CommandResponseFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -37,7 +38,7 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.Optional;
 import java.util.UUID;
 
-import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.failure;
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 
 /**
@@ -90,35 +91,31 @@ public class RelinquishEstateSubCommand implements SubCommand {
 
     // common version
     public static int relinquish(CommandSourceStack source, String ownerName, String estateName) {
-        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> player = getPlayerUuid(source, ownerName);
         if (player.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
 
         Optional<Estate> optionalEstate = CommandHelper.getEstateByOwner(source, player.get(), estateName);
         if (optionalEstate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.relinquish.failure");
             return -1;
         }
 
         Estate estate = optionalEstate.get();
         if (!estate.canRelinquish()) {
-//            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.disallowed.failure")).withStyle(ChatFormatting.RED), false);
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.disallowed.failure")).withStyle(ChatFormatting.RED), false);
-
-            // get and format invalid reasons
-            Component reasons = Component.translatable(LangUtil.chat("estate.relinquish.disallowed.reasons"));
-            for (String s : reasons.getString().split("~")) {
-                source.sendSuccess(() -> Component.literal(LangUtil.INDENT2).append(Component.translatable(s).withStyle(ChatFormatting.DARK_RED, ChatFormatting.ITALIC)), false);
-            }
+            sendLines(source,
+                    CommandResponseFormatter.formatFailureWithReasons(
+                            "estate.relinquish.disallowed.failure",
+                            "estate.relinquish.disallowed.reasons"));
             return -1;
         }
 
         estate.findParcels().forEach(parcel -> {
             try {
                 // unregister parcel
-                ParcelRegistry.unregisterParcel(parcel);
+                ParcelRegistry.unregisterParcel(source.getLevel(), parcel);
 
                 // save old estate
                 Estate oldEstate = parcel.getEstate();
@@ -135,10 +132,8 @@ public class RelinquishEstateSubCommand implements SubCommand {
                 parcel.setEstate(newEstate);
 
                 // re-register
-                ParcelRegistry.register(parcel);
+                ParcelRegistry.register(source.getLevel(), parcel);
 
-                // set the abandon time
-                parcel.setRelinquishedTime(source.getLevel().getGameTime());
             } catch (Exception e) {
                 ClaimMyLand.LOGGER.error("unable to relinquish estate -> {}", parcel.getId());
                 // TODO should this message be sent as multiple parcels are being abandoned ??
@@ -146,8 +141,8 @@ public class RelinquishEstateSubCommand implements SubCommand {
             }
         });
 
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.relinquish.success")).withStyle(ChatFormatting.GREEN), false);
-        CommandHelper.save(source.getLevel());
+        sendSuccess(source, "estate.relinquish.success");
+        save(source.getLevel());
 
         return 1;
     }

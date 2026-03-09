@@ -42,7 +42,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Created by Mark Gottschling on Oct 11, 2024
+ * @author Mark Gottschling on Oct 11, 2024
  */
 public class CitizenPlacementBlock extends BaseEntityBlock {
     private static final VoxelShape SHAPE = Block.box(5, 0, 5, 11D, 16D, 11D);

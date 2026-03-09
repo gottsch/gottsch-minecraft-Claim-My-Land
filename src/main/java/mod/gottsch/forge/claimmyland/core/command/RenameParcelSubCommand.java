@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
@@ -38,6 +37,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/19/2026
@@ -91,16 +92,16 @@ public class RenameParcelSubCommand implements SubCommand {
             return rename(source, player.getScoreboardName(), estateName, parcelName, newName);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred renaming parcel:", e);
-            CommandHelper.unexceptedError(source);
+            unexpectedError(source);
             return 0;
         }
     }
 
     public static int rename(CommandSourceStack source, String ownerName, String estateName, String parcelName, String newName){
-        Optional<UUID> player = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> player = getPlayerUuid(source, ownerName);
 
         if (player.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
 
@@ -109,13 +110,14 @@ public class RenameParcelSubCommand implements SubCommand {
         Optional<Parcel> optionalParcel = parcels.stream().filter(p -> p.getEstate().getName().equalsIgnoreCase(estateName)
                 && p.getName().equalsIgnoreCase(parcelName)).findFirst();
         if (optionalParcel.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "parcel.rename.failure");
             return -1;
         }
+
         // ensure parcels have unique names within the same estate
         Parcel parcel = optionalParcel.get();
         if (ParcelRegistry.hasName(parcel, newName)) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.exists.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "parcel.rename.exists.failure");
             return -1;
         }
 
@@ -123,15 +125,15 @@ public class RenameParcelSubCommand implements SubCommand {
         if (parcel instanceof NationalizedParcel nationalizedParcel) {
             Set<Parcel> nationParcels = ParcelRegistry.findAllByNationEstateId(nationalizedParcel.getNationEstate().getId());
             if (ParcelRegistry.hasName(nationParcels, parcel, newName)) {
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.nation_parcel_exists.failure")).withStyle(ChatFormatting.RED), false);
+                failure(source, "parcel.rename.nation_parcel_exists.failure");
                 return -1;
             }
         }
 
         // update name
         parcel.setName(newName.replace(" ", "_"));
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.rename.success")).withStyle(ChatFormatting.GREEN), false);
-        CommandHelper.save(source.getLevel());
+        sendSuccess(source, "parcel.rename.success");
+        save(source.getLevel());
 
         return 1;
     }

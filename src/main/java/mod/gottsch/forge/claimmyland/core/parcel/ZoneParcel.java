@@ -31,6 +31,7 @@ import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -38,7 +39,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Created by Mark Gottschling on Sep 30, 2024
+ * @author Mark Gottschling on Sep 30, 2024
  */
 public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
     // nation-ownership token
@@ -145,9 +146,10 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
         setNationEstate((NationEstate) parentParcel.getEstate());
 
         // register parcel
-        ParcelRegistry.register(this);
-        CommandHelper.save(level);
-        return ClaimResult.SUCCESS;
+//        ParcelRegistry.register((ServerLevel)level, this);
+//        CommandHelper.save(level);
+//        return ClaimResult.SUCCESS;
+        return nameAndRegister(level);
     }
 
     // NOTE due to Java's singular inheritance, Citizen and Zone parcels have to define

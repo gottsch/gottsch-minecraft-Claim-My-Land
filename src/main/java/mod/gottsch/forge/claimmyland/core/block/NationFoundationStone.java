@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Created by Mark Gottschling on Sep 20, 2024.
+ * @author Mark Gottschling on Sep 20, 2024.
  */
 public class NationFoundationStone extends FoundationStone {
 

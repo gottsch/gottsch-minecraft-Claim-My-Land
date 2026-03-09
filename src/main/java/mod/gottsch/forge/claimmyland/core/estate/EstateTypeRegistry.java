@@ -39,19 +39,20 @@ public class EstateTypeRegistry {
     }
 
     @FunctionalInterface
-    public interface PlayerFactory<T extends Player> {
-        Estate create(T player);
+    public interface CopyFactory {
+        Estate create(Estate source);
     }
 
+    /** used to create unnamed estate objects */
     private static final Map<ResourceLocation, NoArgFactory> NO_ARG_FACTORY = new HashMap<>();
-    private static final Map<ResourceLocation, PlayerFactory<Player>> PLAYER_FACTORY = new HashMap<>();
+    private static final Map<ResourceLocation, CopyFactory> COPY_FACTORY = new HashMap<>();
 
     public static void register(ResourceLocation type, NoArgFactory factory) {
         NO_ARG_FACTORY.put(type, factory);
     }
 
-    public static <T1> void register(ResourceLocation type, PlayerFactory<Player> factory) {
-        PLAYER_FACTORY.put(type, factory);
+    public static void registerCopy(ResourceLocation type, CopyFactory factory) {
+        COPY_FACTORY.put(type, factory);
     }
 
     public static Estate create(ResourceLocation type) {
@@ -62,16 +63,20 @@ public class EstateTypeRegistry {
         return factory.create();
     }
 
-    public static <T extends Player> Estate create(ResourceLocation type, Player player) {
-        PlayerFactory<Player> factory = (PlayerFactory<Player>) PLAYER_FACTORY.get(type);
+    public static Estate createCopy(ResourceLocation type, Estate source) {
+        CopyFactory factory = COPY_FACTORY.get(type);
         if (factory == null) {
-            throw new IllegalArgumentException("Unknown type: " + type);
+            throw new IllegalArgumentException("No copy factory for type: " + type);
         }
-        return factory.create(player);
+        return factory.create(source);
     }
 
     static {
         register(ESTATE_TYPE, () -> new EstateContext());
         register(NATION_ESTATE_TYPE, () -> new NationEstateContext());
+        // copy factories
+        registerCopy(ESTATE_TYPE, source -> new EstateContext().copyFrom(source));
+        registerCopy(NATION_ESTATE_TYPE, source -> new NationEstateContext().copyFrom(source));
+
     }
 }

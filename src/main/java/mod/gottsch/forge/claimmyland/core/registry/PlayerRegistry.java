@@ -38,6 +38,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -45,7 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Created by Mark Gottschling on Sep 23, 2024
+ * @author Mark Gottschling on Sep 23, 2024
  */
 public class PlayerRegistry {
     private static final String MOJANG_API_URL = "https://api.mojang.com/user/profile/";
@@ -57,6 +59,8 @@ public class PlayerRegistry {
     private static final String ID = "id";
 
     public static final BiMap<UUID, String> NAMES = HashBiMap.create();
+    private static final Map<UUID, Integer> ESTATE_NAME_COUNTERS = new HashMap<>();
+
 
     private PlayerRegistry() {}
 
@@ -115,6 +119,7 @@ public class PlayerRegistry {
 
     public static void clear() {
         NAMES.clear();
+        ESTATE_NAME_COUNTERS.clear();
     }
 
     public static synchronized CompoundTag save(CompoundTag tag) {
@@ -123,6 +128,7 @@ public class PlayerRegistry {
             CompoundTag kv = new CompoundTag();
             kv.putUUID(ID, key);
             kv.putString(NAME, val);
+            kv.putInt("estateNameCounter", ESTATE_NAME_COUNTERS.getOrDefault(key, 0));
             listTag.add(kv);
         });
         tag.put(PLAYER_REGISTRY, listTag);
@@ -140,6 +146,9 @@ public class PlayerRegistry {
                     String name = null;
                     if (c.contains(ID)) {
                         id = c.getUUID(ID);
+                        if (c.contains("estateNameCounter")) {
+                            ESTATE_NAME_COUNTERS.put(id, c.getInt("estateNameCounter"));
+                        }
                     }
                     if (c.contains(NAME)) {
                         name = c.getString(NAME);
@@ -345,15 +354,23 @@ public class PlayerRegistry {
         }
     }
 
-    // Example usage (e.g., in a command or event handler):
-//    public static void exampleUsage(ServerPlayer player, UUID uuid) {
-//        getNameFromUUID(uuid).thenAccept(name -> {
-//            if (name != null) {
-//                player.sendSystemMessage(Component.literal("Player name: " + name));
-//            } else {
-//                player.sendSystemMessage(Component.literal("Player not found with that UUID."));
-//            }
-//        });
-//
-//    }
+    /**
+     * Increments and returns the next estate name index for the given player.
+     * This counter only moves forward — demolishing estates never decrements it,
+     * guaranteeing unique default names for the lifetime of the world.
+     *
+     * Call this ONLY at estate creation commit time, not during preview.
+     */
+    public static synchronized int nextEstateNameIndex(UUID playerId) {
+        return ESTATE_NAME_COUNTERS.merge(playerId, 1, Integer::sum);
+    }
+
+    /**
+     * Returns the NEXT index that would be assigned, without consuming it.
+     * Use for preview/display purposes (e.g. Foundation Stone placement feedback).
+     */
+    @Deprecated
+    public static synchronized int peekEstateNameIndex(UUID playerId) {
+        return ESTATE_NAME_COUNTERS.getOrDefault(playerId, 0) + 1;
+    }
 }

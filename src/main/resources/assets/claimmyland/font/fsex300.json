@@ -1,0 +1,14 @@
+{
+  "providers": [
+    {
+      "type": "ttf",
+      "file": "claimmyland:fsex300.ttf",
+      "shift": [
+        0,
+        0
+      ],
+      "size": 13.0,
+      "oversample": 2.0
+    }
+  ]
+}

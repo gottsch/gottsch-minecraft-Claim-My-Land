@@ -35,6 +35,9 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
 
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.failure;
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.sendFailure;
+
 /**
  * @author by Mark Gottschling on 3/2/2026
  */
@@ -56,18 +59,11 @@ public abstract class DeedsSubCommand implements ArgumentSubCommand {
     }
 
     protected int generateDeed(CommandSourceStack source, ParcelType type, int xSize, int ySizeUp, int ySizeDown, int zSize, String nationName) {
-        // resolve the type
-//        ParcelType type = ParcelType.fromString(deedType);
-//        if (type == ParcelType.NONE) {
-//            source.sendFailure(Component.translatable(LangUtil.chat("deed.invalid_type")).withStyle(ChatFormatting.RED));
-//            return -1;
-//        }
-
         Optional<Estate> optionalEstate = EstateRegistry.findByName(nationName);
 
         // validations
         if ((type == ParcelType.CITIZEN) && optionalEstate.isEmpty()) {
-            source.sendFailure(Component.translatable(LangUtil.chat("deed.citizen.nationId_required")).withStyle(ChatFormatting.RED));
+            failure(source, "deed.citizen.nationId_required");
             return -1;
         }
 
@@ -91,11 +87,11 @@ public abstract class DeedsSubCommand implements ArgumentSubCommand {
 
     private boolean isValidSize(CommandSourceStack source, int xSize, int ySizeUp, int ySizeDown, int zSize) {
         if (xSize < 2 || (ySizeUp + ySizeDown) < 2 || zSize < 2) {
-            CommandHelper.failure(source, "deed.too_small");
+            failure(source, "deed.too_small");
             return false;
         }
         if (source.getLevel().isOutsideBuildHeight(ySizeUp + ySizeDown)) {
-            source.sendFailure(Component.translatable(LangUtil.chat("deed.outside_world_boundaries")).withStyle(ChatFormatting.RED));
+            failure(source, "deed.outside_world_boundaries");
             return false;
         }
         return true;
@@ -106,12 +102,12 @@ public abstract class DeedsSubCommand implements ArgumentSubCommand {
             return Result.empty();
         }
         if (nationName == null || nationName.isBlank()) {
-            source.sendFailure(Component.translatable(LangUtil.chat("deed.citizen.nationId_required")).withStyle(ChatFormatting.RED));
+             failure(source, "deed.citizen.nationId_required");
             return Result.failure();
         }
         Optional<Estate> estate = EstateRegistry.findByName(nationName);
         if (estate.isEmpty()) {
-            source.sendFailure(Component.translatable(LangUtil.chat("deed.citizen.nation_not_found")).withStyle(ChatFormatting.RED));
+            failure(source, "deed.citizen.nation_not_found");
             return Result.failure();
         }
         return Result.success(estate.get());
@@ -132,7 +128,7 @@ public abstract class DeedsSubCommand implements ArgumentSubCommand {
             }
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("error while generating deed:", e);
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("deed.generate.failure")).withStyle(ChatFormatting.RED), false);
+            failure(source, "deed.generate.failure");
             return -1;
         }
         return 1;

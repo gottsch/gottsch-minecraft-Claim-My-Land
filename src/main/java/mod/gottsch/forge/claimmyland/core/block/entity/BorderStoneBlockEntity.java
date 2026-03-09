@@ -53,7 +53,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Created by Mark Gottschling on Sep 18, 2024
+ * @author Mark Gottschling on Sep 18, 2024
  */
 public class BorderStoneBlockEntity extends BlockEntity {
     private static final String PARCEL_ID = "parcel_id";

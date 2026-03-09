@@ -19,6 +19,9 @@ import java.net.URL;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * @author Mark Gottschling on Sep 14, 2024
+ */
 public class ModUtil {
 
     private ModUtil() {}

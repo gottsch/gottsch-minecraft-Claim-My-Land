@@ -169,7 +169,11 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.block.list"), "Block Whitelist for estate ");
         add(LangUtil.chat("estate.item_tag.list"), "Item Tag Whitelist for estate ");
         add(LangUtil.chat("estate.item.list"), "Item Whitelist for estate ");
-        
+
+        add(LangUtil.chat("estate.nation.unable_to_locate"), "A nation with that name does not exist.");
+        add(LangUtil.chat("estate.nation.not_owner"), "You are not the owner of the nation.");
+
+
         // parcels
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");
@@ -247,10 +251,14 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.unknown_type"), "Unknown parcel type.");
 
         // deeds
-        add(LangUtil.chat("deed.claim.success"), "You claimed a parcel at [%s] of size [%s].");
+        add(LangUtil.chat("deed.claim.success"), "Parcel claimed!");
+        add(LangUtil.chat("deed.claim.success.detail"), "You claimed a parcel at [%s] of size [%s].");
         add(LangUtil.chat("deed.claim.intersects"), "You cannot claimed this parcel as it intersects with another.");
-        add(LangUtil.chat("deed.claim.insufficient_size"), "The deed's size [%s] is insufficient to claim parcel of size [%s].");
-        add(LangUtil.chat("deed.claim.unable_to_claim"), "You unable to claim parcel at [%s] of size [%s].");
+        add(LangUtil.chat("deed.claim.insufficient_size"), "Unable to claim.");
+        add(LangUtil.chat("deed.claim.insufficient_size.detail"), "The deed's size [%s] is insufficient to claim parcel of size [%s].");
+
+        add(LangUtil.chat("deed.claim.unable_to_claim"), "Unable to claim.");
+        add(LangUtil.chat("deed.claim.unable_to_claim.detail"), "You are unable to claim parcel at [%s] of size [%s].");
 
         add(LangUtil.chat("deed.generate.failure"), "Unable to generate deed.");
         add(LangUtil.chat("deed.not_owner"), "You are not the owner of this deed.");

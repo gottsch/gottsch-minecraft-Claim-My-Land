@@ -57,7 +57,7 @@ public interface Estate {
 
     String defaultName();
 
-    String defaultName(Player player);
+//    String defaultName(Player player);
 
     String defaultName(UUID ownerId);
 

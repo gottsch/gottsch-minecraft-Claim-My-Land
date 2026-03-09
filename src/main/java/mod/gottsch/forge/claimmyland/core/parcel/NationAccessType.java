@@ -5,7 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Created by Mark Gottschling on Feb 9, 2026
+ * @author Mark Gottschling on Feb 9, 2026
  */
 public enum NationAccessType implements StringRepresentable {
     OPEN,

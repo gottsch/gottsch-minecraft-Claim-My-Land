@@ -21,13 +21,10 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.EstateDisplayFormatter;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
@@ -36,6 +33,8 @@ import net.minecraft.server.level.ServerPlayer;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/18/2026
@@ -75,16 +74,16 @@ public class EstateDetailsSubCommand implements SubCommand {
             return details(source, player.getUUID(), estateName);
         } catch(Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred detailing estate:", e);
-            CommandHelper.failure(source, "unexpected_error");
+            failure(source, "unexpected_error");
         }
         return 1;
     }
 
     // ops version
     public static int details(CommandSourceStack source, String ownerName, String estateName) {
-        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> ownerUuid = getPlayerUuid(source, ownerName);
         if (ownerUuid.isEmpty()) {
-            CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
+            sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
         }
         return details(source, ownerUuid.get(), estateName);
@@ -92,16 +91,13 @@ public class EstateDetailsSubCommand implements SubCommand {
 
     // common version
     public static int details(CommandSourceStack source, UUID ownerUuid, String estateName) {
-        Optional<Estate> optionalEstate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
+        Optional<Estate> optionalEstate = getEstateByOwner(source, ownerUuid, estateName);
         if (optionalEstate.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.details.failure"))
-                    .withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.details.failure");
             return -1;
         }
         List<Component> messages = EstateDisplayFormatter.formatEstateDetails(source.getLevel(), optionalEstate.get());
-        messages.forEach(component -> {
-            source.sendSuccess(() -> component, false);
-        });
+        sendLines(source, messages);
         return 1;
     }
 }

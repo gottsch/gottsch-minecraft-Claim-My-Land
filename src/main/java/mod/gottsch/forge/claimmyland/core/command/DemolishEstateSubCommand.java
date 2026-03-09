@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
@@ -31,13 +30,10 @@ import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -46,8 +42,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import java.util.Optional;
 import java.util.UUID;
 
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
+
 /**
  * TODO shares a lot of code with remove - should have a common parent class
+ *
  * @author by Mark Gottschling on 2/27/2026
  */
 public class DemolishEstateSubCommand implements SubCommand {
@@ -71,7 +70,6 @@ public class DemolishEstateSubCommand implements SubCommand {
                         .suggests(OPS_OWNER_NAMES)
                         .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                                 .suggests(OPS_OWNER_ESTATE_NAMES)
-                                .suggests(OPS_OWNER_NAMES)
                                 .then(Commands.argument(PARCEL_NAME, StringArgumentType.string())
                                         .suggests(OPS_OWNER_ESTATE_PARCEL_NAMES)
                                         .executes(source -> {
@@ -89,8 +87,8 @@ public class DemolishEstateSubCommand implements SubCommand {
             ServerPlayer player = source.getPlayerOrException();
             return demolish(source, player.getScoreboardName(), estateName);
         } catch(Exception e) {
-            ClaimMyLand.LOGGER.error("an error occurred demonishing parcel:", e);
-            CommandHelper.unexceptedError(source);
+            ClaimMyLand.LOGGER.error("an error occurred demolishing estate:", e);
+            unexpectedError(source);
             return 0;
         }
     }
@@ -102,17 +100,16 @@ public class DemolishEstateSubCommand implements SubCommand {
 
             Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
             if (ownerUuid.isEmpty()) {
-                CommandHelper.sendUnableToLocatePlayerMessage(source, ownerName);
-                return 1;
+               sendUnableToLocatePlayerMessage(source, ownerName);
+                return -1;
             }
 
             ClaimMyLand.LOGGER.debug("owner player uuid -> {}", ownerUuid.get());
 
             Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid.get(), estateName);
             if (estate.isEmpty()) {
-                source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.demolish.failure"))
-                        .withStyle(ChatFormatting.RED), false);
-                return 1;
+                failure(source, "estate.demolish.failure");
+                return -1;
             }
 
             // for each parcel in estate, demolish the parcel
@@ -122,18 +119,16 @@ public class DemolishEstateSubCommand implements SubCommand {
 
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred demolishing an estate:", e);
-            source.sendFailure(Component.translatable(LangUtil.chat("unexpected_error"))
-                    .withStyle(ChatFormatting.RED));
+            unexpectedError(source);
         }
-        return 1;
+        return -1;
     }
 
     private int demolishParcel(CommandSourceStack source, ServerPlayer player, Parcel parcel) {
         ItemStack deed = createDeedForParcel(source.getLevel(), parcel);
 
         if (deed.isEmpty()) {
-            source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.zone_cannot_demolish"))
-                    .withStyle(ChatFormatting.RED), false);
+            failure(source, "estate.demolish.zone_cannot_demolish");
             return -1;
         }
 
@@ -146,11 +141,10 @@ public class DemolishEstateSubCommand implements SubCommand {
         }
         player.getInventory().add(deed);
 
-        ParcelRegistry.unregisterParcel(parcel);
+        ParcelRegistry.unregisterParcel(source.getLevel(), parcel);
         removeBorderStone(source.getLevel(), parcel);
 
-        source.sendSuccess(() -> Component.translatable(LangUtil.chat("parcel.demolish.success"))
-                .withStyle(ChatFormatting.GREEN), false);
+        sendSuccess(source, "estate.demolish.success");
         return 1;
     }
 
@@ -164,7 +158,7 @@ public class DemolishEstateSubCommand implements SubCommand {
     }
 
     private void removeBorderStone(ServerLevel level, Parcel parcel) {
-        // TODO this will only work if the border stone is at coords
+        // NOTE this will only work if the border stone is at coords
         ICoords coords = parcel.getCoords();
         BlockEntity be = level.getBlockEntity(coords.toPos());
         if (be instanceof BorderStoneBlockEntity borderStone) {

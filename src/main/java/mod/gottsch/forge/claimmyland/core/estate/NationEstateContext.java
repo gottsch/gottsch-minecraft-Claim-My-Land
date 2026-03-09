@@ -28,6 +28,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -47,9 +48,24 @@ public class NationEstateContext extends AbstractEstate implements NationEstate 
         this.accessType = NationAccessType.CLOSED;
     }
 
+    public NationEstateContext(Player player) {
+        super(player);
+        this.accessType = NationAccessType.CLOSED;
+    }
+
     public NationEstateContext(UUID ownerUuid) {
         super(ownerUuid);
         this.accessType = NationAccessType.CLOSED;
+    }
+
+    @Override
+    public NationEstateContext copyFrom(Estate source) {
+        super.copyFrom(source);
+        if (source instanceof NationEstate nationEstate) {
+            setAccessType(nationEstate.getAccessType());
+            setPlayerBlacklist(new HashSet<>(nationEstate.getPlayerBlacklist()));
+        }
+        return this;
     }
 
     @Override
