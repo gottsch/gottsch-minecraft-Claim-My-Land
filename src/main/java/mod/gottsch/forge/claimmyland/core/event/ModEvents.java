@@ -63,7 +63,7 @@ import net.minecraftforge.fml.common.Mod;
 import java.util.List;
 
 /**
- * Created by Mark Gottschling on Sep 14, 2024
+ * @author Mark Gottschling on Sep 14, 2024
  */
 @Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ModEvents {

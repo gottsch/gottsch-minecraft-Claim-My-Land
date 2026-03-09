@@ -19,12 +19,10 @@
  */
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
-import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
@@ -33,7 +31,7 @@ import javax.annotation.Nullable;
 import java.util.UUID;
 
 /**
- * Create by Mark Gottschling on Sep 14, 2024
+ * @author Mark Gottschling on Sep 14, 2024
  */
 public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity {
     private static final String DEED_ID = "deed_id";

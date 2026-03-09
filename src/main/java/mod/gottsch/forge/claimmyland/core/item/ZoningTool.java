@@ -43,7 +43,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Optional;
 
 /**
- * Created by Mark Gottschling on Oct 7, 2024
+ * @author Mark Gottschling on Oct 7, 2024
  */
 public class ZoningTool extends BlockItem {
     private static final String COORDS1 = "coords1";

@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.1.0] - 2026-03-06
+> ⚠️ **IMPORTANT — Breaking Change & Backup Warning**
+>
+> **v2.x is not save-compatible with v1.x.** Parcel data saved by any v1 release **will not load** in v2. If you are upgrading an existing world, your claimed parcels will be lost.
+>
+> **Back up your world before installing v2.** Copy your entire world folder to a safe location before upgrading. Once you have loaded the world in v2, downgrading back to v1 is not supported.
+
+---
+
+## [2.1.0] - 2026-03-08
 
 > **💡 Recommended:** Since this mod is heavily command-based, we recommend using [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
 

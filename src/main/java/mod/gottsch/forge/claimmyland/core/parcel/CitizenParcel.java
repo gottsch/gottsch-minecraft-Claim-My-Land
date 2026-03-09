@@ -38,7 +38,7 @@ import net.minecraft.world.level.Level;
 import java.util.List;
 
 /**
- * Created by Mark Gottschling on Sep 14, 2024
+ * @author Mark Gottschling on Sep 14, 2024
  */
 public class CitizenParcel extends AbstractClaimableParcel implements NationalizedParcel {
 

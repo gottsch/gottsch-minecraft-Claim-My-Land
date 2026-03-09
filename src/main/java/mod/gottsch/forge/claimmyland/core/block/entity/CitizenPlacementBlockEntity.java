@@ -30,7 +30,7 @@ import java.util.Optional;
 
 // TODO abstract most of this out to PlacementBlockEntity
 /**
- * Create by Mark Gottschling on Oct 18, 2204
+ * @author Mark Gottschling on Oct 18, 2204
  */
 public class CitizenPlacementBlockEntity extends BorderStoneBlockEntity {
 

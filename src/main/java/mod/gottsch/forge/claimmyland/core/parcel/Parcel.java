@@ -331,11 +331,6 @@ public interface Parcel {
     Estate getEstate();
     void setEstate(Estate estate);
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    UUID getNationId();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setNationId(UUID nationId);
-
     UUID getOwnerId();
 
     void setOwnerId(UUID ownerId);
@@ -367,36 +362,5 @@ public interface Parcel {
     void setPlayerWhitelist(Set<UUID> whitelist);
 
     String getDimension();
-
     void setDimension(String dimension);
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<UUID> getWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setWhitelist(List<UUID> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getBlockTagWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockTagWhitelist(List<String> blockTagWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockTagWhitelist(Set<String> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getBlockWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockWhitelist(List<String> blockWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setBlockWhitelist(Set<String> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getItemTagWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemTagWhitelist(List<String> itemTagWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemTagWhitelist(Set<String> whitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    Set<String> getItemWhitelist();
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemWhitelist(List<String> itemWhitelist);
-    @Deprecated(forRemoval = true, since = "2.0")
-    void setItemWhitelist(Set<String> whitelist);
-
 }

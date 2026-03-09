@@ -152,7 +152,7 @@ public abstract class AbstractParcel implements Parcel {
             return true;
         } else {
             // or the owner's whitelist has access
-            return getWhitelist().stream().anyMatch(uuid -> uuid.equals(entityId));
+            return getEstate().getPlayerWhitelist().stream().anyMatch(uuid -> uuid.equals(entityId));
         }
     }
 
@@ -337,20 +337,6 @@ public abstract class AbstractParcel implements Parcel {
         this.estate = estate;
     }
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public UUID getNationId() {
-//        return nationId;
-        return getEstate().getId();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setNationId(UUID nationId) {
-        // legacy
-        this.nationId = nationId;
-    }
-
     @Override
     public UUID getOwnerId() {
         return getEstate().getOwnerId();
@@ -412,16 +398,7 @@ public abstract class AbstractParcel implements Parcel {
         this.dimension = dimension;
     }
 
-    @Override
-    public Set<UUID> getWhitelist() {
-        return getEstate().getPlayerWhitelist();
-    }
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setWhitelist(List<UUID> whitelist) {
-        setPlayerWhitelist(new HashSet<>(whitelist));
-    }
 
     /*
      * convenience method
@@ -436,69 +413,7 @@ public abstract class AbstractParcel implements Parcel {
         getEstate().setPlayerWhitelist(whitelist);
     }
 
-    @Override
-    public Set<String> getBlockTagWhitelist() {
-        return getEstate().getBlockTagWhitelist();
-    }
 
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setBlockTagWhitelist(List<String> blockTagWhitelist) {
-        setBlockTagWhitelist(new HashSet<>(blockTagWhitelist));
-    }
-
-    @Override
-    public void setBlockTagWhitelist(Set<String> whitelist) {
-        getEstate().setBlockTagWhitelist(whitelist);
-    }
-
-    @Override
-    public Set<String> getBlockWhitelist() {
-        return getEstate().getBlockWhitelist();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setBlockWhitelist(List<String> blockWhitelist) {
-        setBlockWhitelist(new HashSet<>(blockWhitelist));
-    }
-
-    @Override
-    public void setBlockWhitelist(Set<String> whitelist) {
-        getEstate().setBlockWhitelist(whitelist);
-    }
-
-    @Override
-    public Set<String> getItemTagWhitelist() {
-        return getEstate().getItemTagWhitelist();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setItemTagWhitelist(List<String> itemTagWhitelist) {
-        setItemTagWhitelist(new HashSet<>(itemTagWhitelist));
-    }
-
-    @Override
-    public void setItemTagWhitelist(Set<String> whitelist) {
-        getEstate().setItemTagWhitelist(whitelist);
-    }
-
-    @Override
-    public Set<String> getItemWhitelist() {
-        return getEstate().getItemWhitelist();
-    }
-
-    @Deprecated(forRemoval = true, since = "2.0")
-    @Override
-    public void setItemWhitelist(List<String> itemWhitelist) {
-        setItemWhitelist(new HashSet<>(itemWhitelist));
-    }
-
-    @Override
-    public void setItemWhitelist(Set<String> whitelist) {
-        getEstate().setItemWhitelist(whitelist);
-    }
 
     @Override
     public ParcelType getType() {

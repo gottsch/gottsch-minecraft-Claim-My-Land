@@ -47,7 +47,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Created by Mark Gottschling on Sep 23, 2024
+ * @author Mark Gottschling on Sep 23, 2024
  */
 public class PlayerRegistry {
     private static final String MOJANG_API_URL = "https://api.mojang.com/user/profile/";

@@ -131,12 +131,12 @@ dependencies {
     compileOnly fg.deobf(group: 'info.journeymap', name: 'journeymap-api', version: project.journeymap_api_version, changing: true)
 
     // JourneyMap mod — available at runtime in dev for in-game testing.
-//    runtimeOnly fg.deobf("curse.maven:journeymap-${project.jm_project_id}:${project.jm_file_id}")
+    runtimeOnly fg.deobf("curse.maven:journeymap-${project.jm_project_id}:${project.jm_file_id}")
 
 
-//    implementation fg.deobf("curse.maven:kotlin-for-forge-351264:7291067")
-//    implementation fg.deobf("curse.maven:architectury-api-419699:5137938")
-//    implementation fg.deobf("maven.modrinth:chat-plus:${chatplus_version}")
+    implementation fg.deobf("curse.maven:kotlin-for-forge-351264:7291067")
+    implementation fg.deobf("curse.maven:architectury-api-419699:5137938")
+    implementation fg.deobf("maven.modrinth:chat-plus:${chatplus_version}")
 
     implementation fg.deobf("curse.maven:treasure2-289760:6085216")
     implementation fg.deobf("curse.maven:jade-324717:5672013") // 1.20.1

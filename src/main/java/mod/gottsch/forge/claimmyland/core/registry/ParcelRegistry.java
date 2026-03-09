@@ -20,33 +20,30 @@
 package mod.gottsch.forge.claimmyland.core.registry;
 
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.gson.Gson;
 import com.mojang.authlib.minecraft.client.ObjectMapper;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.cache.ParcelRegionCache;
 import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.estate.*;
+import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.estate.EstateContext;
+import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
-import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.claimmyland.core.util.TagHelper;
 import mod.gottsch.forge.gottschcore.bst.CoordsInterval;
 import mod.gottsch.forge.gottschcore.bst.CoordsIntervalTree;
 import mod.gottsch.forge.gottschcore.bst.IInterval;
 import mod.gottsch.forge.gottschcore.spatial.Box;
-import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
 
@@ -223,180 +220,175 @@ public class ParcelRegistry {
         return mapper.writeValueAsString(PARCELS_BY_COORDS);
     }
 
-    /**
-     *
-     * @param tag
-     */
-    public static void convertV1ToV2(CompoundTag tag) {
-        Map<ICoords, Parcel> byCoords = new HashMap<>();
-        ClaimMyLand.LOGGER.debug("converting registry from v1 to v2...");
+//    /**
+//     *
+//     * @param tag
+//     */
+//    public static void convertV1ToV2(CompoundTag tag) {
+//        Map<ICoords, Parcel> byCoords = new HashMap<>();
+//        ClaimMyLand.LOGGER.debug("converting registry from v1 to v2...");
+//
+//        if (tag.contains(PARCELS_KEY)) {
+//            // 1. load parcels into local map
+//            ListTag list = tag.getList(PARCELS_KEY, Tag.TAG_COMPOUND);
+//
+//            list.stream()
+//                    .map(element -> (CompoundTag) element)
+//                    .peek(e -> ClaimMyLand.LOGGER.debug("processing v1 parcel element..."))
+//                    .forEach(e -> {
+//                        ParcelType type = e.contains(Parcel.TYPE)
+//                                ? ParcelType.fromString(e.getString(Parcel.TYPE))
+//                                : ParcelType.NONE;
+//
+//                        ParcelTypeRegistry.create(type).ifPresent(parcel -> {
+//                            // load the legacy parcel
+//                            // NOTE the new parcel structure is used, so method calls like setWhitelist()
+//                            //  are actually updating the estate.
+//                            loadV1(parcel, e);
+//
+//                            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+//                                ClaimMyLand.LOGGER.debug("loaded v1 parcel -> {}", parcel);
+//                            }
+//
+//                            // add parcel to the local map
+//                            byCoords.put(parcel.getCoords(), parcel);
+//                        });
+//                    });
+//
+//
+//            // 2. walk the parcel map, building the nation-level parcels
+//            byCoords.values().stream()
+//                    .filter(p -> p instanceof NationParcel)
+//                    .map(p -> (NationParcel)p)
+//                    .forEach(np -> {
+//                        NationEstateContext estate = (NationEstateContext) np.getEstate();
+//                        // copy properties
+//                        estate.setPlayerBlacklist(new HashSet<>(np.getBlacklist()));
+//                        if (estate.getOwnerId() != null) {
+//                            ParcelRegistry.register(np);
+//                        }
+//                    });
+//
+//            // walk he parcel map again, building the rest
+//            byCoords.values().stream()
+//                    .filter(p -> !(p instanceof NationParcel))
+//                    .forEach(p -> {
+//                        Estate estate = p.getEstate();
+//                        // setup default estate
+//
+//
+//                        // setup the nation estate if a nation id exists
+//                        if (p instanceof NationalizedParcel nationalizedParcel) {
+//
+//                            Optional<Estate> nationEstate = EstateRegistry.get(nationalizedParcel.getNationEstate().getId());
+//                            if (nationEstate.isEmpty()) {
+//                                // TODO log warning
+//                                return;
+//                            }
+//
+//                            if (estate.getOwnerId() == null) {
+//                                estate.setRelinquished(true);
+//                                estate.setOwnerId(nationEstate.get().getOwnerId());
+//                            }
+//                            nationalizedParcel.setNationEstate((NationEstate) nationEstate.get());
+//                        }
+//                        ParcelRegistry.register(p);
+//                    });
+//        }
+//    }
 
-        if (tag.contains(PARCELS_KEY)) {
-            // 1. load parcels into local map
-            ListTag list = tag.getList(PARCELS_KEY, Tag.TAG_COMPOUND);
-
-            list.stream()
-                    .map(element -> (CompoundTag) element)
-                    .peek(e -> ClaimMyLand.LOGGER.debug("processing v1 parcel element..."))
-                    .forEach(e -> {
-                        ParcelType type = e.contains(Parcel.TYPE)
-                                ? ParcelType.fromString(e.getString(Parcel.TYPE))
-                                : ParcelType.NONE;
-
-                        ParcelTypeRegistry.create(type).ifPresent(parcel -> {
-                            // load the legacy parcel
-                            // NOTE the new parcel structure is used, so method calls like setWhitelist()
-                            //  are actually updating the estate.
-                            loadV1(parcel, e);
-
-                            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-                                ClaimMyLand.LOGGER.debug("loaded v1 parcel -> {}", parcel);
-                            }
-
-                            // add parcel to the local map
-                            byCoords.put(parcel.getCoords(), parcel);
-                        });
-                    });
-
-
-            // 2. walk the parcel map, building the nation-level parcels
-            byCoords.values().stream()
-                    .filter(p -> p instanceof NationParcel)
-                    .map(p -> (NationParcel)p)
-                    .forEach(np -> {
-                        NationEstateContext estate = (NationEstateContext) np.getEstate();
-                        // copy properties
-                        estate.setPlayerBlacklist(new HashSet<>(np.getBlacklist()));
-                        if (estate.getOwnerId() != null) {
-                            ParcelRegistry.register(np);
-                        }
-                    });
-
-            // walk he parcel map again, building the rest
-            byCoords.values().stream()
-                    .filter(p -> !(p instanceof NationParcel))
-                    .forEach(p -> {
-                        Estate estate = p.getEstate();
-                        // setup default estate
-
-
-                        // setup the nation estate if a nation id exists
-                        if (p instanceof NationalizedParcel nationalizedParcel) {
-                            // NOTE load nationId from tag since new parceling loading doesn't load nation id ????
-                            if (nationalizedParcel.getNationId() == null) {
-                                // TODO log warning
-                                return;
-                            }
-
-                            Optional<Estate> nationEstate = EstateRegistry.get(nationalizedParcel.getNationId());
-                            if (nationEstate.isEmpty()) {
-                                // TODO log warning
-                                return;
-                            }
-
-                            if (estate.getOwnerId() == null) {
-                                estate.setRelinquished(true);
-                                estate.setOwnerId(nationEstate.get().getOwnerId());
-                            }
-                            nationalizedParcel.setNationEstate((NationEstate) nationEstate.get());
-                        }
-                        ParcelRegistry.register(p);
-                    });
-        }
-    }
-
-    public static synchronized void loadV1(Parcel parcel, CompoundTag tag) {
-        // standard parcel
-        if (tag.contains(AbstractParcel.ID_KEY)) {
-            parcel.setId(tag.getUUID(AbstractParcel.ID_KEY));
-        } else {
-            parcel.setId(UUID.randomUUID());
-        }
-        if (tag.contains(AbstractParcel.NATION_ID_KEY)) {
-            parcel.setNationId(tag.getUUID(AbstractParcel.NATION_ID_KEY));
-        }
-        if (tag.contains(AbstractParcel.NAME_KEY)) {
-            parcel.setName(tag.getString(AbstractParcel.NAME_KEY));
-        }
-        if (tag.contains(AbstractParcel.OWNER_KEY)) {
-            parcel.setOwnerId(tag.getUUID(AbstractParcel.OWNER_KEY));
-        }
-        if (tag.contains(AbstractParcel.DEED_KEY)) {
-            parcel.setDeedId(tag.getUUID(AbstractParcel.DEED_KEY));
-        }
-        if (tag.contains(AbstractParcel.TYPE)) {
-            parcel.setType(ParcelType.valueOf(tag.getString(AbstractParcel.TYPE)));
-        }
-        if (tag.contains(AbstractParcel.COORDS_KEY)) {
-            parcel.setCoords(Coords.EMPTY.load(tag.getCompound(AbstractParcel.COORDS_KEY)));
-        }
-        if (tag.contains(AbstractParcel.SIZE_KEY)) {
-            parcel.setSize(Box.load(tag.getCompound(AbstractParcel.SIZE_KEY)));
-        }
-        if (tag.contains(AbstractParcel.WHITELIST_KEY)) {
-            ListTag list = tag.getList(AbstractParcel.WHITELIST_KEY, Tag.TAG_COMPOUND);
-            list.forEach(element -> {
-                CompoundTag uuidTag = ((CompoundTag)element);
-                if (uuidTag.contains(AbstractParcel.ID_KEY)) {
-                    ClaimMyLand.LOGGER.debug("loading {} to whitelist", uuidTag.getUUID(AbstractParcel.ID_KEY));
-                    parcel.getWhitelist().add(uuidTag.getUUID(AbstractParcel.ID_KEY));
-                }
-            });
-        }
-
-        if (tag.contains(AbstractParcel.BLOCK_TAG_WHITELIST_KEY)) {
-            ListTag list = tag.getList(AbstractParcel.BLOCK_TAG_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String blockTag = element.getAsString();
-                parcel.getBlockTagWhitelist().add(blockTag);
-            });
-        }
-
-        if (tag.contains(AbstractParcel.BLOCK_WHITELIST_KEY)) {
-            ListTag list = tag.getList(AbstractParcel.BLOCK_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String block = element.getAsString();
-                parcel.getBlockWhitelist().add(block);
-            });
-        }
-
-        if (tag.contains(AbstractParcel.ITEM_TAG_WHITELIST_KEY)) {
-            ListTag list = tag.getList(AbstractParcel.ITEM_TAG_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String itemTag = element.getAsString();
-                parcel.getItemTagWhitelist().add(itemTag);
-            });
-        }
-
-        if (tag.contains(AbstractParcel.ITEM_WHITELIST_KEY)) {
-            ListTag list = tag.getList(AbstractParcel.ITEM_WHITELIST_KEY, Tag.TAG_STRING);
-            list.forEach(element -> {
-                String item = element.getAsString();
-                parcel.getItemWhitelist().add(item);
-            });
-        }
-
-        // parcel specific properties
-        if (parcel instanceof NationParcel nationParcel) {
-            NationEstateContext estate = (NationEstateContext) nationParcel.getEstate();
-            if (tag.contains("borderType")) {
-                try {
-                    estate.setAccessType(NationAccessType.valueOf(tag.getString("borderType")));
-                } catch(Exception e) {
-                    ClaimMyLand.LOGGER.warn("unable to parse and load borderType - using default CLOSED");
-                    estate.setAccessType(NationAccessType.CLOSED);
-                }
-            }
-
-            if (tag.contains("blacklist")) {
-                ListTag list = tag.getList("blacklist", Tag.TAG_STRING);
-                list.forEach(element -> {
-                    StringTag uuidTag = ((StringTag)element);
-                    nationParcel.getBlacklist().add(UUID.fromString(uuidTag.getAsString()));
-                });
-            }
-        }
-    }
+//    public static synchronized void loadV1(Parcel parcel, CompoundTag tag) {
+//        // standard parcel
+//        if (tag.contains(AbstractParcel.ID_KEY)) {
+//            parcel.setId(tag.getUUID(AbstractParcel.ID_KEY));
+//        } else {
+//            parcel.setId(UUID.randomUUID());
+//        }
+//        if (tag.contains(AbstractParcel.NATION_ID_KEY)) {
+//            parcel.setNationId(tag.getUUID(AbstractParcel.NATION_ID_KEY));
+//        }
+//        if (tag.contains(AbstractParcel.NAME_KEY)) {
+//            parcel.setName(tag.getString(AbstractParcel.NAME_KEY));
+//        }
+//        if (tag.contains(AbstractParcel.OWNER_KEY)) {
+//            parcel.setOwnerId(tag.getUUID(AbstractParcel.OWNER_KEY));
+//        }
+//        if (tag.contains(AbstractParcel.DEED_KEY)) {
+//            parcel.setDeedId(tag.getUUID(AbstractParcel.DEED_KEY));
+//        }
+//        if (tag.contains(AbstractParcel.TYPE)) {
+//            parcel.setType(ParcelType.valueOf(tag.getString(AbstractParcel.TYPE)));
+//        }
+//        if (tag.contains(AbstractParcel.COORDS_KEY)) {
+//            parcel.setCoords(Coords.EMPTY.load(tag.getCompound(AbstractParcel.COORDS_KEY)));
+//        }
+//        if (tag.contains(AbstractParcel.SIZE_KEY)) {
+//            parcel.setSize(Box.load(tag.getCompound(AbstractParcel.SIZE_KEY)));
+//        }
+//        if (tag.contains(AbstractParcel.WHITELIST_KEY)) {
+//            ListTag list = tag.getList(AbstractParcel.WHITELIST_KEY, Tag.TAG_COMPOUND);
+//            list.forEach(element -> {
+//                CompoundTag uuidTag = ((CompoundTag)element);
+//                if (uuidTag.contains(AbstractParcel.ID_KEY)) {
+//                    ClaimMyLand.LOGGER.debug("loading {} to whitelist", uuidTag.getUUID(AbstractParcel.ID_KEY));
+//                    parcel.getWhitelist().add(uuidTag.getUUID(AbstractParcel.ID_KEY));
+//                }
+//            });
+//        }
+//
+//        if (tag.contains(AbstractParcel.BLOCK_TAG_WHITELIST_KEY)) {
+//            ListTag list = tag.getList(AbstractParcel.BLOCK_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+//            list.forEach(element -> {
+//                String blockTag = element.getAsString();
+//                parcel.getBlockTagWhitelist().add(blockTag);
+//            });
+//        }
+//
+//        if (tag.contains(AbstractParcel.BLOCK_WHITELIST_KEY)) {
+//            ListTag list = tag.getList(AbstractParcel.BLOCK_WHITELIST_KEY, Tag.TAG_STRING);
+//            list.forEach(element -> {
+//                String block = element.getAsString();
+//                parcel.getBlockWhitelist().add(block);
+//            });
+//        }
+//
+//        if (tag.contains(AbstractParcel.ITEM_TAG_WHITELIST_KEY)) {
+//            ListTag list = tag.getList(AbstractParcel.ITEM_TAG_WHITELIST_KEY, Tag.TAG_STRING);
+//            list.forEach(element -> {
+//                String itemTag = element.getAsString();
+//                parcel.getItemTagWhitelist().add(itemTag);
+//            });
+//        }
+//
+//        if (tag.contains(AbstractParcel.ITEM_WHITELIST_KEY)) {
+//            ListTag list = tag.getList(AbstractParcel.ITEM_WHITELIST_KEY, Tag.TAG_STRING);
+//            list.forEach(element -> {
+//                String item = element.getAsString();
+//                parcel.getItemWhitelist().add(item);
+//            });
+//        }
+//
+//        // parcel specific properties
+//        if (parcel instanceof NationParcel nationParcel) {
+//            NationEstateContext estate = (NationEstateContext) nationParcel.getEstate();
+//            if (tag.contains("borderType")) {
+//                try {
+//                    estate.setAccessType(NationAccessType.valueOf(tag.getString("borderType")));
+//                } catch(Exception e) {
+//                    ClaimMyLand.LOGGER.warn("unable to parse and load borderType - using default CLOSED");
+//                    estate.setAccessType(NationAccessType.CLOSED);
+//                }
+//            }
+//
+//            if (tag.contains("blacklist")) {
+//                ListTag list = tag.getList("blacklist", Tag.TAG_STRING);
+//                list.forEach(element -> {
+//                    StringTag uuidTag = ((StringTag)element);
+//                    nationParcel.getBlacklist().add(UUID.fromString(uuidTag.getAsString()));
+//                });
+//            }
+//        }
+//    }
 
     /*
      * determines if parcel name exists within an estate.
@@ -678,24 +670,6 @@ public class ParcelRegistry {
         });
         return parcels;
     }
-
-    /**
-     * returns a nation parcel by nation id
-     * @param nationId
-     * @return
-     */
-    @Deprecated
-    public static List<Parcel> findByNationId(UUID nationId) {
-        List<Parcel> parcels = new ArrayList<>(1);
-        for (Parcel parcel : PARCELS_BY_COORDS.values()) {
-            if ((parcel instanceof NationParcel) && ((NationParcel) parcel).getNationId().equals(nationId)) {
-                parcels.add(parcel);
-                break;
-            }
-        }
-        return parcels;
-    }
-
 
     public static List<Parcel> findByNationName(String nationName) {
         return PARCELS_BY_COORDS.values().stream()
@@ -1052,10 +1026,10 @@ public class ParcelRegistry {
         return resolveParcelCached(player, coords, dimension)
                 .map(parcel -> {
                     if (itemStack != null && !itemStack.isEmpty()) {
-                        for (String tagName : parcel.getItemTagWhitelist()) {
+                        for (String tagName : parcel.getEstate().getItemTagWhitelist()) {
                             if (TagHelper.doesItemBelongToTag(itemStack.getItem(), new ResourceLocation(tagName))) return true;
                         }
-                        for (String itemName : parcel.getItemWhitelist()) {
+                        for (String itemName : parcel.getEstate().getItemWhitelist()) {
                             if (ModUtil.getName(itemStack.getItem()).equals(new ResourceLocation(itemName))) return true;
                         }
                     }
@@ -1188,7 +1162,7 @@ public class ParcelRegistry {
                 .map(parcel -> {
                     ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
 
-                    for (String tagName : parcel.getBlockTagWhitelist()) {
+                    for (String tagName : parcel.getEstate().getBlockTagWhitelist()) {
                         ResourceLocation location = new ResourceLocation(tagName);
                         ClaimMyLand.LOGGER.debug("creating tag for parcel block tag -> {}", location);
                         if (TagHelper.doesBlockBelongToTag(state.getBlock(), location)) {
@@ -1196,8 +1170,8 @@ public class ParcelRegistry {
                         }
                     }
 
-                    ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getBlockWhitelist());
-                    for (String blockName : parcel.getBlockWhitelist()) {
+                    ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getEstate().getBlockWhitelist());
+                    for (String blockName : parcel.getEstate().getBlockWhitelist()) {
                         ResourceLocation location = new ResourceLocation(blockName);
                         ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
                         if (ModUtil.getName(state.getBlock()).equals(location)) {
@@ -1208,7 +1182,7 @@ public class ParcelRegistry {
                     if (heldItem != null && !heldItem.isEmpty()) {
                         ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
 
-                        for (String tagName : parcel.getItemTagWhitelist()) {
+                        for (String tagName : parcel.getEstate().getItemTagWhitelist()) {
                             ResourceLocation location = new ResourceLocation(tagName);
                             ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location);
                             if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
@@ -1216,8 +1190,8 @@ public class ParcelRegistry {
                             }
                         }
 
-                        ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
-                        for (String itemName : parcel.getItemWhitelist()) {
+                        ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getEstate().getItemWhitelist());
+                        for (String itemName : parcel.getEstate().getItemWhitelist()) {
                             ResourceLocation location = new ResourceLocation(itemName);
                             ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
                             if (ModUtil.getName(heldItem.getItem()).equals(location)) {
@@ -1235,11 +1209,11 @@ public class ParcelRegistry {
         return resolveParcelCached(playerId, coords, dimension)
                 .map(parcel -> {
                     if (itemStack != null && !itemStack.isEmpty()) {
-                        for (String tagName : parcel.getItemTagWhitelist()) {
+                        for (String tagName : parcel.getEstate().getItemTagWhitelist()) {
                             ResourceLocation location = new ResourceLocation(tagName);
                             if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) return true;
                         }
-                        for (String itemName : parcel.getItemWhitelist()) {
+                        for (String itemName : parcel.getEstate().getItemWhitelist()) {
                             if (ModUtil.getName(itemStack.getItem()).equals(new ResourceLocation(itemName))) return true;
                         }
                     }
@@ -1257,17 +1231,17 @@ public class ParcelRegistry {
                     ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}",
                             state.getBlock().getName().getString(), parcel);
 
-                    for (String tagName : parcel.getBlockTagWhitelist()) {
+                    for (String tagName : parcel.getEstate().getBlockTagWhitelist()) {
                         if (TagHelper.doesBlockBelongToTag(state.getBlock(), new ResourceLocation(tagName))) return true;
                     }
-                    for (String blockName : parcel.getBlockWhitelist()) {
+                    for (String blockName : parcel.getEstate().getBlockWhitelist()) {
                         if (ModUtil.getName(state.getBlock()).equals(new ResourceLocation(blockName))) return true;
                     }
                     if (heldItem != null && !heldItem.isEmpty()) {
-                        for (String tagName : parcel.getItemTagWhitelist()) {
+                        for (String tagName : parcel.getEstate().getItemTagWhitelist()) {
                             if (TagHelper.doesItemBelongToTag(heldItem.getItem(), new ResourceLocation(tagName))) return true;
                         }
-                        for (String itemName : parcel.getItemWhitelist()) {
+                        for (String itemName : parcel.getEstate().getItemWhitelist()) {
                             if (ModUtil.getName(heldItem.getItem()).equals(new ResourceLocation(itemName))) return true;
                         }
                     }
@@ -1540,9 +1514,9 @@ public class ParcelRegistry {
     }
 
     public static void registerFriends(Parcel parcel) {
-        if (ObjectUtils.isNotEmpty(parcel.getWhitelist())) {
+        if (ObjectUtils.isNotEmpty(parcel.getEstate().getPlayerWhitelist())) {
             // add to parcels_by_friends
-            parcel.getWhitelist().forEach(friend ->
+            parcel.getEstate().getPlayerWhitelist().forEach(friend ->
                     PARCELS_BY_FRIENDS.computeIfAbsent(friend, k -> new ArrayList<>())
                             .add(parcel)
             );
@@ -1550,7 +1524,7 @@ public class ParcelRegistry {
     }
 
     public static void unregisterFriends(Parcel parcel) {
-        parcel.getWhitelist().forEach(friend -> {
+        parcel.getEstate().getPlayerWhitelist().forEach(friend -> {
             List<Parcel> parcelList = PARCELS_BY_FRIENDS.get(friend);
             if (!parcelList.isEmpty()) {
                 parcelList.removeIf(p -> p.getId().equals(parcel.getId()));

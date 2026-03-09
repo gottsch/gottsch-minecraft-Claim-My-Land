@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Created by Mark Gottschling on Sep 30, 2024
+ * @author Mark Gottschling on Sep 30, 2024
  */
 public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
     // nation-ownership token

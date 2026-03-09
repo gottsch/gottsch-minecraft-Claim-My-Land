@@ -34,8 +34,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.failure;
-import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.sendUnableToLocatePlayerMessage;
+import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
 /**
  * @author by Mark Gottschling on 2/18/2026
@@ -82,7 +81,7 @@ public class EstateDetailsSubCommand implements SubCommand {
 
     // ops version
     public static int details(CommandSourceStack source, String ownerName, String estateName) {
-        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        Optional<UUID> ownerUuid = getPlayerUuid(source, ownerName);
         if (ownerUuid.isEmpty()) {
             sendUnableToLocatePlayerMessage(source, ownerName);
             return -1;
@@ -92,15 +91,13 @@ public class EstateDetailsSubCommand implements SubCommand {
 
     // common version
     public static int details(CommandSourceStack source, UUID ownerUuid, String estateName) {
-        Optional<Estate> optionalEstate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
+        Optional<Estate> optionalEstate = getEstateByOwner(source, ownerUuid, estateName);
         if (optionalEstate.isEmpty()) {
             failure(source, "estate.details.failure");
             return -1;
         }
         List<Component> messages = EstateDisplayFormatter.formatEstateDetails(source.getLevel(), optionalEstate.get());
-        messages.forEach(component -> {
-            source.sendSuccess(() -> component, false);
-        });
+        sendLines(source, messages);
         return 1;
     }
 }

@@ -105,22 +105,12 @@ public abstract class Deed extends Item {
     public Optional<Parcel> createParcel(ItemStack deedStack, ICoords coords, Player player) {
         CompoundTag tag = deedStack.getOrCreateTag();
 
-        // TODO DeedItem should have a PARCEL_TYPE property which can be fed to the ParcelTypeRegistry
-        // NOTE this is a guaranteed creation of a Parcel as the concrete Deed init a Parcel
-//        Parcel parcel = createParcel();
         Optional<Parcel> optionalParcel = ParcelTypeRegistry.create(getParcelType());
-//                tag.contains(Deed.PARCEL_TYPE) ?
-//                        ParcelType.fromString(tag.getString(Deed.PARCEL_TYPE)) :
-//                        ParcelType.NONE);
-        // TODO if optional Parcel is not present, use backup by Deed class factory ??
+
         if (optionalParcel.isEmpty()) {
             return optionalParcel;
         }
         Parcel parcel = optionalParcel.orElseThrow(IllegalStateException::new);
-
-        // NOTE don't need to name the parcel yet
-        // update the Estate name using the player
-//        parcel.getEstate().setName(parcel.getEstate().defaultName(player));
 
         // update parcel properties if deed contains them
         if (tag.contains(PARCEL_ID)) {

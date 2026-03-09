@@ -53,7 +53,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 /**
- * Created by Mark Gottschling on Sep 18, 2024.
+ * @author Mark Gottschling on Sep 18, 2024.
  * a Border Stone is used to display a border.
  *
  */
