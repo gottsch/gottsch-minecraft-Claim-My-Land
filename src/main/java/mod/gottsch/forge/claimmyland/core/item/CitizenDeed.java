@@ -97,7 +97,8 @@ public class CitizenDeed extends Deed {
         CompoundTag tag = deed.getOrCreateTag();
 
         // check if parcel is within another existing parcel
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos));
+        String dimension = blockEntity.getLevel().dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos), dimension);
 
         // override some properties if within another parcel
         // if claiming an existing citizen parcel

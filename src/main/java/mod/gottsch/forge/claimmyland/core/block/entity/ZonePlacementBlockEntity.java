@@ -96,7 +96,8 @@ public class ZonePlacementBlockEntity extends BorderStoneBlockEntity {
         /*
          * check if parcel is within another existing parcel
          */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords(), dimension);
 
         if (registryParcel.isEmpty()) {
             // if a zone placement is not within a nation then bad

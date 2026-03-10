@@ -58,6 +58,7 @@ public class PersistedData extends SavedData {
 		if (tag.contains(PARCEL_REGISTRY_V2)) {
 			ParcelRegistry.load(tag.getCompound(PARCEL_REGISTRY_V2));
 		}
+		PlayerRegistry.load(tag);
 		return create();
 	}
 
@@ -65,6 +66,7 @@ public class PersistedData extends SavedData {
 	public CompoundTag save(CompoundTag tag) {
 		ClaimMyLand.LOGGER.debug("saving world data...");
 		tag.put(PARCEL_REGISTRY_V2, ParcelRegistry.save(new CompoundTag()));
+		PlayerRegistry.save(tag);
 		return tag;
 	}
 
@@ -73,7 +75,11 @@ public class PersistedData extends SavedData {
 	 * @return
 	 */
 	public static PersistedData get(Level world) {
-		DimensionDataStorage storage = ((ServerLevel)world).getDataStorage();
+//		DimensionDataStorage storage = ((ServerLevel)world).getDataStorage();
+		// always use the Overworld level for global storage
+		ServerLevel overworld = ((ServerLevel) world).getServer().getLevel(Level.OVERWORLD);
+		DimensionDataStorage storage = overworld.getDataStorage();
+
 		PersistedData data = (PersistedData) storage.computeIfAbsent(
 				PersistedData::load, PersistedData::create, ClaimMyLand.MOD_ID);
 		return data;

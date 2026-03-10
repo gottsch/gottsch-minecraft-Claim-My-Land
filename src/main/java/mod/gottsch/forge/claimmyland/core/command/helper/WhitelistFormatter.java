@@ -68,6 +68,7 @@ public class WhitelistFormatter {
 
         if (players == null || players.isEmpty()) {
             lines.add(Component.literal("No friends whitelisted").withStyle(ChatFormatting.GRAY));
+            lines.add(newline());
             return lines;
         }
 
@@ -76,7 +77,7 @@ public class WhitelistFormatter {
         lines.add(newline());
 
         lines.addAll(formatPlayerList(level, players, "", estateId));
-
+        lines.add(newline());
         return lines;
     }
 
@@ -106,6 +107,7 @@ public class WhitelistFormatter {
 
         if (data == null || data.isEmpty()) {
             lines.add(Component.literal("No entries in whitelist").withStyle(ChatFormatting.GRAY));
+            lines.add(newline());
             return lines;
         }
 
@@ -114,7 +116,7 @@ public class WhitelistFormatter {
         lines.add(newline());
 
         lines.addAll(formatGenericList(data, type, ""));
-
+        lines.add(newline());
         return lines;
     }
 
@@ -180,6 +182,7 @@ public class WhitelistFormatter {
             }
             lines.add(component);
         }
+        lines.add(newline());
         return lines;
     }
 
@@ -216,6 +219,7 @@ public class WhitelistFormatter {
             }
             lines.add(component);
         }
+        lines.add(newline());
         return lines;
     }
 
@@ -241,6 +245,7 @@ public class WhitelistFormatter {
             lines.add(Component.literal(indent + branch)
                     .append(Component.literal(sorted.get(i)).withStyle(type.getColor())));
         }
+        lines.add(newline());
         return lines;
     }
 
@@ -270,7 +275,7 @@ public class WhitelistFormatter {
             lines.add(Component.literal(indent + branch)
                     .append(sortedPlayers.get(i)).withStyle(ChatFormatting.WHITE));
         }
-
+        lines.add(newline());
         return lines;
     }
 

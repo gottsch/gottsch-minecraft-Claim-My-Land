@@ -30,11 +30,9 @@ import mod.gottsch.forge.claimmyland.core.parcel.ParcelHelper;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.List;
@@ -137,7 +135,7 @@ public class JoinSubCommand implements SubCommand {
         // find all parcels belonging to otherEstate
         Set<Parcel> parcels = otherEstate.get().findParcels();//ParcelRegistry.findAllByEstateId(otherEstate.get().getId());
 
-        if (!shareContainingParcel(mainParcels, parcels)) {
+        if (!shareContainingParcel(source.getLevel(), mainParcels, parcels)) {
             failure(source, "estate.join.different.zone.failure");
             return -1;
         }
@@ -173,9 +171,9 @@ public class JoinSubCommand implements SubCommand {
      * verifies that all parcels in both estates share the same containing nation/zone parcel.
      * uses a sample parcel from each estate and finds the nation or zone that contains it.
      */
-    private static boolean shareContainingParcel(Set<Parcel> mainParcels, Set<Parcel> otherParcels) {
-        Optional<UUID> mainContainerId = getContainingParcelId(mainParcels);
-        Optional<UUID> otherContainerId = getContainingParcelId(otherParcels);
+    private static boolean shareContainingParcel(ServerLevel level, Set<Parcel> mainParcels, Set<Parcel> otherParcels) {
+        Optional<UUID> mainContainerId = getContainingParcelId(level, mainParcels);
+        Optional<UUID> otherContainerId = getContainingParcelId(level, otherParcels);
 
         // both are wilderness (no containing parcel) - that's valid
         if (mainContainerId.isEmpty() && otherContainerId.isEmpty()) {
@@ -188,14 +186,15 @@ public class JoinSubCommand implements SubCommand {
         return mainContainerId.get().equals(otherContainerId.get());
     }
 
-    private static Optional<UUID> getContainingParcelId(Set<Parcel> parcels) {
+    private static Optional<UUID> getContainingParcelId(ServerLevel level, Set<Parcel> parcels) {
         if (parcels.isEmpty()) return Optional.empty();
 
         // safe to sample just one - containment is enforced at claim time
         Parcel sample = parcels.iterator().next();
         List<Parcel> overlapping = ParcelRegistry.find(sample.getMinCoords());
 
-        return ParcelRegistry.findMostSignificant(overlapping, ParcelType.NATION, ParcelType.ZONE)
+        String dimension = level.dimension().location().toString();
+        return ParcelRegistry.findMostSignificant(overlapping, dimension, ParcelType.NATION, ParcelType.ZONE)
                 .map(Parcel::getId);
     }
 }

@@ -67,6 +67,12 @@ public class ModBlockTagsProvider extends BlockTagsProvider {
                 );
 
         // custom tags
+        tag(ModTags.Blocks.FIRE_BLOCKS)
+                .add(
+                        Blocks.FIRE,
+                        Blocks.SOUL_FIRE
+                );
+
         tag(ModTags.Blocks.DOOR_GATE_WHITELIST)
                 .addTags(
                         BlockTags.WOODEN_DOORS,

@@ -71,6 +71,8 @@ public class ParcelDisplayFormatter {
 
         if (parcels.isEmpty()) {
             lines.add(Component.literal("No parcels found.").withStyle(ChatFormatting.YELLOW));
+
+            lines.add(newline());
             return lines;
         }
 
@@ -83,7 +85,7 @@ public class ParcelDisplayFormatter {
                 lines.add(newline());
             }
         }
-
+        lines.add(newline());
         return lines;
     }
 
@@ -270,7 +272,7 @@ public class ParcelDisplayFormatter {
                     .append(Component.literal("Border: ").withStyle(ChatFormatting.GRAY))
                     .append(Component.literal(borderType).withStyle(ChatFormatting.GOLD)));
         }
-
+        lines.add(newline());
         return lines;
     }
 

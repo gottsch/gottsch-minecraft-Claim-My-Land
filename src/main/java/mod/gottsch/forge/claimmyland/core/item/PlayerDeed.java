@@ -35,7 +35,8 @@ public class PlayerDeed extends Deed {
     protected void populateFoundationStone(FoundationStoneBlockEntity blockEntity, ItemStack deed, BlockPos pos, Player player) {
         super.populateFoundationStone(blockEntity, deed, pos, player);
 
-        ParcelRegistry.findLeastSignificant(Coords.of(pos))
+        String dimension = blockEntity.getLevel().dimension().location().toString();
+        ParcelRegistry.findLeastSignificant(Coords.of(pos), dimension)
                 .filter(parcel -> parcel.isCitizen() || parcel.isPlayer())
                 .ifPresent(parcel -> applyExistingParcelProperties(blockEntity, parcel));
     }

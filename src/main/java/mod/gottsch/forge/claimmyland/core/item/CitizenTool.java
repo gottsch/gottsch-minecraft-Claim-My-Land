@@ -23,12 +23,14 @@ import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.CitizenPlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
+import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -40,6 +42,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -59,11 +62,13 @@ public class CitizenTool extends BlockItem {
         if (context.getLevel().isClientSide()) {
             return InteractionResult.FAIL;
         }
-        if (context.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+        ResourceLocation dimId = context.getLevel().dimension().location();
+        List<? extends String> excluded = Config.SERVER.dimensions.excludedDimensions.get();
+        if (excluded.stream().anyMatch(e -> e.equals(dimId.toString()))) {
             return InteractionResult.FAIL;
         }
 
-        Optional<Parcel> parentParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
+        Optional<Parcel> parentParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()), dimId.toString());
         if (parentParcel.isEmpty() || !isValidParent(parentParcel.get())) {
             PlayerMessageHelper.sendFailure(context.getPlayer(), "citizen_placement.not_valid_parent");
             return InteractionResult.FAIL;
@@ -125,11 +130,24 @@ public class CitizenTool extends BlockItem {
         citizen.setSize(new Box(Coords.of(0, 0, 0), box.getSize()));
 
         ClaimResult claimResult = citizen.handleEmbeddedClaim(context.getLevel(), parentParcel, citizen.getBox());
-        if (claimResult == ClaimResult.SUCCESS) {
-            PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
+//        if (claimResult == ClaimResult.SUCCESS) {
+//            PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
+//            CommandHelper.save(context.getLevel());
+//        } else {
+//            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
+//        }
+        if (claimResult.isSuccess()) {
+            if (claimResult == ClaimResult.SUCCESS_WITH_WARNINGS) {
+                PlayerMessageHelper.sendWarning(context.getPlayer(), "parcel.add.structure_warning");
+            } else {
+                PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
+            }
             CommandHelper.save(context.getLevel());
         } else {
-            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
+            switch (claimResult) {
+                case STRUCTURE_DENIED -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.structure_denied");
+                default -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
+            }
         }
     }
 
@@ -172,8 +190,9 @@ public class CitizenTool extends BlockItem {
                                                 CompoundTag tag, ICoords coords2) {
         ICoords coords1 = loadCoords(tag, COORDS1);
 
-        Optional<Parcel> parentAtCoords1 = ParcelRegistry.findLeastSignificant(coords1);
-        Optional<Parcel> parentAtCoords2 = ParcelRegistry.findLeastSignificant(coords2);
+        String dimension = context.getLevel().dimension().location().toString();
+        Optional<Parcel> parentAtCoords1 = ParcelRegistry.findLeastSignificant(coords1, dimension);
+        Optional<Parcel> parentAtCoords2 = ParcelRegistry.findLeastSignificant(coords2, dimension);
 
         if (parentAtCoords1.isEmpty() || parentAtCoords2.isEmpty()) {
             PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");

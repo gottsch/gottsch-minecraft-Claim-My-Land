@@ -105,7 +105,8 @@ public class NationDeed extends Deed {
 //        blockEntity.setNationId(tag.contains(NATION_ID) ? tag.getUUID(NATION_ID) : null);
 
         // check if parcel is within another nation parcel ie it was abandoned
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos));
+        String dimension = blockEntity.getLevel().dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos), dimension);
 
         // override some properties if within another parcel
         if (registryParcel.isPresent()) {

@@ -171,7 +171,9 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
      * @param coords
      */
     private void populateBlockEntity(Level level, BorderStoneBlockEntity blockEntity, ICoords coords) {
-        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(coords);
+//        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(coords);
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(coords, dimension);
 
         if (parcel.isPresent()) {
             blockEntity.setParcelId(parcel.get().getId());

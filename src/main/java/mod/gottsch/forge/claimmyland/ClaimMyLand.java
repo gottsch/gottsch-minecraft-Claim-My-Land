@@ -12,6 +12,7 @@ import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.setup.CommonSetup;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -55,18 +56,18 @@ public class ClaimMyLand {
         modEventBus.addListener(CommonSetup::init);
         MinecraftForge.EVENT_BUS.register(ParcelHud.class);  // static subscriber — Class, not new instance
 
-        File saveDir = new File("world/data/claimmyland"); // TODO config option
-        Type listType = new TypeToken<List<Parcel>>(){}.getType();
-
-        // save every 5 minutes, keep 20 most recent files
-        parcelSaver = new RollingJsonSaver<>(
-                saveDir,
-                "parcels",  // TODO config option
-                20,                                // TODO config option
-                10,                                 // TODO config option
-                ParcelRegistry::getParcels,  // supplier that returns current parcel list
-                listType
-        );
+//        File saveDir = new File("world/data/claimmyland"); // TODO config option
+//        Type listType = new TypeToken<List<Parcel>>(){}.getType();
+//
+//        // save every 5 minutes, keep 20 most recent files
+//        parcelSaver = new RollingJsonSaver<>(
+//                saveDir,
+//                "parcels",  // TODO config option
+//                20,                                // TODO config option
+//                10,                                 // TODO config option
+//                ParcelRegistry::getParcels,  // supplier that returns current parcel list
+//                listType
+//        );
 
 //        // Load latest on startup
 //        List<Parcel> loaded = parcelSaver.loadLatest();
@@ -78,11 +79,40 @@ public class ClaimMyLand {
         MinecraftForge.EVENT_BUS.register(new ForgeEventHandler());
     }
 
+    // In ClaimMyLand.java ForgeEventHandler — add a new handler:
+    @SubscribeEvent
+    public void onServerStarting(ServerStartingEvent event) {
+        ClaimMyLand.reinitBackup();
+    }
+
+    /**
+     * constructs or reconstructs the RollingJsonSaver from current config values.
+     * called once at startup and again on config reload.
+     */
+    public static void reinitBackup() {
+        if (Config.SERVER.backup.enabled.get()) {
+            File saveDir = new File("world/data/claimmyland");
+            Type listType = new TypeToken<List<Parcel>>(){}.getType();
+            parcelSaver = new RollingJsonSaver<>(
+                    saveDir,
+                    "parcels",
+                    Config.SERVER.backup.maxFiles.get(),
+                    Config.SERVER.backup.intervalMinutes.get(),
+                    ParcelRegistry::getParcels,
+                    listType
+            );
+        } else {
+            parcelSaver = null;
+        }
+    }
+
     public static class ForgeEventHandler {
         @SubscribeEvent
         public void onServerTick(TickEvent.ServerTickEvent event) {
             if (event.phase == TickEvent.Phase.END) {
-                parcelSaver.tick();
+                if (parcelSaver != null) {
+                    parcelSaver.tick();
+                }
             }
         }
     }

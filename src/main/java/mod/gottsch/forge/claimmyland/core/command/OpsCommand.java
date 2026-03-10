@@ -51,70 +51,73 @@ public class OpsCommand {
 
                                 ///// PARCEL TOP-LEVEL OPTION /////
                                 .then(Commands.literal(PARCEL).requires(source -> source.hasPermission(Config.SERVER.general.opsPermissionLevel.get()))
-                                                ///// LIST OPTION /////
-                                                .then(new ListParcelsSubCommand().buildOps())
+                                        ///// LIST OPTION /////
+                                        .then(new ListParcelsSubCommand().buildOps())
 
-                                                ///// RELINQUISH OPTION /////
-                                                .then(new RelinquishParcelSubCommand().buildOps())
+                                        ///// RELINQUISH OPTION /////
+                                        .then(new RelinquishParcelSubCommand().buildOps())
 
-                                                ///// DEMOLISH /////
-                                                .then(new DemolishParcelSubCommand().buildOps())
+                                        ///// DEMOLISH /////
+                                        .then(new DemolishParcelSubCommand().buildOps())
 
-                                                ///// RENAME PARCEL /////
-                                                .then(new RenameParcelSubCommand().buildOps())
+                                        ///// RENAME PARCEL /////
+                                        .then(new RenameParcelSubCommand().buildOps())
 
-                                                ///// TRANSFER /////
-                                                .then(new TransferParcelSubCommand().buildOps())
+                                        ///// TRANSFER /////
+                                        .then(new TransferParcelSubCommand().buildOps())
 
-                                                ///// CLEAR /////
+                                        ///// CLEAR /////
                                         .then(new ClearSubCommand().buildOps())
                                 )
                                 ///// ESTATE TOP-LEVEL OPTION /////
                                 .then(Commands.literal(ESTATE).requires(source -> source.hasPermission(Config.SERVER.general.opsPermissionLevel.get()))
-                                                ///// ACCESS TYPE /////
-                                                .then(new AccessTypeSubCommand().buildOps())
+                                        ///// ACCESS TYPE /////
+                                        .then(new AccessTypeSubCommand().buildOps())
 
-                                                /// // LIST ESTATES /////
-                                                .then(new ListEstateSubCommand().buildOps())
-                                                ///// DETAILS OPTION /////
-                                                .then(new EstateDetailsSubCommand().buildOps())
-                                                ///// RENAME ESTATE /////
-                                                .then(new RenameEstateSubCommand().buildOps())
+                                        /// // LIST ESTATES /////
+                                        .then(new ListEstateSubCommand().buildOps())
+                                        ///// DETAILS OPTION /////
+                                        .then(new EstateDetailsSubCommand().buildOps())
+                                        ///// RENAME ESTATE /////
+                                        .then(new RenameEstateSubCommand().buildOps())
 
-                                                ///// REMOVE ESTATE /////
-                                                // removes Estate from the world without returning Deeds
-                                                .then(new RemoveEstateSubCommand().buildOps())
+                                        ///// REMOVE ESTATE /////
+                                        // removes Estate from the world without returning Deeds
+                                        .then(new RemoveEstateSubCommand().buildOps())
 
-                                                ///// RELINQUISH /////
-                                                .then(new RelinquishEstateSubCommand().buildOps())
+                                        ///// RELINQUISH /////
+                                        .then(new RelinquishEstateSubCommand().buildOps())
 
-                                                ///// TRANSFER /////
-                                                .then(new TransferEstateSubCommand().buildOps())
+                                        ///// TRANSFER /////
+                                        .then(new TransferEstateSubCommand().buildOps())
 
-                                                ///// JOIN (ANNEX) OPTION /////
-                                                .then(new JoinSubCommand().buildOps())
+                                        ///// PREVENT FIRE SPREAD /////
+                                        .then(new PreventFireSpreadSubCommand().buildOps())
 
-                                                ///// SPLIT (CEDE) OPTION /////
-                                                .then(new SplitSubCommand().buildOps())
-                                                ///// WHITELIST OPTION /////
-                                                .then(Commands.literal(WHITELIST)
-                                                        ///// BLOCK TAG WHITELIST OPTION /////
-                                                        .then(new TagWhitelistSubCommand().buildOps(buildContext, WhitelistType.BLOCK_TAG))
-                                                        ///// BLOCK WHITELIST OPTION /////
-                                                        .then(new BlockWhitelistSubCommand().buildOps(buildContext, WhitelistType.BLOCK))
-                                                        ///// ITEM TAG WHITELIST OPTION /////
-                                                        .then(new TagWhitelistSubCommand().buildOps(buildContext, WhitelistType.ITEM_TAG))
-                                                        ///// ITEM WHITELIST OPTION /////
-                                                        .then(new ItemWhitelistSubCommand().buildOps(buildContext, WhitelistType.ITEM))
-                                                        .then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY_TAG))
-                                                        .then(new EntitySpawnWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY))
-                                                        .then(new FriendsWhitelistSubCommand().build())
-                                                )
-                                                ///// CLEAR /////
-                                                // performs same action as parcel > clear
-                                                .then(new ClearSubCommand().buildOps())
-                                                ///// CLAIMED_BY TOP-LEVEL OPTION /////
-                                                .then(new ClaimedBySubCommand().build())
+                                        ///// JOIN (ANNEX) OPTION /////
+                                        .then(new JoinSubCommand().buildOps())
+
+                                        ///// SPLIT (CEDE) OPTION /////
+                                        .then(new SplitSubCommand().buildOps())
+                                        ///// WHITELIST OPTION /////
+                                        .then(Commands.literal(WHITELIST)
+                                                ///// BLOCK TAG WHITELIST OPTION /////
+                                                .then(new TagWhitelistSubCommand().buildOps(buildContext, WhitelistType.BLOCK_TAG))
+                                                ///// BLOCK WHITELIST OPTION /////
+                                                .then(new BlockWhitelistSubCommand().buildOps(buildContext, WhitelistType.BLOCK))
+                                                ///// ITEM TAG WHITELIST OPTION /////
+                                                .then(new TagWhitelistSubCommand().buildOps(buildContext, WhitelistType.ITEM_TAG))
+                                                ///// ITEM WHITELIST OPTION /////
+                                                .then(new ItemWhitelistSubCommand().buildOps(buildContext, WhitelistType.ITEM))
+                                                .then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY_TAG))
+                                                .then(new EntitySpawnWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY))
+                                                .then(new FriendsWhitelistSubCommand().build())
+                                        )
+                                        ///// CLEAR /////
+                                        // performs same action as parcel > clear
+                                        .then(new ClearSubCommand().buildOps())
+                                        ///// CLAIMED_BY TOP-LEVEL OPTION /////
+                                        .then(new ClaimedBySubCommand().build())
                                 )
                 );
     } // end of method

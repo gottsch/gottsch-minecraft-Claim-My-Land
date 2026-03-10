@@ -21,11 +21,14 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.estate.EstateHelper;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.claimmyland.core.util.StructureIntersectionChecker;
+import mod.gottsch.forge.claimmyland.core.util.StructurePolicyFactory;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
@@ -90,8 +93,6 @@ public interface Parcel {
         do {
             name = "Parcel" + String.valueOf(size);
             // check the registry
-//            Optional<Parcel> namedParcel = ParcelRegistry.findByName(name);
-//            if (namedParcel.isEmpty()) nameNotFound = true;
             if (!ParcelRegistry.hasName(this, name)) nameNotFound = true;
         } while (iterations++ < 3 && !nameNotFound);
 
@@ -100,14 +101,6 @@ public interface Parcel {
         }
         return name;
     }
-
-//    default public Estate createEstate() {
-//        return new EstateContext();
-//    }
-//
-//    default public Estate createEstate(Player player) {
-//        return new EstateContext(player);
-//    }
 
     String defaultName(Player player);
 
@@ -167,7 +160,8 @@ public interface Parcel {
         /*
          * check if parcel is within another existing parcel
          */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords);
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords, dimension);
         return registryParcel.map(this::handleEmbeddedPlacementRules).orElseGet(this::handlePlacementRules);
     }
 
@@ -263,21 +257,60 @@ public interface Parcel {
         return nameAndRegister(level, claimingPlayer.getScoreboardName());
     }
 
+    /**
+     * Validates the proposed parcel against structure intersection rules.
+     *
+     * @param level the ServerLevel the parcel will live in
+     * @return SUCCESS, SUCCESS_WITH_WARNINGS, or STRUCTURE_DENIED
+     */
+    default ClaimResult validateClaim(ServerLevel level) {
+        if (!Config.SERVER.structureProtection.enabled.get()) {
+            return ClaimResult.SUCCESS;
+        }
+        StructureIntersectionChecker.StructurePolicy policy =
+                StructurePolicyFactory.getPolicy();
+        StructureIntersectionChecker.CheckResult result =
+                StructureIntersectionChecker.check(
+                        level,
+                        getBox().getMinCoords(),
+                        getBox().getMaxCoords(),
+                        policy);
+        if (result.isDenied()) {
+            return ClaimResult.STRUCTURE_DENIED;
+        }
+        if (result.hasWarnings()) {
+            return ClaimResult.SUCCESS_WITH_WARNINGS;
+        }
+        return ClaimResult.SUCCESS;
+    }
+
     default ClaimResult nameAndRegister(Level level) {
         ClaimMyLand.LOGGER.debug("nameAndRegister() called for parcel -> {}", getId());
+        ClaimResult validation = validateClaim((ServerLevel) level);
+        if (validation == ClaimResult.STRUCTURE_DENIED) {
+            return validation;
+        }
+        // set dimension before registration so registerChunk() can read it
+        setDimension(((ServerLevel) level).dimension().location().toString());
         getEstate().setName(EstateHelper.buildName((ServerLevel) level, getOwnerId()));
         setName(ParcelHelper.buildName((ServerLevel) level, getEstate()));
         ParcelRegistry.register((ServerLevel) level, this);
         CommandHelper.save(level);
-        return ClaimResult.SUCCESS;
+        return validation;  // SUCCESS or SUCCESS_WITH_WARNINGS
     }
 
     default ClaimResult nameAndRegister(Level level, String playerName) {
+        ClaimResult validation = validateClaim((ServerLevel) level);
+        if (validation == ClaimResult.STRUCTURE_DENIED) {
+            return validation;
+        }
+        // set dimension before registration so registerChunk() can read it
+        setDimension(((ServerLevel) level).dimension().location().toString());
         getEstate().setName(EstateHelper.buildName((ServerLevel) level, getOwnerId()));
         setName(ParcelHelper.buildName((ServerLevel) level, getEstate()));
         ParcelRegistry.register((ServerLevel) level, this, playerName);
         CommandHelper.save(level);
-        return ClaimResult.SUCCESS;
+        return validation;  // SUCCESS or SUCCESS_WITH_WARNINGS
     }
 
     default public boolean hasBufferedIntersections(Parcel parcel, List<Parcel> bufferedParcels) {

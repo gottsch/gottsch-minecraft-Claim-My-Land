@@ -362,6 +362,8 @@ public class EstateDisplayFormatter {
             lines.add(newline());
         }
 
+        lines.add(newline());
+                
         return lines;
     }
 
@@ -483,7 +485,7 @@ public class EstateDisplayFormatter {
                 lines.addAll(formatTenantEstateList(level, nationalizedEstates, indent + LangUtil.INDENT2));
             }
         }
-
+        lines.add(newline());
         return lines;
     }
 
@@ -507,6 +509,7 @@ public class EstateDisplayFormatter {
             }
             lines.add(component);
         }
+        lines.add(newline());
         return lines;
     }
 

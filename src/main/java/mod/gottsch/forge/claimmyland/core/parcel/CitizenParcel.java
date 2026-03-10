@@ -132,7 +132,8 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
 
     @Override
     public boolean canPlaceAt(Level level, ICoords coords) {
-        return ParcelRegistry.findLeastSignificant(coords)
+        String dimension = level.dimension().location().toString();
+        return ParcelRegistry.findLeastSignificant(coords, dimension)
                 .filter(parcel -> hasAccessTo(parcel) && parcel.grantsAccess(this))
                 .isPresent();
     }

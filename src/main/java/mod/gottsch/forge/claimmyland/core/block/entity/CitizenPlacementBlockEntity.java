@@ -74,7 +74,8 @@ public class CitizenPlacementBlockEntity extends BorderStoneBlockEntity {
         /*
          * check if parcel is within another existing parcel
          */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords(), dimension);
 
         if (registryParcel.isEmpty()) {
             // if a citizen placement is not within a zone or a nation then bad

@@ -42,6 +42,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.item.ItemEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -145,10 +146,14 @@ public class PlayerEvents {
      */
     @SubscribeEvent
     public static void onSpawnEntity(MobSpawnEvent.FinalizeSpawn event) {
+        if (!(event.getLevel() instanceof Level world)) {
+            return;
+        }
 
         // get the parcel
-        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(event.getEntity().blockPosition()));
-        if (parcel.isEmpty()) {
+        String dimension = world.dimension().location().toString();
+        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(event.getEntity().blockPosition()), dimension);
+                if (parcel.isEmpty()) {
             return;
         }
 

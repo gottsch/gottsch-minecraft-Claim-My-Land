@@ -41,6 +41,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -187,7 +188,9 @@ public abstract class Deed extends Item {
             return InteractionResult.SUCCESS;
         }
 
-        if (context.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+        ResourceLocation dimId = context.getLevel().dimension().location();
+        List<? extends String> excluded = Config.SERVER.dimensions.excludedDimensions.get();
+        if (excluded.stream().anyMatch(e -> e.equals(dimId.toString()))) {
             return InteractionResult.SUCCESS;
         }
 
@@ -236,7 +239,8 @@ public abstract class Deed extends Item {
                 /*
                  * check if parcel is within another existing parcel
                  */
-                Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords);
+                String dimension = context.getLevel().dimension().location().toString();
+                Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords, dimension);
 
                 Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
@@ -275,11 +279,20 @@ public abstract class Deed extends Item {
                             parcel.getMinCoords().toShortString(),
                             ModUtil.getSize(parcel.getBox()).toShortString());
 
+                    if (claimResult == ClaimResult.SUCCESS_WITH_WARNINGS) {
+                        PlayerMessageHelper.sendWarning(context.getPlayer(),
+                                "deed.claim.structure_warning");
+                    }
+
                 } else {
-                    // send the respective failure message.
                     switch (claimResult) {
+                        case STRUCTURE_DENIED -> {
+                            PlayerMessageHelper.sendFailure(context.getPlayer(),
+                                    "deed.claim.structure_denied");
+                        }
                         case INTERSECTS -> {
-                            PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.claim.intersects");
+                            PlayerMessageHelper.sendFailure(context.getPlayer(),
+                                    "deed.claim.intersects");
                         }
                         case INSUFFICIENT_SIZE -> {
                             PlayerMessageHelper.sendFailure(context.getPlayer(),
@@ -296,6 +309,7 @@ public abstract class Deed extends Item {
                                     ModUtil.getSize(parcel.getBox()));
                         }
                     }
+
                 }
                 return claimResult.isSuccess()  ? InteractionResult.CONSUME : InteractionResult.FAIL;
             }

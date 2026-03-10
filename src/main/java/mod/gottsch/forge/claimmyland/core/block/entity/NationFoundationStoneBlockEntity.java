@@ -72,7 +72,8 @@ public class NationFoundationStoneBlockEntity extends FoundationStoneBlockEntity
          * check if parcel is within another existing parcel
          * NOTE this should not happen as it is not allowed by the rules
          */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords(), dimension);
 
         if (registryParcel.isEmpty()) {
             // find overlaps of the parcel with buffered registry parcels.
@@ -116,7 +117,8 @@ public class NationFoundationStoneBlockEntity extends FoundationStoneBlockEntity
         /*
          * check if box/parcel is within another existing parcel
          */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords(), dimension);
 
         // not within another parcel
         if (registryParcel.isEmpty()) {

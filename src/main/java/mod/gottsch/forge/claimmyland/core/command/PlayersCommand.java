@@ -86,7 +86,8 @@ public class PlayersCommand {
 								.then(new RemoveEstateSubCommand().build())
 								///// TRANSFER /////
 								.then(new TransferEstateSubCommand().build())
-
+								///// PREVENT FIRE SPREAD /////
+								.then(new PreventFireSpreadSubCommand().build())
 								///// WHITELIST OPTION /////
 								.then(Commands.literal(WHITELIST)
 										///// BLOCK WHITELIST OPTION /////

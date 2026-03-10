@@ -24,43 +24,37 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelChunkIndex;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.world.WorldInfo;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
-import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDestroyBlockEvent;
-import net.minecraftforge.event.entity.living.LivingEntityUseItemEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.level.PistonEvent;
-import net.minecraftforge.eventbus.api.Event;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Mark Gottschling on Sep 14, 2024
@@ -138,9 +132,11 @@ public class ModEvents {
             return;
         }
 
+        String dimension = getDimensionString(player.level());
+
         // Chunk pre-filter — if this chunk has no parcels, handle wilderness
         // transition without touching the BST at all
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             if (ParcelRegistry.REGION_CACHE.isCached(player.getUUID())) {
                 ParcelRegistry.REGION_CACHE.invalidatePlayer(player.getUUID());
                 CMLNetwork.syncWildernessToPlayer(player);
@@ -152,7 +148,6 @@ public class ModEvents {
         //   cache hit  → bounds check only, no BST, no packet (client already knows)
         //   cache miss → BST query, updates server cache, sends CacheSyncPacket
         //   no parcel  → invalidates server cache, sends wilderness packet
-        String dimension = getDimensionString(player.level());
 //        ParcelRegistry.resolveParcelCached(player, Coords.of(pos), dimension);
         ParcelRegistry.syncParcelToClient(player, Coords.of(pos), dimension);
     }
@@ -165,7 +160,8 @@ public class ModEvents {
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -198,13 +194,15 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onBlockPlace(final BlockEvent.EntityPlaceEvent event) {
+
         if (event.getLevel().isClientSide()) {
             return;
         }
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -239,8 +237,13 @@ public class ModEvents {
                 PlayerMessageHelper.sendFailure(player, "parcel.place_block.block_claimed");
 
             }
-        } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
-            event.setCanceled(true);
+        } else {
+            // non-player entity placement (includes natural fire spread)
+            if (ParcelRegistry.isFireSpreadPrevented(Coords.of(event.getPos()), event.getState())) {
+                event.setCanceled(true);
+            } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
+                event.setCanceled(true);
+            }
         }
     }
 
@@ -252,7 +255,8 @@ public class ModEvents {
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -310,7 +314,8 @@ public class ModEvents {
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -352,7 +357,8 @@ public class ModEvents {
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -406,7 +412,8 @@ public class ModEvents {
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -459,7 +466,8 @@ public class ModEvents {
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getEntity().level());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -481,7 +489,8 @@ public class ModEvents {
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())) {
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
@@ -545,9 +554,10 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onExplosion(final ExplosionEvent.Detonate event) {
+        String dimension = getDimensionString(event.getLevel());
         List<BlockPos> affectedBlocks = event.getAffectedBlocks();
         affectedBlocks.removeIf(pos ->
-                !ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ())
+                !ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)
         );
         // remove any affected blocks that are protected
         affectedBlocks.removeIf(block -> {
@@ -603,9 +613,9 @@ public class ModEvents {
 //    }
 
     private static boolean isInProtectedDimension(LevelAccessor level) {
-        // v2.1: still only Overworld. But now changeable in one place.
-        return ((Level) level).dimensionTypeId() == BuiltinDimensionTypes.OVERWORLD;
-        // Future: return Config.SERVER.protection.protectedDimensions.get().contains(...)
+        ResourceLocation dimId = ((Level) level).dimension().location();
+        List<? extends String> excluded = Config.SERVER.dimensions.excludedDimensions.get();
+        return excluded.stream().noneMatch(e -> e.equals(dimId.toString()));
     }
 
     private static String getDimensionString(LevelAccessor level) {

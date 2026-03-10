@@ -18,16 +18,19 @@
 package mod.gottsch.forge.claimmyland.core.config;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
-import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
+import mod.gottsch.forge.claimmyland.core.util.StructurePolicyFactory;
 import mod.gottsch.forge.gottschcore.config.AbstractConfig;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.common.ForgeConfigSpec.BooleanValue;
 import net.minecraftforge.common.ForgeConfigSpec.IntValue;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import org.apache.commons.lang3.tuple.Pair;
+
+import java.util.List;
 
 /**
  * 
@@ -90,10 +93,13 @@ public class Config extends AbstractConfig {
 		ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, SERVER_SPEC);
 	}
 
-	@Deprecated
-//	public static void init() {
-//		Config.GENERAL.init();
-//	}
+	@SubscribeEvent
+	public static void onConfigReload(ModConfigEvent.Reloading event) {
+		if (event.getConfig().getSpec() == SERVER_SPEC) {
+			StructurePolicyFactory.invalidate();
+			ClaimMyLand.reinitBackup();
+		}
+	}
 
 	/*
 	 *
@@ -116,11 +122,18 @@ public class Config extends AbstractConfig {
 		public General general;
 		public Borders borders;
 		public Protection protection;
+		public Backup backup;
+		public StructureProtection structureProtection;
+		public Dimensions dimensions;
+		public BooleanValue preventFireSpread;
 
         public ServerConfig(ForgeConfigSpec.Builder builder) {
 			general = new General(builder);
 			borders = new Borders(builder);
 			protection = new Protection(builder);
+			backup = new Backup(builder);
+			structureProtection = new StructureProtection(builder);
+			dimensions = new Dimensions(builder);
 		}
 	}
 
@@ -239,7 +252,8 @@ public class Config extends AbstractConfig {
 		public BooleanValue enableLivingDestroyBlockEvent;
 		public BooleanValue enablePistionEvent;
 		public BooleanValue enableExplosionDetonateEvent;
-		
+		public BooleanValue preventFireSpread;
+
 		Protection(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, 
 					" Protection properties for Claim My Land mod.",
@@ -283,8 +297,112 @@ public class Config extends AbstractConfig {
 			enableExplosionDetonateEvent = builder
 					.comment(" Enables explosion protection. If enabled, explosions will not destory protected blocks.")
 					.define("enableExplosionProtection", true);
-			
+
+			preventFireSpread = builder
+					.comment(" Prevents fire from spreading within claimed parcels.",
+							" Can be overridden per-estate.",
+							" Default: true.")
+					.define("preventFireSpread", true);
+
 			builder.pop();
 		}
 	}
+
+	public static class Backup {
+		public final BooleanValue enabled;
+		public final IntValue intervalMinutes;
+		public final IntValue maxFiles;
+
+		Backup(final ForgeConfigSpec.Builder builder) {
+			builder.comment(CATEGORY_DIV,
+					" Backup properties for Claim My Land mod.",
+					CATEGORY_DIV).push("backup");
+
+			enabled = builder
+					.comment(" Enable the rolling JSON backup system.",
+							" Backups are written to world/data/claimmyland/backups/")
+					.define("enabled", true);
+
+			intervalMinutes = builder
+					.comment(" How often (in minutes) a backup is written.",
+							" Minimum: 1. Default: 5.")
+					.defineInRange("intervalMinutes", 5, 1, 1440);
+
+			maxFiles = builder
+					.comment(" Maximum number of backup files to keep.",
+							" Oldest files are deleted automatically.",
+							" Minimum: 1. Default: 20.")
+					.defineInRange("maxFiles", 20, 1, 500);
+
+			builder.pop();
+		}
+	}
+
+	public static class StructureProtection {
+		public final BooleanValue enabled;
+		public final ForgeConfigSpec.ConfigValue<List<? extends String>> denyStructures;
+		public final ForgeConfigSpec.ConfigValue<List<? extends String>> warnStructures;
+
+		StructureProtection(final ForgeConfigSpec.Builder builder) {
+			builder.comment(CATEGORY_DIV,
+					" Structure protection properties for Claim My Land mod.",
+					CATEGORY_DIV).push("structureProtection");
+
+			enabled = builder
+					.comment(" When true, players cannot claim land that overlaps certain structures.",
+							" See denyStructures and warnStructures to customise which ones.")
+					.define("enabled", true);
+
+			denyStructures = builder
+					.comment(" Structures that cannot be claimed over. Claim is hard-rejected.",
+							" Use Minecraft resource location format.",
+							" Prefix with # for a structure tag.",
+							" Default: Stronghold, Nether Fortress, Bastion Remnant, End City.",
+							" Example: [\"#minecraft:eye_of_ender_located\", \"minecraft:fortress\"]")
+					.defineListAllowEmpty("denyStructures",
+							List.of(
+									"#minecraft:eye_of_ender_located",
+									"minecraft:fortress",
+									"minecraft:bastion_remnant",
+									"minecraft:end_city"
+							),
+							String.class::isInstance);
+
+			warnStructures = builder
+					.comment(" Structures that trigger a warning but still allow the claim.",
+							" Default: Village, Woodland Mansion, Ocean Monument.",
+							" Example: [\"#minecraft:village\", \"minecraft:mansion\"]")
+					.defineListAllowEmpty("warnStructures",
+							List.of(
+									"#minecraft:village",
+									"#minecraft:on_woodland_explorer_maps",
+									"#minecraft:on_ocean_explorer_maps"
+							),
+							String.class::isInstance);
+
+			builder.pop();
+		}
+	}
+
+	public static class Dimensions {
+		public final ForgeConfigSpec.ConfigValue<List<? extends String>> excludedDimensions;
+
+		Dimensions(final ForgeConfigSpec.Builder builder) {
+			builder.comment(CATEGORY_DIV,
+					" Dimension properties for Claim My Land mod.",
+					CATEGORY_DIV).push("dimensions");
+
+			excludedDimensions = builder
+					.comment(" Dimensions where land claiming is completely disabled.",
+							" Use Minecraft resource location format.",
+							" Default is empty — all dimensions are claimable.",
+							" Example: [\"minecraft:the_nether\", \"minecraft:the_end\"]")
+					.defineListAllowEmpty("excludedDimensions",
+							List.of(),
+							String.class::isInstance);
+
+			builder.pop();
+		}
+	}
+
 }

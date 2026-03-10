@@ -42,7 +42,8 @@ public class PlayerFoundationStoneBlockEntity extends FoundationStoneBlockEntity
 
     @Override
     public Block getBorderBlock() {
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(this.getBlockPos()));
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(this.getBlockPos()), dimension);
 
         if (registryParcel.isEmpty()) {
             return ModBlocks.PLAYER_BORDER.get();
@@ -67,7 +68,8 @@ public class PlayerFoundationStoneBlockEntity extends FoundationStoneBlockEntity
         /*
          * check if parcel is within another existing parcel
          */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords(), dimension);
 
         if (registryParcel.isEmpty()) {
             // find overlaps of the parcel with buffered registry parcels.
@@ -115,7 +117,8 @@ public class PlayerFoundationStoneBlockEntity extends FoundationStoneBlockEntity
         /*
          * check if box/parcel is within another existing parcel
          */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords(), dimension);
 
         // not within another parcel
         if (registryParcel.isEmpty()) {

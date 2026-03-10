@@ -14,10 +14,10 @@ import java.util.UUID;
  * @author by Mark Gottschling on 1/28/2026
  */
 public interface Estate {
-    public static final String ID_KEY = "id";
+    String ID_KEY = "id";
+    String PREVENT_FIRE_SPREAD_KEY = "preventFireSpread";
 
     boolean isRelinquished();
-
     void setRelinquished(boolean relinquished);
 
     default boolean canRelinquish() {
@@ -36,7 +36,9 @@ public interface Estate {
                 && this.getId().equals(parcel.getEstate().getId());    // the estate == parcel's estate
     }
 
-    // TODO add other type checks
+    boolean isPreventFireSpread();
+    void setPreventFireSpread(boolean preventFireSpread);
+
     default public boolean isNation() {
         return this.getParcelType() == ParcelType.NATION;
     }

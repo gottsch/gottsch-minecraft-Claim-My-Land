@@ -73,9 +73,6 @@ public class ParcelChunkIndex {
      */
     public static final int MEGA_PARCEL_CHUNK_THRESHOLD = 50;
 
-    /** Dimension key used for all index entries in v2.1 (Overworld only). */
-    private static final String DEFAULT_DIMENSION = "minecraft:overworld";
-
     // -------------------------------------------------------------------------
     // internal state
     // -------------------------------------------------------------------------
@@ -106,7 +103,7 @@ public class ParcelChunkIndex {
      * Parcels whose XZ footprint exceeds MEGA_PARCEL_CHUNK_THRESHOLD total
      * chunks go into MEGA_PARCELS; all others are indexed per-chunk.
      */
-    public static void index(Parcel parcel) {
+    public static void index(Parcel parcel, String dimension) {
         Objects.requireNonNull(parcel, "parcel must not be null");
 
         ICoords min = parcel.getMinCoords();
@@ -126,7 +123,7 @@ public class ParcelChunkIndex {
             UUID id = parcel.getId();
             for (int cx = minCX; cx <= maxCX; cx++) {
                 for (int cz = minCZ; cz <= maxCZ; cz++) {
-                    ChunkKey key = new ChunkKey(DEFAULT_DIMENSION, cx, cz);
+                    ChunkKey key = new ChunkKey(dimension, cx, cz);
                     CHUNK_TO_PARCEL_IDS
                             .computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet())
                             .add(id);
@@ -139,7 +136,7 @@ public class ParcelChunkIndex {
      * Removes parcel from whichever index structure it was added to.
      * Called from ParcelRegistry during parcel demolition / unregistration.
      */
-    public static void unindex(Parcel parcel) {
+    public static void unindex(Parcel parcel, String dimension) {
         Objects.requireNonNull(parcel, "parcel must not be null");
 
         // Fast path: try mega-parcel set first (O(1) average via equals/hashCode)
@@ -158,7 +155,7 @@ public class ParcelChunkIndex {
         UUID id = parcel.getId();
         for (int cx = minCX; cx <= maxCX; cx++) {
             for (int cz = minCZ; cz <= maxCZ; cz++) {
-                ChunkKey key = new ChunkKey(DEFAULT_DIMENSION, cx, cz);
+                ChunkKey key = new ChunkKey(dimension, cx, cz);
                 Set<UUID> ids = CHUNK_TO_PARCEL_IDS.get(key);
                 if (ids != null) {
                     ids.remove(id);
@@ -183,8 +180,8 @@ public class ParcelChunkIndex {
      * event handler. It performs one hash lookup against the chunk map, then —
      * only on a miss — does a linear scan over the (tiny) mega-parcel set.
      */
-    public static boolean isChunkClaimed(int blockX, int blockZ) {
-        ChunkKey key = new ChunkKey(DEFAULT_DIMENSION, blockX >> 4, blockZ >> 4);
+    public static boolean isChunkClaimed(int blockX, int blockZ, String dimension) {
+        ChunkKey key = new ChunkKey(dimension, blockX >> 4, blockZ >> 4);
         Set<UUID> ids = CHUNK_TO_PARCEL_IDS.get(key);
         if (ids != null && !ids.isEmpty()) {
             return true;
@@ -197,10 +194,10 @@ public class ParcelChunkIndex {
      * chunk containing block (blockX, blockZ), including any mega-parcels that
      * cover this block. Intended for debugging; not for the hot path.
      */
-    public static Set<UUID> getParcelIdsInChunk(int blockX, int blockZ) {
+    public static Set<UUID> getParcelIdsInChunk(int blockX, int blockZ, String dimension) {
         Set<UUID> result = new HashSet<>();
 
-        ChunkKey key = new ChunkKey(DEFAULT_DIMENSION, blockX >> 4, blockZ >> 4);
+        ChunkKey key = new ChunkKey(dimension, blockX >> 4, blockZ >> 4);
         Set<UUID> ids = CHUNK_TO_PARCEL_IDS.get(key);
         if (ids != null) {
             result.addAll(ids);
