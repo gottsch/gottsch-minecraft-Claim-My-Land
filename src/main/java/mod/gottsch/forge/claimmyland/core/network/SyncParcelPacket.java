@@ -25,6 +25,7 @@ import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
+import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.network.NetworkEvent;
@@ -54,17 +55,24 @@ public class SyncParcelPacket {
     private final int minX, minY, minZ;
     private final int maxX, maxY, maxZ;
     private final String dimension;
+    private final boolean isBorderVisible;
+    private final int borderStoneY;
+    private final boolean isPreview;
 
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
+
+    public SyncParcelPacket(Parcel parcel, String resolvedOwnerName) {
+        this(parcel, resolvedOwnerName, 0);
+    }
 
     /**
      * server-side constructor — build from a live Parcel and pre-resolved owner name.
      * owner name should be resolved via PlayerRegistry.getPlayerName() before
      * constructing this packet, as done in CMLNetwork.
      */
-    public SyncParcelPacket(Parcel parcel, String resolvedOwnerName) {
+    public SyncParcelPacket(Parcel parcel, String resolvedOwnerName, int borderStoneY) {
         this.parcelId    = parcel.getId();
         this.estateId    = parcel.getEstate().getId();
         this.parcelName  = parcel.getName() != null ? parcel.getName() : "";
@@ -80,6 +88,9 @@ public class SyncParcelPacket {
         this.maxY = parcel.getMaxCoords().getY();
         this.maxZ = parcel.getMaxCoords().getZ();
         this.dimension   = parcel.getDimension();
+        this.borderStoneY = borderStoneY;
+        this.isPreview = false;
+        this.isBorderVisible = true;
     }
 
     /**
@@ -91,7 +102,10 @@ public class SyncParcelPacket {
             UUID ownerId, ParcelType parcelType, boolean relinquished,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
-            String dimension) {
+            String dimension,
+            boolean isBorderVisible,
+            int borderStoneY,
+            boolean isPreview) {
         this.parcelId    = parcelId;
         this.estateId    = estateId;
         this.parcelName  = parcelName;
@@ -103,6 +117,9 @@ public class SyncParcelPacket {
         this.minX = minX; this.minY = minY; this.minZ = minZ;
         this.maxX = maxX; this.maxY = maxY; this.maxZ = maxZ;
         this.dimension   = dimension;
+        this.isBorderVisible = isBorderVisible;
+        this.borderStoneY = borderStoneY;
+        this.isPreview = isPreview;
     }
 
     // -------------------------------------------------------------------------
@@ -121,11 +138,14 @@ public class SyncParcelPacket {
         buf.writeInt(packet.minX); buf.writeInt(packet.minY); buf.writeInt(packet.minZ);
         buf.writeInt(packet.maxX); buf.writeInt(packet.maxY); buf.writeInt(packet.maxZ);
         buf.writeUtf(packet.dimension);
+        buf.writeBoolean(packet.isBorderVisible);
+        buf.writeInt(packet.borderStoneY);
+        buf.writeBoolean(packet.isPreview);
     }
 
     public static SyncParcelPacket decode(FriendlyByteBuf buf) {
         UUID parcelId    = buf.readUUID();
-        UUID estateId    = buf.readUUID();
+        UUID estateId = buf.readUUID();
         String parcelName  = buf.readUtf();
         String estateName  = buf.readUtf();
         String ownerName   = buf.readUtf();
@@ -135,6 +155,9 @@ public class SyncParcelPacket {
         int minX = buf.readInt(), minY = buf.readInt(), minZ = buf.readInt();
         int maxX = buf.readInt(), maxY = buf.readInt(), maxZ = buf.readInt();
         String dimension   = buf.readUtf();
+        boolean isBorderVisible = buf.readBoolean();
+        int borderStoneY = buf.readInt();
+        boolean isPreview = buf.readBoolean();
 
         return new SyncParcelPacket(
                 parcelId, estateId,
@@ -142,7 +165,10 @@ public class SyncParcelPacket {
                 ownerId, type, relinquished,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
-                dimension
+                dimension,
+                isBorderVisible,
+                borderStoneY,
+                isPreview
         );
     }
 
@@ -163,7 +189,9 @@ public class SyncParcelPacket {
                     packet.relinquished,
                     packet.minX, packet.minY, packet.minZ,
                     packet.maxX, packet.maxY, packet.maxZ,
-                    packet.dimension
+                    packet.dimension,
+                    packet.isBorderVisible, 0, packet.borderStoneY,
+                    packet.isPreview
             );
             ClientParcelRegistry.register(clientParcel);
 
@@ -188,7 +216,34 @@ public class SyncParcelPacket {
                 ownerId, parcelType, relinquished,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
-                dimension
+                dimension,
+                isBorderVisible,
+                0, borderStoneY, isPreview
+        );
+    }
+
+    /**
+     * builds a preview packet from raw block entity state.
+     * No server-side Parcel object is required — called before the parcel is claimed.
+     */
+    public static SyncParcelPacket forPreview(UUID parcelId, UUID estateId, UUID ownerId, String ownerName,
+                                              ParcelType parcelType, Box box,
+                                              int stoneY, String dimension) {
+        return new SyncParcelPacket(
+                parcelId,
+                estateId,
+                "",             // parcelName
+                "",             // estateName
+                ownerName != null ? ownerName : "",
+                ownerId,
+                parcelType != null ? parcelType : ParcelType.PLAYER,
+                false,          // relinquished
+                box.getMinCoords().getX(), box.getMinCoords().getY(), box.getMinCoords().getZ(),
+                box.getMaxCoords().getX(), box.getMaxCoords().getY(), box.getMaxCoords().getZ(),
+                dimension,
+                true,           // isBorderVisible
+                stoneY,
+                true            // isPreview
         );
     }
 }

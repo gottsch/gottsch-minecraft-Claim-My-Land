@@ -113,8 +113,12 @@ public class Config extends AbstractConfig {
 
 	public static class ClientConfig {
 		public Gui gui;
+		public Rendering rendering;
+
 		public ClientConfig(ForgeConfigSpec.Builder builder) {
+
 			gui = new Gui(builder);
+			rendering = new Rendering(builder);
 		}
 	}
 
@@ -221,6 +225,9 @@ public class Config extends AbstractConfig {
 		public ForgeConfigSpec.LongValue ticksPerBorderStoneRefresh;
 		public ForgeConfigSpec.IntValue borderStoneLifeSpan;
 		public ForgeConfigSpec.IntValue foundationStoneLifeSpan;
+		public ForgeConfigSpec.IntValue largeParcelsThreshold;
+		public ForgeConfigSpec.IntValue nationBorderHeight;
+		// default 20, min 1, max 256
 
 		Borders(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, " General properties for Protect It  mod.", CATEGORY_DIV).push(GENERAL_CATEGORY);
@@ -237,6 +244,16 @@ public class Config extends AbstractConfig {
 					.comment(" The life span of a foundation stone in ticks.")
 					.defineInRange("foundationStoneLifeSpan", 6000, 1200, Integer.MAX_VALUE);
 
+			largeParcelsThreshold = builder
+					.comment(" Parcel area threshold (in blocks) above which physical border/buffer blocks",
+							" are replaced by the visual ParcelBorderRenderer.",
+							" Area is calculated as (maxX - minX) * (maxZ - minZ).",
+							" Default: 4096 (a 64x64 parcel).")
+					.defineInRange("largeParcelsThreshold", 4096, 1, Integer.MAX_VALUE);
+
+			nationBorderHeight = builder
+					.comment(" Height in blocks of the visual border and buffer wall for Nation parcels.")
+					.defineInRange("nationBorderHeight", 20, 1, 256);
 
 			builder.pop();
 		}
@@ -405,4 +422,21 @@ public class Config extends AbstractConfig {
 		}
 	}
 
+	public static class Rendering {
+		public IntValue borderRenderRadius;
+
+		Rendering(final ForgeConfigSpec.Builder builder) {
+			builder.comment(CATEGORY_DIV,
+					" Rendering properties for Claim My Land mod.",
+					CATEGORY_DIV).push("rendering");
+
+			borderRenderRadius = builder
+					.comment(" Maximum radius (in blocks) within which parcel borders are rendered.",
+							" Parcels whose buffer boundary is entirely outside this radius are skipped.",
+							" Default: 256.")
+					.defineInRange("borderRenderRadius", 256, 64, 2048);
+
+			builder.pop();
+		}
+	}
 }

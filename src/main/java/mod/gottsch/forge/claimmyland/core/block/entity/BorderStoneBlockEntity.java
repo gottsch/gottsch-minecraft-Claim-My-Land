@@ -23,6 +23,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.*;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
@@ -37,6 +38,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -50,7 +52,9 @@ import org.apache.commons.lang3.StringUtils;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mark Gottschling on Sep 18, 2024
@@ -66,6 +70,8 @@ public class BorderStoneBlockEntity extends BlockEntity {
     private static final int FIVE_SECONDS = 5 * TICKS_PER_SECOND;
     private static final int ONE_MINUTE = 60 * TICKS_PER_SECOND;
     private static final int FIVE_MINUTES = 5 * ONE_MINUTE;
+
+    public static final Set<BorderStoneBlockEntity> ACTIVE_TIER2 = ConcurrentHashMap.newKeySet();
 
     // TODO rename RELATIVE_BOX
     private static final String SIZE = "size";
@@ -103,25 +109,57 @@ public class BorderStoneBlockEntity extends BlockEntity {
      *
      */
     public void tickServer() {
+//        ClaimMyLand.LOGGER.debug("BorderStone tick: gameTime={} expireTime={} parcelId={}",
+//                getLevel().getGameTime(), getExpireTime(), getParcelId());
         // refresh the borders
         if (getLevel().getGameTime() % Config.SERVER.borders.ticksPerBorderStoneRefresh.get() == 0) {
-            // determine if a parcel still exits at this location
-            if (getParcelId() != null && ParcelRegistry.findByParcelId(getParcelId()).isPresent()) {
-                placeParcelBorder();
-                placeParcelHorizontalArea();
-            } else {
-                setParcelId(null);
-                setExpireTime(0L);
+            if (getParcelId() != null) {
+                Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+                if (parcel.isPresent()) {
+                    // only refresh physical blocks for Tier 1 parcels
+                    if (!isTier2(parcel.get())) {
+                        placeParcelBorder();
+                        placeParcelHorizontalArea();
+                    }
+                } else {
+                    setParcelId(null);
+                    setExpireTime(0L);
+                }
             }
         }
 
         if (getLevel().getGameTime() > getExpireTime()) {
-            // remove border
-            removeParcelBorder(getLevel(), getCoords());
-            removeHorizontalArea(getLevel(), getCoords());
+            if (getLevel() instanceof ServerLevel serverLevel) {
+                Optional<Parcel> parcel = getParcelId() != null
+                        ? ParcelRegistry.findByParcelId(getParcelId())
+                        : Optional.empty();
+
+                if (parcel.map(p -> isTier2(p)).orElse(false)) {
+                    // Tier 2 — visual only; send hide packet, skip physical removal
+                    parcel.ifPresent(p ->
+                            CMLNetwork.syncBorderVisibilityToTrackingPlayers(serverLevel, p, false, 0, getBlockPos().getY())
+                    );
+                    ACTIVE_TIER2.remove(this);
+                } else {
+                    // Tier 1 — remove physical border blocks
+                    removeParcelBorder(getLevel(), getCoords());
+                    removeHorizontalArea(getLevel(), getCoords());
+                }
+            } else {
+                removeParcelBorder(getLevel(), getCoords());
+                removeHorizontalArea(getLevel(), getCoords());
+            }
+
             // self destruct
             selfDestruct();
         }
+    }
+
+    public boolean isTier2(Parcel parcel) {
+        Box box = parcel.getBox(); // verify method name
+        int area = (box.getMaxCoords().getX() - box.getMinCoords().getX())
+                * (box.getMaxCoords().getZ() - box.getMinCoords().getZ());
+        return area > Config.SERVER.borders.largeParcelsThreshold.get();
     }
 
     /**
@@ -271,8 +309,27 @@ public class BorderStoneBlockEntity extends BlockEntity {
             coords = new Coords(this.getBlockPos());
             bufferRadius = getBufferSize(getParcelType());
         }
+
+        // --- v2.2 tier check ---
+        Box absoluteBox = getAbsoluteBox(coords);
+        int area = (absoluteBox.getMaxCoords().getX() - absoluteBox.getMinCoords().getX())
+                * (absoluteBox.getMaxCoords().getZ() - absoluteBox.getMinCoords().getZ());
+        boolean isTier2 = area > Config.SERVER.borders.largeParcelsThreshold.get();
+
+        if (isTier2) {
+            // tier 2 — visual renderer handles display; send visibility packet only
+            if (level instanceof ServerLevel serverLevel && getParcelId() != null) {
+                parcel.ifPresent(p ->
+                        CMLNetwork.syncBorderVisibilityToTrackingPlayers(serverLevel, p, true, 0, getBlockPos().getY())
+                );
+            }
+            ACTIVE_TIER2.add(this);
+            return;
+        }
+        // --- end tier check ---
+
 //        ClaimMyLand.LOGGER.debug("using coords for outlines -> {}", coords);
-        // add the border
+        // add the tier 1 border (physical blocks)
         Box box = getBorderDisplayBox(coords);
         BlockState borderState = getBorderBlockState(box);
         placeParcelBorder(box, borderState);
@@ -285,12 +342,12 @@ public class BorderStoneBlockEntity extends BlockEntity {
         }
     }
 
-    public void placeParcelBorder(Box box, BlockState state) {
+    protected void placeParcelBorder(Box box, BlockState state) {
         // TODO AIR should be a tag and can replace air, water, and BorderBlocks
         addParcelBorder(box, Blocks.AIR, state);
     }
 
-    public void addParcelBorder(Box box, Block removeBlock, BlockState intersectsBlockState) {
+    protected void addParcelBorder(Box box, Block removeBlock, BlockState intersectsBlockState) {
         addParcelBorder(getLevel(), box, removeBlock, intersectsBlockState);
     }
 
@@ -305,7 +362,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param removeBlock
      * @param intersectsBlockState
      */
-    public static void addParcelBorder(Level level, Box box, Block removeBlock, BlockState intersectsBlockState) {
+    protected static void addParcelBorder(Level level, Box box, Block removeBlock, BlockState intersectsBlockState) {
         /* NOTE the for loops.
          * for x is "<=" because the Box was reduced by 1 during creation to ensure
          * it is the right size when including the origin.
@@ -498,10 +555,18 @@ public class BorderStoneBlockEntity extends BlockEntity {
         ICoords coords = parcel.map(Parcel::getCoords).orElse(Coords.of(this.getBlockPos()));
 
         // add the border
-        Box box = getAbsoluteBox(coords);
+        Box absoluteBox = getAbsoluteBox(coords);
+
+        // Tier 2 — visual rendering handles the horizontal plane; no physical block needed
+        int area = (absoluteBox.getMaxCoords().getX() - absoluteBox.getMinCoords().getX())
+                * (absoluteBox.getMaxCoords().getZ() - absoluteBox.getMinCoords().getZ());
+        if (area > Config.SERVER.borders.largeParcelsThreshold.get()) {
+            return;
+        }
+
         Block horizontalAreaBlock = getHorizontalAreaBlock();
-        BlockState borderState = getHorizontalAreaBlockState(getBorderBlockState(box).getValue(BorderBlock.INTERSECTS));
-        placeParcelHorizontalArea(box, borderState);
+        BlockState borderState = getHorizontalAreaBlockState(getBorderBlockState(absoluteBox).getValue(BorderBlock.INTERSECTS));
+        placeParcelHorizontalArea(absoluteBox, borderState);
     }
 
     public void placeParcelHorizontalArea(Box box, BlockState state) {
@@ -609,6 +674,21 @@ public class BorderStoneBlockEntity extends BlockEntity {
         }
         if (tag.contains(EXPIRE_TIME)) {
             setExpireTime(tag.getLong(EXPIRE_TIME));
+        }
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        ClaimMyLand.LOGGER.debug("BorderStoneBlockEntity.onLoad: parcelId={} level={}",
+                getParcelId(), level != null ? level.getClass().getSimpleName() : "null");
+        if (level instanceof ServerLevel && getParcelId() != null) {
+            ParcelRegistry.findByParcelId(getParcelId()).ifPresent(parcel -> {
+                if (isTier2(parcel)) {
+                    ACTIVE_TIER2.add(this);
+                    CMLNetwork.queueBorderVisible(parcel.getId());
+                }
+            });
         }
     }
 

@@ -20,9 +20,12 @@
 package mod.gottsch.forge.claimmyland.core.network;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
+import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -33,7 +36,9 @@ import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * central network channel for Claim My Land.
@@ -42,14 +47,15 @@ import java.util.UUID;
  * @author Mark Gottschling on 3/3/2026
  */
 public class CMLNetwork {
+    private static final Set<UUID> PENDING_BORDER_VISIBLE = ConcurrentHashMap.newKeySet();
 
     private static final String PROTOCOL_VERSION = "1";
 
     public static SimpleChannel CHANNEL;
 
     /**
-     * Registers the network channel and all packets.
-     * Call from CommonSetup.init() inside event.enqueueWork().
+     * registers the network channel and all packets.
+     * call from CommonSetup.init() inside event.enqueueWork().
      */
     public static void register() {
         CHANNEL = NetworkRegistry.newSimpleChannel(
@@ -102,6 +108,16 @@ public class CMLNetwork {
                 java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT)
         );
 
+        // Border visibility — sent when a Border/Foundation Stone state changes.
+        CHANNEL.registerMessage(
+                id++,
+                BorderVisibilityPacket.class,
+                BorderVisibilityPacket::encode,
+                BorderVisibilityPacket::decode,
+                BorderVisibilityPacket::handle,
+                java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        );
+
         ClaimMyLand.LOGGER.debug("CMLNetwork registered {} packet(s)", id);
     }
 
@@ -110,8 +126,8 @@ public class CMLNetwork {
     // -------------------------------------------------------------------------
 
     /**
-     * Sends a cache sync packet to a single player.
-     * Use after a BST hit in resolveParcelCached(), or on player login.
+     * sends a cache sync packet to a single player.
+     * use after a BST hit in resolveParcelCached(), or on player login.
      *
      * @param player the target player
      * @param parcel the parcel the player is now inside, or null for wilderness
@@ -141,12 +157,17 @@ public class CMLNetwork {
 
     /**
      * send a single parcel sync directly to one player.
-     * Used when the executing player would be excluded by TRACKING_CHUNK.
+     * used when the executing player would be excluded by TRACKING_CHUNK.
      */
     public static void syncParcelToPlayer(ServerLevel level, ServerPlayer player, Parcel parcel) {
         String ownerName = resolveOwnerName(level, parcel.getEstate().getOwnerId());
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncParcelPacket(parcel, ownerName));
     }
+    public static void syncParcelToPlayer(ServerLevel level, ServerPlayer player, Parcel parcel, int borderStoneY) {
+        String ownerName = resolveOwnerName(level, parcel.getEstate().getOwnerId());
+        CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncParcelPacket(parcel, ownerName, borderStoneY));
+    }
+
 
     /** send to all players tracking the chunk, resolving owner name internally. */
     public static void syncParcelToTrackingPlayers(ServerLevel level, Parcel parcel) {
@@ -166,9 +187,26 @@ public class CMLNetwork {
         );
     }
 
+    public static void syncParcelToTrackingPlayers(ServerLevel level, Parcel parcel, int borderStoneY) {
+        syncParcelToTrackingPlayers(level, parcel,
+                resolveOwnerName(level, parcel.getEstate().getOwnerId()), borderStoneY);
+    }
+
+    public static void syncParcelToTrackingPlayers(ServerLevel level, Parcel parcel, String ownerName, int borderStoneY) {
+        SyncParcelPacket packet = new SyncParcelPacket(parcel, ownerName, borderStoneY);
+        CHANNEL.send(
+                PacketDistributor.TRACKING_CHUNK.with(() ->
+                        level.getChunkAt(new BlockPos(
+                                parcel.getMinCoords().getX(),
+                                parcel.getMinCoords().getY(),
+                                parcel.getMinCoords().getZ()))),
+                packet
+        );
+    }
+
     /**
      * sends a remove notification to all players tracking the chunk the parcel was in.
-     * Call from ParcelRegistry.unregisterParcel().
+     * call from ParcelRegistry.unregisterParcel().
      */
     public static void removeParcelFromTracking(ServerLevel level, Parcel parcel) {
         CHANNEL.send(
@@ -183,25 +221,81 @@ public class CMLNetwork {
     }
 
     /**
-     * Sends all parcels to a player on login.
-     * Call from PlayerEvent.PlayerLoggedInEvent in ModEvents.
+     * Sends a RemoveParcelPacket to all players tracking the chunk at pos.
+     * Used when no Parcel object is available (e.g. FoundationStone TTL expiry).
+     */
+    public static void removeParcelFromTracking(ServerLevel level, UUID parcelId, BlockPos pos) {
+        CHANNEL.send(
+                PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)),
+                new RemoveParcelPacket(parcelId)
+        );
+    }
+
+    /**
+     * sends a border visibility update to all players tracking the chunk.
+     * call from the Border/Foundation Stone BlockEntity tick on state change.
+     *
+     * @param level       the server level
+     * @param parcel      the parcel whose visibility state changed
+     * @param visible     whether the border should be rendered
+     * @param conflictState 0 = NONE, 1 = CONFLICT
+     */
+    public static void syncBorderVisibilityToTrackingPlayers(ServerLevel level, Parcel parcel,
+                                                             boolean visible, int conflictState,
+                                                             int borderStoneY) {
+        CHANNEL.send(
+                PacketDistributor.TRACKING_CHUNK.with(() ->
+                        level.getChunkAt(new BlockPos(
+                                parcel.getMinCoords().getX(),
+                                parcel.getMinCoords().getY(),
+                                parcel.getMinCoords().getZ()))),
+                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY)
+        );
+    }
+
+    /**
+     * sends all parcels to a player on login.
+     * call from PlayerEvent.PlayerLoggedInEvent in ModEvents.
      */
     public static void syncAllParcelsToPlayer(ServerPlayer player) {
         List<SyncParcelPacket> packets = ParcelRegistry.getParcels().stream()
                 .map(parcel -> new SyncParcelPacket(parcel,
                         resolveOwnerName(player.serverLevel(), parcel.getEstate().getOwnerId())))
                 .toList();
-//        CHANNEL.sendTo(
-//                new SyncAllParcelsPacket(packets),
-//                player.connection.connection,
-//                NetworkDirection.PLAY_TO_CLIENT
-//        );
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
                 new SyncAllParcelsPacket(packets));
 
         ClaimMyLand.LOGGER.debug("CMLNetwork: synced {} parcel(s) to player {}",
                 packets.size(), player.getScoreboardName());
+
+        // sync border visibility for all active Tier 2 border stones
+        for (BorderStoneBlockEntity stone : BorderStoneBlockEntity.ACTIVE_TIER2) {
+            if (stone.getParcelId() == null || stone.getLevel() == null) continue;
+            ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel ->
+                    CHANNEL.send(
+                            PacketDistributor.PLAYER.with(() -> player),
+                            new BorderVisibilityPacket(
+                                    parcel.getId(), true, 0, stone.getBlockPos().getY()))
+            );
+        }
+    }
+
+    public static void syncPreviewParcelToTrackingPlayers(ServerLevel level, UUID parcelId,
+                                                          UUID estateId, UUID ownerId,
+                                                          ParcelType parcelType,
+                                                          Box box, int stoneY, String dimension) {
+        String ownerName = resolveOwnerName(level, ownerId);
+        SyncParcelPacket packet = SyncParcelPacket.forPreview(
+                parcelId, estateId, ownerId, ownerName, parcelType, box, stoneY, dimension);
+        CHANNEL.send(
+                PacketDistributor.TRACKING_CHUNK.with(() ->
+                        level.getChunkAt(new BlockPos(
+                                box.getMinCoords().getX(),
+                                box.getMinCoords().getY(),
+                                box.getMinCoords().getZ()))),
+                packet
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -225,5 +319,9 @@ public class CMLNetwork {
     private static String resolveOwnerName(ServerLevel level, UUID ownerId) {
         if (ownerId == null) return "";
         return PlayerRegistry.getPlayerName(level, ownerId).orElse("");
+    }
+
+    public static void queueBorderVisible(UUID parcelId) {
+        PENDING_BORDER_VISIBLE.add(parcelId);
     }
 }

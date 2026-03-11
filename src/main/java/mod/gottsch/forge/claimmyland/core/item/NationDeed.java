@@ -108,9 +108,12 @@ public class NationDeed extends Deed {
         String dimension = blockEntity.getLevel().dimension().location().toString();
         Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos), dimension);
 
+        blockEntity.setParcelType(ParcelType.NATION.getSerializedName());
+
+        // TODO don't know what i'm trying to do here.
         // override some properties if within another parcel
         if (registryParcel.isPresent()) {
-            if (registryParcel.get().getType() == ParcelType.NATION) {
+            if (registryParcel.get().isNation()) {
                 // update block entity with properties of that of the existing citizen parcel
                 blockEntity.setParcelId(registryParcel.get().getId());
 //                blockEntity.setDeedId(registryParcel.get().getDeedId());

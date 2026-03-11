@@ -86,6 +86,7 @@
   "chat.claimmyland.estate.split.failure": "Unable to split estate.",
   "chat.claimmyland.estate.split.single_parcel.failure": "An estate with only one parcel cannot be split.",
   "chat.claimmyland.estate.split.success": "Estate has been split.",
+  "chat.claimmyland.estate.tenants": "Tenant Estates:",
   "chat.claimmyland.estate.transfer.failure": "Unable to transfer the estate.",
   "chat.claimmyland.estate.transfer.success": "The estate has been transferred.",
   "chat.claimmyland.estate.whitelist.add.failure": "Unable to add friend to the whitelist.",

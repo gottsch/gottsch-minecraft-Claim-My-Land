@@ -2,6 +2,8 @@ package mod.gottsch.forge.claimmyland;
 
 import com.google.common.reflect.TypeToken;
 import mod.gottsch.forge.claimmyland.client.hud.ParcelHud;
+import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
+import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRendererSetup;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.ModBlockEntities;
 import mod.gottsch.forge.claimmyland.core.config.Config;
@@ -9,7 +11,9 @@ import mod.gottsch.forge.claimmyland.core.item.ModItems;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.RollingJsonSaver;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.setup.ClientSetup;
 import mod.gottsch.forge.claimmyland.core.setup.CommonSetup;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -17,6 +21,7 @@ import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -54,7 +59,7 @@ public class ClaimMyLand {
 
         // register 'ModSetup::init' to be called at mod setup time (server and client)
         modEventBus.addListener(CommonSetup::init);
-        MinecraftForge.EVENT_BUS.register(ParcelHud.class);  // static subscriber — Class, not new instance
+        modEventBus.addListener(ClientSetup::init);
 
 //        File saveDir = new File("world/data/claimmyland"); // TODO config option
 //        Type listType = new TypeToken<List<Parcel>>(){}.getType();
@@ -77,6 +82,11 @@ public class ClaimMyLand {
 
         // register FORGE bus events separately
         MinecraftForge.EVENT_BUS.register(new ForgeEventHandler());
+
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            modEventBus.register(ParcelBorderRendererSetup.class);
+        }
+
     }
 
     // In ClaimMyLand.java ForgeEventHandler — add a new handler:

@@ -73,6 +73,7 @@ public class CacheSyncPacket {
     private final int minX, minY, minZ;
     private final int maxX, maxY, maxZ;
     private final String dimension;
+    private final int borderStoneY;
 
     // -------------------------------------------------------------------------
     // Constructors
@@ -94,6 +95,7 @@ public class CacheSyncPacket {
             this.minX = this.minY = this.minZ = 0;
             this.maxX = this.maxY = this.maxZ = 0;
             this.dimension = WILDERNESS;
+            this.borderStoneY = 0;
         } else {
             this.parcelId   = parcel.getId();
             this.estateId   = parcel.getEstate().getId();
@@ -113,6 +115,7 @@ public class CacheSyncPacket {
             this.maxY = parcel.getMaxCoords().getY();
             this.maxZ = parcel.getMaxCoords().getZ();
             this.dimension = parcel.getDimension();
+            this.borderStoneY = parcel.getCoords().getY();
         }
     }
 
@@ -125,7 +128,8 @@ public class CacheSyncPacket {
             UUID ownerId, ParcelType parcelType, boolean relinquished,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
-            String dimension) {
+            String dimension,
+            int borderStoneY) {
         this.parcelId   = parcelId;
         this.estateId   = estateId;
         this.parcelName = parcelName;
@@ -137,6 +141,7 @@ public class CacheSyncPacket {
         this.minX = minX; this.minY = minY; this.minZ = minZ;
         this.maxX = maxX; this.maxY = maxY; this.maxZ = maxZ;
         this.dimension  = dimension;
+        this.borderStoneY = borderStoneY;
     }
 
     // -------------------------------------------------------------------------
@@ -160,6 +165,7 @@ public class CacheSyncPacket {
             buf.writeInt(packet.minX); buf.writeInt(packet.minY); buf.writeInt(packet.minZ);
             buf.writeInt(packet.maxX); buf.writeInt(packet.maxY); buf.writeInt(packet.maxZ);
             buf.writeUtf(packet.dimension);
+            buf.writeInt(packet.borderStoneY);
         }
         // No else — wilderness is fully represented by hasParcel = false
     }
@@ -182,6 +188,7 @@ public class CacheSyncPacket {
         int minX = buf.readInt(), minY = buf.readInt(), minZ = buf.readInt();
         int maxX = buf.readInt(), maxY = buf.readInt(), maxZ = buf.readInt();
         String dimension   = buf.readUtf();
+        int borderStoneY = buf.readInt();
 
         return new CacheSyncPacket(
                 parcelId, estateId,
@@ -189,7 +196,8 @@ public class CacheSyncPacket {
                 ownerId, type, relinquished,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
-                dimension
+                dimension,
+                borderStoneY
         );
     }
 
@@ -216,8 +224,18 @@ public class CacheSyncPacket {
                         packet.maxX, packet.maxY, packet.maxZ,
                         packet.dimension
                 );
-                // Also ensure the full registry knows about this parcel.
-                // The player is inside it, so it must be registered for HUD queries.
+                // also ensure the full registry knows about this parcel.
+                // the player is inside it, so it must be registered for HUD queries.
+
+                // look up existing entry to preserve isBorderVisible
+                ClientParcel existing = ClientParcelRegistry.findById(packet.parcelId).orElse(null);
+                boolean borderVisible = existing != null && existing.isBorderVisible();
+                int conflictState = existing != null ? existing.conflictState() : 0;
+                int borderStoneY = existing != null && existing.borderStoneY() != 0
+                        ? existing.borderStoneY()
+                        : packet.borderStoneY;
+
+
                 ClientParcel clientParcel = new ClientParcel(
                         packet.parcelId,
                         packet.estateId,
@@ -229,7 +247,9 @@ public class CacheSyncPacket {
                         packet.relinquished,
                         packet.minX, packet.minY, packet.minZ,
                         packet.maxX, packet.maxY, packet.maxZ,
-                        packet.dimension
+                        packet.dimension,
+                borderVisible, conflictState, borderStoneY,
+                        false
                 );
                 ClientParcelRegistry.register(clientParcel);
 

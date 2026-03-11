@@ -19,10 +19,12 @@
  */
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
@@ -65,6 +67,10 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         if (getLevel().getGameTime() > getExpireTime()) {
             // remove border
             removeParcelBorder(getLevel(), getCoords());
+            // clean up preview ClientParcel on all tracking clients
+            if (getLevel() instanceof ServerLevel serverLevel && getParcelId() != null) {
+                CMLNetwork.removeParcelFromTracking(serverLevel, getParcelId(), getBlockPos());
+            }
             // self destruct
             selfDestruct();
         }

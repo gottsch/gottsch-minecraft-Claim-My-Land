@@ -307,6 +307,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.entity_spawn.whitelist"), "Entity Spawn Whitelist: ");
         add(LangUtil.chat("estate.entity_spawn_tag.whitelist"), "Entity Spawn Tag Whitelist: ");
 
+        add(LangUtil.chat("estate.tenants"), "Tenant Estates:");
         /*
          *  Util.tooltips
          */

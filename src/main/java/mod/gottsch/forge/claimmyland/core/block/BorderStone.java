@@ -22,13 +22,14 @@ package mod.gottsch.forge.claimmyland.core.block;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.gottschcore.block.FacingBlock;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -44,7 +45,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.block.state.properties.Property;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -153,16 +153,32 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
     }
 
     @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState state2, boolean b) {
-        if (!level.isClientSide()) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean b) {
+        if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
+            // guard against server shutdown
+            if (!serverLevel.getServer().isRunning()) return;
+
             BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
             if (blockEntity != null) {
-                // remove any borders
-                blockEntity.removeParcelBorder();
-                blockEntity.removeHorizontalArea();
+                if (blockEntity.getParcelId() != null) {
+                    Optional<Parcel> parcel = ParcelRegistry.findByParcelId(blockEntity.getParcelId());
+                    if (parcel.isPresent() && blockEntity.isTier2(parcel.get())) {
+                        // Tier 2 — send hide packet, no physical blocks to remove
+                        CMLNetwork.syncBorderVisibilityToTrackingPlayers(serverLevel, parcel.get(), false, 0, pos.getY());
+                        BorderStoneBlockEntity.ACTIVE_TIER2.remove(blockEntity);
+                    } else {
+                        // Tier 1 — remove physical border blocks
+                        blockEntity.removeParcelBorder();
+                        blockEntity.removeHorizontalArea();
+                    }
+                } else {
+                    // no parcel associated — safe to attempt physical removal
+                    blockEntity.removeParcelBorder();
+                    blockEntity.removeHorizontalArea();
+                }
             }
         }
-        super.onRemove(state, level, pos, state2, b);
+        super.onRemove(state, level, pos, newState, b);
     }
 
     /**
