@@ -1398,6 +1398,33 @@ public class ParcelRegistry {
         return intervals.size() > 1 ? findLeastSignificant(parcels) : Optional.of(parcels.get(0));
     }
 
+    /**
+     * Determines the conflict state for a proposed parcel box and its owner.
+     * Returns 1 if:
+     *   - the proposed border overlaps any existing parcel border (any owner), OR
+     *   - the proposed border overlaps another owner's buffer zone.
+     * Returns 0 if no conflict exists.
+     *
+     * @author Mark Gottschling on Mar 11, 2026
+     */
+    public static int resolveConflictState(Box proposedBox, UUID ownerId, UUID excludeParcelId) {
+        // rule 1: border-vs-border — any overlap is a conflict, excluding self
+        List<Parcel> borderOverlaps = find(proposedBox).stream()
+                .filter(p -> !p.getId().equals(excludeParcelId))
+                .toList();
+        if (!borderOverlaps.isEmpty()) {
+            return 1;
+        }
+
+        // rule 2: border-vs-buffer — conflict only if different owner, excluding self
+        List<Parcel> bufferOverlaps = findBuffer(proposedBox).stream()
+                .filter(p -> !p.getId().equals(excludeParcelId))
+                .toList();
+        boolean foreignBufferConflict = bufferOverlaps.stream()
+                .anyMatch(p -> !ownerId.equals(p.getOwnerId()));
+        return foreignBufferConflict ? 1 : 0;
+    }
+
     // expose a detached parcel list
     public static List<Parcel> getParcels() {
         return new ArrayList<>(PARCELS_BY_COORDS.values());

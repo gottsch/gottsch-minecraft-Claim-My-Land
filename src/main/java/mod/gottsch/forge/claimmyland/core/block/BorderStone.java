@@ -30,6 +30,7 @@ import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -145,8 +146,17 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
              * NOTE foundation stone is non-craftable nor in the crafting tab
              * so need to initiate the borders manually.
              */
+
+            ServerPlayer placingPlayer = null;
+            if (level instanceof ServerLevel serverLevel && blockEntity.getParcelId() != null) {
+                placingPlayer = ParcelRegistry.findByParcelId(blockEntity.getParcelId())
+                        .map(p -> serverLevel.getServer().getPlayerList()
+                                .getPlayer(p.getEstate().getOwnerId()))
+                        .orElse(null);
+            }
+
             // place border blocks
-            blockEntity.placeParcelBorder();
+            blockEntity.placeParcelBorder(placingPlayer);
             blockEntity.placeParcelHorizontalArea();
         }
         super.onPlace(state, level, pos, oldState, isMoving);
@@ -162,20 +172,45 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
             if (blockEntity != null) {
                 if (blockEntity.getParcelId() != null) {
                     Optional<Parcel> parcel = ParcelRegistry.findByParcelId(blockEntity.getParcelId());
+                    ClaimMyLand.LOGGER.debug("onRemove: parcel found={}", parcel.isPresent());
+
+//                    if (parcel.isPresent() && blockEntity.isTier2(parcel.get())) {
+//                        // Tier 2 — send hide packet, no physical blocks to remove
+//                        CMLNetwork.syncBorderVisibilityToTrackingPlayers(serverLevel, parcel.get(), false, 0, pos.getY());
+//                        BorderStoneBlockEntity.ACTIVE_TIER2.remove(blockEntity);
+//                    } else {
+//                        // Tier 1 — remove physical border blocks
+//                        blockEntity.removeParcelBorder();
+//                        blockEntity.removeHorizontalArea();
+//                    }
                     if (parcel.isPresent() && blockEntity.isTier2(parcel.get())) {
-                        // Tier 2 — send hide packet, no physical blocks to remove
+                        ClaimMyLand.LOGGER.debug("onRemove: Tier 2 committed parcel — sending hide packet");
+
                         CMLNetwork.syncBorderVisibilityToTrackingPlayers(serverLevel, parcel.get(), false, 0, pos.getY());
                         BorderStoneBlockEntity.ACTIVE_TIER2.remove(blockEntity);
+                    } else if (parcel.isEmpty()) {
+                        ClaimMyLand.LOGGER.debug("onRemove: preview parcel — sending remove packet");
+
+                        // preview parcel — not in server registry, but client may have it
+                        CMLNetwork.removePreviewParcelFromTracking(serverLevel, blockEntity.getParcelId(), pos);
                     } else {
-                        // Tier 1 — remove physical border blocks
+                        ClaimMyLand.LOGGER.debug("onRemove: Tier 1 — removing physical blocks");
+
                         blockEntity.removeParcelBorder();
                         blockEntity.removeHorizontalArea();
                     }
+
                 } else {
+                    ClaimMyLand.LOGGER.debug("onRemove: parcelId is null — removing physical blocks");
+
                     // no parcel associated — safe to attempt physical removal
                     blockEntity.removeParcelBorder();
                     blockEntity.removeHorizontalArea();
                 }
+            }
+            else {
+                ClaimMyLand.LOGGER.debug("onRemove: blockEntity is NULL at pos={}", pos);
+
             }
         }
         super.onRemove(state, level, pos, newState, b);

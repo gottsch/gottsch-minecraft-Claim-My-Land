@@ -20,6 +20,7 @@ package mod.gottsch.forge.claimmyland.client.renderer;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
@@ -84,7 +85,7 @@ public class ParcelBorderRenderer {
     // ---------------------------------------------------------------------------
     // Render loop
     // ---------------------------------------------------------------------------
-
+//    private static int debugFrameCount = 0;
     private static void render(PoseStack poseStack, Camera camera) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return;
@@ -96,8 +97,13 @@ public class ParcelBorderRenderer {
 
         RenderSystem.enableDepthTest();
         RenderSystem.lineWidth(2.0f);
-
+//        boolean debugThisFrame = (debugFrameCount++ % 200 == 0);
         for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
+            // add just inside the for loop, before the guards
+//            if (debugThisFrame) {
+//                ClaimMyLand.LOGGER.debug("ParcelBorderRenderer: parcel={}, isBorderVisible={}, isTier2={}, withinRadius={}",
+//                        parcel.parcelId(), parcel.isBorderVisible(), isTier2(parcel), isWithinRenderRadius(parcel, mc.player));
+//            }
             if (!parcel.isBorderVisible()) continue;
             if (!isTier2(parcel)) continue;
             if (!isWithinRenderRadius(parcel, player)) continue;
@@ -148,6 +154,11 @@ public class ParcelBorderRenderer {
                                               VertexConsumer consumer,
                                               ClientParcel parcel,
                                               float r, float g, float b) {
+
+        if (parcel.conflictState() == 1) {
+            r = 1.0f; g = 0.0f; b = 0.0f;
+        }
+
         float a;
         if (parcel.isPreview()) {
             float pulse = (float) (Math.sin(System.currentTimeMillis() / 500.0) * 0.5 + 0.5);

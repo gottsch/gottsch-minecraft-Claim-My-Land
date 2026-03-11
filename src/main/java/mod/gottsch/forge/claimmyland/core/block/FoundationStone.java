@@ -22,9 +22,13 @@ package mod.gottsch.forge.claimmyland.core.block;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.gottschcore.block.FacingBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
@@ -35,6 +39,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 /**
  * @author Mark Gottschling on Sep 14, 2024.
@@ -92,20 +98,57 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
      * @param b
      */
     @Override
+//    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState state2, boolean b) {
+//        if (!level.isClientSide()) {
+//            FoundationStoneBlockEntity blockEntity = (FoundationStoneBlockEntity) level.getBlockEntity(pos);
+//            if (blockEntity != null) {
+//                /*
+//                 * NOTE the stone and border will be removed, but if the stone is caused by
+//                 * onDestroyedByPlayer(), then the owning Deed will still contain the
+//                 * pos of this block. Checks must be added to the Deed to ensure that the old
+//                 * stone exists before attempting to remove it. This is because the Deed
+//                 * adds a new stone and then attempts to remove the old stone. But if the
+//                 * stones are in the same location, weird things happen.
+//                 */
+//                blockEntity.removeParcelBorder();
+//                blockEntity.removeHorizontalArea();
+//            }
+//        }
+//        super.onRemove(state, level, pos, state2, b);
+//    }
+
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState state2, boolean b) {
-        if (!level.isClientSide()) {
+        if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
+            if (!serverLevel.getServer().isRunning()) return;
+
             FoundationStoneBlockEntity blockEntity = (FoundationStoneBlockEntity) level.getBlockEntity(pos);
             if (blockEntity != null) {
-                /*
-                 * NOTE the stone and border will be removed, but if the stone is caused by
-                 * onDestroyedByPlayer(), then the owning Deed will still contain the
-                 * pos of this block. Checks must be added to the Deed to ensure that the old
-                 * stone exists before attempting to remove it. This is because the Deed
-                 * adds a new stone and then attempts to remove the old stone. But if the
-                 * stones are in the same location, weird things happen.
-                 */
-                blockEntity.removeParcelBorder();
-                blockEntity.removeHorizontalArea();
+                if (blockEntity.getParcelId() != null) {
+                    Optional<Parcel> parcel = ParcelRegistry.findByParcelId(blockEntity.getParcelId());
+                    ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: parcelId={}, parcelPresent={}, isTier2={}",
+                            blockEntity.getParcelId(),
+                            parcel.isPresent(),
+                            parcel.map(p -> blockEntity.isTier2(p)).orElse(false));
+                    if (parcel.isPresent() && blockEntity.isTier2(parcel.get())) {
+                        // Tier 2 committed parcel — send hide packet
+                        CMLNetwork.syncBorderVisibilityToTrackingPlayers(
+                                serverLevel, parcel.get(), false, 0, pos.getY());
+                        BorderStoneBlockEntity.ACTIVE_TIER2.remove(blockEntity);
+                    } else if (parcel.isEmpty()) {
+                        // preview parcel — not in server registry, remove from clients
+                        CMLNetwork.removePreviewParcelFromTracking(
+                                serverLevel, blockEntity.getParcelId(), pos);
+                    } else {
+                        // Tier 1 committed parcel — remove physical blocks
+                        blockEntity.removeParcelBorder();
+                        blockEntity.removeHorizontalArea();
+                    }
+                } else {
+                    ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: parcelId is null");
+                    // no parcel id — Tier 1 only
+                    blockEntity.removeParcelBorder();
+                    blockEntity.removeHorizontalArea();
+                }
             }
         }
         super.onRemove(state, level, pos, state2, b);

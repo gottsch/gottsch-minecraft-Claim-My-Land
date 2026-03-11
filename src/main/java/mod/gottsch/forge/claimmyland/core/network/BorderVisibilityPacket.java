@@ -17,6 +17,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.network;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
@@ -77,6 +78,8 @@ public class BorderVisibilityPacket {
     // -------------------------------------------------------------------------
 
     public static void handle(BorderVisibilityPacket packet, Supplier<NetworkEvent.Context> ctx) {
+        ClaimMyLand.LOGGER.debug("BorderVisibilityPacket.handle: parcelId={}, visible={}, conflictState={}, stoneY={}",
+                packet.parcelId, packet.isBorderVisible, packet.conflictState, packet.borderStoneY);
         ctx.get().enqueueWork(() -> {
             ClientParcelRegistry.findById(packet.parcelId).ifPresent(parcel -> {
                 ClientParcelRegistry.register(

@@ -56,6 +56,7 @@ public class SyncParcelPacket {
     private final int maxX, maxY, maxZ;
     private final String dimension;
     private final boolean isBorderVisible;
+    private final int conflictState;
     private final int borderStoneY;
     private final boolean isPreview;
 
@@ -91,6 +92,7 @@ public class SyncParcelPacket {
         this.borderStoneY = borderStoneY;
         this.isPreview = false;
         this.isBorderVisible = true;
+        this.conflictState = 0;
     }
 
     /**
@@ -104,6 +106,7 @@ public class SyncParcelPacket {
             int maxX, int maxY, int maxZ,
             String dimension,
             boolean isBorderVisible,
+            int conflictState,
             int borderStoneY,
             boolean isPreview) {
         this.parcelId    = parcelId;
@@ -118,6 +121,7 @@ public class SyncParcelPacket {
         this.maxX = maxX; this.maxY = maxY; this.maxZ = maxZ;
         this.dimension   = dimension;
         this.isBorderVisible = isBorderVisible;
+        this.conflictState = conflictState;
         this.borderStoneY = borderStoneY;
         this.isPreview = isPreview;
     }
@@ -139,6 +143,7 @@ public class SyncParcelPacket {
         buf.writeInt(packet.maxX); buf.writeInt(packet.maxY); buf.writeInt(packet.maxZ);
         buf.writeUtf(packet.dimension);
         buf.writeBoolean(packet.isBorderVisible);
+        buf.writeInt(packet.conflictState);
         buf.writeInt(packet.borderStoneY);
         buf.writeBoolean(packet.isPreview);
     }
@@ -156,6 +161,7 @@ public class SyncParcelPacket {
         int maxX = buf.readInt(), maxY = buf.readInt(), maxZ = buf.readInt();
         String dimension   = buf.readUtf();
         boolean isBorderVisible = buf.readBoolean();
+        int conflictState = buf.readInt();
         int borderStoneY = buf.readInt();
         boolean isPreview = buf.readBoolean();
 
@@ -167,6 +173,7 @@ public class SyncParcelPacket {
                 maxX, maxY, maxZ,
                 dimension,
                 isBorderVisible,
+                conflictState,
                 borderStoneY,
                 isPreview
         );
@@ -190,7 +197,7 @@ public class SyncParcelPacket {
                     packet.minX, packet.minY, packet.minZ,
                     packet.maxX, packet.maxY, packet.maxZ,
                     packet.dimension,
-                    packet.isBorderVisible, 0, packet.borderStoneY,
+                    packet.isBorderVisible, packet.conflictState, packet.borderStoneY,
                     packet.isPreview
             );
             ClientParcelRegistry.register(clientParcel);
@@ -228,7 +235,7 @@ public class SyncParcelPacket {
      */
     public static SyncParcelPacket forPreview(UUID parcelId, UUID estateId, UUID ownerId, String ownerName,
                                               ParcelType parcelType, Box box,
-                                              int stoneY, String dimension) {
+                                              int stoneY, String dimension, int conflictState) {
         return new SyncParcelPacket(
                 parcelId,
                 estateId,
@@ -242,6 +249,7 @@ public class SyncParcelPacket {
                 box.getMaxCoords().getX(), box.getMaxCoords().getY(), box.getMaxCoords().getZ(),
                 dimension,
                 true,           // isBorderVisible
+                conflictState,
                 stoneY,
                 true            // isPreview
         );

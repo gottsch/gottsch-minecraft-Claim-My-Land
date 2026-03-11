@@ -23,6 +23,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.*;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
+import mod.gottsch.forge.claimmyland.core.network.BorderVisibilityPacket;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
@@ -39,6 +40,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -46,6 +48,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraftforge.network.PacketDistributor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -55,6 +58,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static mod.gottsch.forge.claimmyland.core.network.CMLNetwork.CHANNEL;
 
 /**
  * @author Mark Gottschling on Sep 18, 2024
@@ -118,7 +123,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
                 if (parcel.isPresent()) {
                     // only refresh physical blocks for Tier 1 parcels
                     if (!isTier2(parcel.get())) {
-                        placeParcelBorder();
+                        placeParcelBorder(null);
                         placeParcelHorizontalArea();
                     }
                 } else {
@@ -290,11 +295,14 @@ public class BorderStoneBlockEntity extends BlockEntity {
     }
 
     /*
-     * border cud operations
+     * border crud operations
      */
-    public void placeParcelBorder() {
+    public void placeParcelBorder(ServerPlayer placingPlayer) {
         Level level = getLevel();
         Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+
+        ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, blockPos={}",
+                getParcelId(), parcel.isPresent(), getBlockPos());
 
         ICoords coords;
         int bufferRadius = 1;
@@ -311,17 +319,49 @@ public class BorderStoneBlockEntity extends BlockEntity {
         }
 
         // --- v2.2 tier check ---
-        Box absoluteBox = getAbsoluteBox(coords);
+        Box absoluteBox = getAbsoluteBox();
         int area = (absoluteBox.getMaxCoords().getX() - absoluteBox.getMinCoords().getX())
                 * (absoluteBox.getMaxCoords().getZ() - absoluteBox.getMinCoords().getZ());
         boolean isTier2 = area > Config.SERVER.borders.largeParcelsThreshold.get();
 
         if (isTier2) {
-            // tier 2 — visual renderer handles display; send visibility packet only
             if (level instanceof ServerLevel serverLevel && getParcelId() != null) {
-                parcel.ifPresent(p ->
-                        CMLNetwork.syncBorderVisibilityToTrackingPlayers(serverLevel, p, true, 0, getBlockPos().getY())
-                );
+                UUID ownerId = parcel.isPresent()
+                        ? parcel.get().getEstate().getOwnerId()
+                        : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
+
+                int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? parcelId : null);
+
+                ClaimMyLand.LOGGER.debug("placeParcelBorder: sending visibility packet, parcelId={}, conflictState={}, stoneY={}, player={}",
+                        getParcelId(), conflictState, getBlockPos().getY(),
+                        placingPlayer != null ? placingPlayer.getName().getString() : "null");
+
+                if (parcel.isPresent()) {
+                    if (placingPlayer != null) {
+                        CMLNetwork.syncBorderVisibilityToTrackingPlayersAndSelf(
+                                serverLevel, placingPlayer, parcel.get(), true, conflictState, getBlockPos().getY());
+                    } else {
+                        CMLNetwork.syncBorderVisibilityToTrackingPlayers(
+                                serverLevel, parcel.get(), true, conflictState, getBlockPos().getY());
+                    }
+                } else if (placingPlayer != null) {
+                    // parcel not yet registered (phase 1) — send directly to placing player only
+//                    CHANNEL.send(
+//                            PacketDistributor.PLAYER.with(() -> placingPlayer),
+//                            new BorderVisibilityPacket(getParcelId(), true, conflictState, getBlockPos().getY()));
+                    // phase 1 — register preview parcel on client first, then border is visible immediately
+                    String dimension = level.dimension().location().toString();
+                    CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
+                            serverLevel, placingPlayer,
+                            getParcelId(), getParcelId(),
+                            placingPlayer.getUUID(), ParcelType.fromString(getParcelType()),
+                            absoluteBox, getBlockPos().getY(),
+                            dimension, conflictState);
+                }
+            }
+            else {
+                ClaimMyLand.LOGGER.debug("placeParcelBorder: Tier 2 but skipping packet — level={}, parcelId={}",
+                        level.getClass().getSimpleName(), getParcelId());
             }
             ACTIVE_TIER2.add(this);
             return;
@@ -334,10 +374,19 @@ public class BorderStoneBlockEntity extends BlockEntity {
         BlockState borderState = getBorderBlockState(box);
         placeParcelBorder(box, borderState);
 
-        // inflate the box
+        // place buffer
+        placeBufferBorder(box, bufferRadius);
+    }
+
+    /**
+     * Places the physical buffer border blocks around the given border box.
+     * Subclasses may override to suppress buffer placement.
+     * @author Mark Gottschling on Mar 11, 2026
+     */
+    protected void placeBufferBorder(Box borderBox, int bufferRadius) {
         if (bufferRadius > 0) {
-            Box bufferedBox = ModUtil.inflate(box, bufferRadius);
-            BlockState bufferState = getBufferBlockState(box, bufferedBox);
+            Box bufferedBox = ModUtil.inflate(borderBox, bufferRadius);
+            BlockState bufferState = getBufferBlockState(borderBox, bufferedBox);
             placeParcelBorder(bufferedBox, bufferState);
         }
     }

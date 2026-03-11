@@ -132,15 +132,24 @@ public class ZonePlacementBlockEntity extends BorderStoneBlockEntity {
         return Blocks.AIR.defaultBlockState();
     }
 
+//    /**
+//     * like that of BorderStoneBlockEntity, but doesn't add the buffer border
+//     */
+//    @Override
+//    public void placeParcelBorder() {
+//        // add the border
+//        Box box = new Box(getCoords1(), getCoords2());
+//        BlockState borderState = getBorderBlockState(box);
+//        placeParcelBorder(box, borderState);
+//    }
+
     /**
-     * like that of BorderStoneBlockEntity, but doesn't add the buffer border
+     * Zone parcels have no buffer zone — suppress buffer block placement.
+     * @author Mark Gottschling on Mar 11, 2026
      */
     @Override
-    public void placeParcelBorder() {
-        // add the border
-        Box box = new Box(getCoords1(), getCoords2());
-        BlockState borderState = getBorderBlockState(box);
-        placeParcelBorder(box, borderState);
+    protected void placeBufferBorder(Box borderBox, int bufferRadius) {
+        // no buffer for citizen parcels
     }
 
     @Override

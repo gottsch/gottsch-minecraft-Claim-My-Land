@@ -281,21 +281,78 @@ public class CMLNetwork {
         }
     }
 
-    public static void syncPreviewParcelToTrackingPlayers(ServerLevel level, UUID parcelId,
-                                                          UUID estateId, UUID ownerId,
-                                                          ParcelType parcelType,
-                                                          Box box, int stoneY, String dimension) {
+//    public static void syncPreviewParcelToTrackingPlayers(ServerLevel level, UUID parcelId,
+//                                                          UUID estateId, UUID ownerId,
+//                                                          ParcelType parcelType,
+//                                                          Box box, int stoneY, String dimension) {
+//        String ownerName = resolveOwnerName(level, ownerId);
+//        SyncParcelPacket packet = SyncParcelPacket.forPreview(
+//                parcelId, estateId, ownerId, ownerName, parcelType, box, stoneY, dimension);
+//        CHANNEL.send(
+//                PacketDistributor.TRACKING_CHUNK.with(() ->
+//                        level.getChunkAt(new BlockPos(
+//                                box.getMinCoords().getX(),
+//                                box.getMinCoords().getY(),
+//                                box.getMinCoords().getZ()))),
+//                packet
+//        );
+//    }
+
+    /**
+     * Sends a preview SyncParcelPacket to tracking players AND directly to the
+     * placing player. Required because TRACKING_CHUNK excludes the sender's chunk.
+     * @author Mark Gottschling on Mar 11, 2026
+     */
+    public static void syncPreviewParcelToTrackingPlayersAndSelf(ServerLevel level,
+                                                                 ServerPlayer placingPlayer,
+                                                                 UUID parcelId, UUID estateId,
+                                                                 UUID ownerId, ParcelType parcelType,
+                                                                 Box box, int stoneY,
+                                                                 String dimension, int conflictState) {
         String ownerName = resolveOwnerName(level, ownerId);
         SyncParcelPacket packet = SyncParcelPacket.forPreview(
-                parcelId, estateId, ownerId, ownerName, parcelType, box, stoneY, dimension);
+                parcelId, estateId, ownerId, ownerName, parcelType, box, stoneY, dimension, conflictState);
         CHANNEL.send(
                 PacketDistributor.TRACKING_CHUNK.with(() ->
                         level.getChunkAt(new BlockPos(
                                 box.getMinCoords().getX(),
                                 box.getMinCoords().getY(),
                                 box.getMinCoords().getZ()))),
-                packet
+                packet);
+        CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> placingPlayer),
+                packet);
+    }
+
+    /**
+     * sends a border visibility packet to all tracking players AND directly to
+     * the specified player. use this overload when the acting player is known
+     * (e.g. fresh border stone placement) since TRACKING_CHUNK excludes the
+     * sender's own chunk.
+     * @author Mark Gottschling on Mar 11, 2026
+     */
+    public static void syncBorderVisibilityToTrackingPlayersAndSelf(ServerLevel level,
+                                                                    ServerPlayer player,
+                                                                    Parcel parcel,
+                                                                    boolean visible,
+                                                                    int conflictState,
+                                                                    int borderStoneY) {
+        syncBorderVisibilityToTrackingPlayers(level, parcel, visible, conflictState, borderStoneY);
+        CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY)
         );
+    }
+
+    /**
+     * Removes a preview parcel from all tracking clients and the placing player.
+     * Used when a foundation stone is broken before the claim is committed.
+     * @author Mark Gottschling on Mar 11, 2026
+     */
+    public static void removePreviewParcelFromTracking(ServerLevel level, UUID parcelId, BlockPos pos) {
+        RemoveParcelPacket packet = new RemoveParcelPacket(parcelId);
+        CHANNEL.send(
+                PacketDistributor.DIMENSION.with(() -> level.dimension()), packet);
     }
 
     // -------------------------------------------------------------------------

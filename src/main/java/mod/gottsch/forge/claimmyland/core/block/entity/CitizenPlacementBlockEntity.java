@@ -5,6 +5,7 @@ import mod.gottsch.forge.claimmyland.core.block.BorderBlock;
 import mod.gottsch.forge.claimmyland.core.block.BorderStatus;
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
@@ -18,6 +19,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -110,16 +113,27 @@ public class CitizenPlacementBlockEntity extends BorderStoneBlockEntity {
         return Blocks.AIR.defaultBlockState();
     }
 
+//    /**
+//     * like that of BorderStoneBlockEntity, but doesn't add the buffer border
+//     */
+//    @Override
+//    public void placeParcelBorder() {
+//        // add the border
+//        Box box = new Box(getCoords1(), getCoords2());
+//        BlockState borderState = getBorderBlockState(box);
+//        placeParcelBorder(box, borderState);
+//    }
+
     /**
-     * like that of BorderStoneBlockEntity, but doesn't add the buffer border
+     * Citizen parcels placed by zoning tool have no buffer zone — suppress buffer block placement.
+     * @author Mark Gottschling on Mar 11, 2026
      */
     @Override
-    public void placeParcelBorder() {
-        // add the border
-        Box box = new Box(getCoords1(), getCoords2());
-        BlockState borderState = getBorderBlockState(box);
-        placeParcelBorder(box, borderState);
+    protected void placeBufferBorder(Box borderBox, int bufferRadius) {
+        // no buffer for citizen parcels
     }
+
+
 
     @Override
     public void removeParcelBorder(Level level, ICoords coords) {

@@ -42,6 +42,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -422,7 +423,7 @@ public abstract class Deed extends Item {
              * so need to initiate the borders manually.
              */
             // place border blocks
-            blockEntity.placeParcelBorder();
+            blockEntity.placeParcelBorder((ServerPlayer) player);
             blockEntity.placeParcelHorizontalArea();
         }
     }

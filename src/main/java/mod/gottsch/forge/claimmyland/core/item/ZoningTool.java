@@ -31,6 +31,7 @@ import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -230,7 +231,7 @@ public class ZoningTool extends BlockItem {
         blockEntity1.setCoords2(coords2);
         blockEntity1.setOwnerId(player.getUUID());
 
-        blockEntity2.placeParcelBorder();
+        blockEntity2.placeParcelBorder((ServerPlayer) player);
     }
 
     // -------------------------------------------------------------------------
