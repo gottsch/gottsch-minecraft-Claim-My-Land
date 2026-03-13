@@ -175,9 +175,9 @@ public class RemoveEstateSubCommand implements SubCommand {
     }
 
     private void removeBorder(ServerLevel level, Parcel parcel) {
-        BlockEntity blockEntity = level.getBlockEntity(parcel.getCoords().toPos());
-        if (blockEntity instanceof FoundationStoneBlockEntity) {
-            ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder(level, parcel.getCoords());
-        }
+//        BlockEntity blockEntity = level.getBlockEntity(parcel.getCoords().toPos());
+//        if (blockEntity instanceof FoundationStoneBlockEntity) {
+//            ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder(level, parcel.getCoords());
+//        }
     }
 }

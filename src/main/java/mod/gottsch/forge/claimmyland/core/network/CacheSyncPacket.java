@@ -229,12 +229,20 @@ public class CacheSyncPacket {
 
                 // look up existing entry to preserve isBorderVisible
                 ClientParcel existing = ClientParcelRegistry.findById(packet.parcelId).orElse(null);
+
+                // if the existing registry entry is a preview parcel, don't overwrite it —
+                // the preview entry is owned by SyncParcelPacket and CacheSyncPacket must not stomp it
+                if (existing != null && existing.isPreview()) {
+                    ClaimMyLand.LOGGER.debug("CacheSyncPacket.handle: skipping registry update for preview parcel {}", packet.parcelId);
+                    return;
+                }
+
                 boolean borderVisible = existing != null && existing.isBorderVisible();
                 int conflictState = existing != null ? existing.conflictState() : 0;
                 int borderStoneY = existing != null && existing.borderStoneY() != 0
                         ? existing.borderStoneY()
                         : packet.borderStoneY;
-
+//                boolean isPreview = existing != null && existing.isPreview(); // preserve preview state
 
                 ClientParcel clientParcel = new ClientParcel(
                         packet.parcelId,
@@ -251,6 +259,8 @@ public class CacheSyncPacket {
                 borderVisible, conflictState, borderStoneY,
                         false
                 );
+                ClaimMyLand.LOGGER.debug("CacheSyncPacket.handle: parcelId={}, borderVisible={} (from existing={})",
+                        packet.parcelId, borderVisible, existing != null);
                 ClientParcelRegistry.register(clientParcel);
 
                 if (ModList.get().isLoaded("journeymap")) {

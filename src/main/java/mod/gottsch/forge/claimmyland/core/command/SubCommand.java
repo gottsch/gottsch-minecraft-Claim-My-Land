@@ -134,7 +134,10 @@ public interface SubCommand {
         List<String> estates = new ArrayList<>();
         Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
         if (playerUuid.isPresent()) {
-            estates = EstateRegistry.findByOwner(playerUuid.get()).stream().map(Estate::getName).toList();
+            estates = EstateRegistry.findByOwner(playerUuid.get()).stream()
+                    .map(Estate::getName)
+                    .map(StringArgumentType::escapeIfRequired)
+                    .toList();
         }
         return SharedSuggestionProvider.suggest(estates, builder);
     };
@@ -147,7 +150,9 @@ public interface SubCommand {
         if (playerUuid.isPresent()) {
             estates = EstateRegistry.findByOwner(playerUuid.get()).stream()
                     .map(Estate::getName)
-                    .filter(name -> !name.equalsIgnoreCase(primaryEstateName)).toList();
+                    .filter(name -> !name.equalsIgnoreCase(primaryEstateName))
+                    .map(StringArgumentType::escapeIfRequired)
+                    .toList();
         }
         return SharedSuggestionProvider.suggest(estates, builder);
     };
@@ -161,7 +166,9 @@ public interface SubCommand {
         if (ownerUuid.isPresent()) {
             names = EstateRegistry.findByOwner(ownerUuid.get()).stream()
                     .filter(estate -> estate instanceof NationEstate)
-                    .map((Estate::getName)).toList();
+                    .map((Estate::getName))
+                    .map(StringArgumentType::escapeIfRequired)
+                    .toList();
         }
         return SharedSuggestionProvider.suggest(names, builder);
     };
@@ -179,6 +186,7 @@ public interface SubCommand {
                     .map(parcel -> (NationalizedParcel) parcel)
                     .filter(nationalizedParcel -> nationalizedParcel.getNationEstate().getName().equalsIgnoreCase(nationName))
                     .map(nationalizedParcel -> nationalizedParcel.getEstate().getName())
+                    .map(StringArgumentType::escapeIfRequired)
                     .collect(Collectors.toSet());
         }
         return SharedSuggestionProvider.suggest(names, builder);
@@ -199,7 +207,9 @@ public interface SubCommand {
             }
 
             names = estate.get().findParcels().stream()
-                    .map(Parcel::getName).collect(Collectors.toSet());
+                    .map(Parcel::getName)
+                    .map(StringArgumentType::escapeIfRequired)
+                    .collect(Collectors.toSet());
         }
         return SharedSuggestionProvider.suggest(names, builder);
     };
@@ -214,7 +224,10 @@ public interface SubCommand {
             Optional<Estate> estate = CommandHelper.getEstateByOwner(source.getSource(), ownerUuid.get(), estateName);
             if (estate.isPresent()) {
                 Set<Parcel> parcels = estate.get().findParcels();
-                names = parcels.stream().map((Parcel::getName)).toList();
+                names = parcels.stream()
+                        .map((Parcel::getName))
+                        .map(StringArgumentType::escapeIfRequired)
+                        .toList();
             }
         }
         return SharedSuggestionProvider.suggest(names, builder);
@@ -226,7 +239,10 @@ public interface SubCommand {
         List<String> parcels = new ArrayList<>();
         Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
         if (playerUuid.isPresent()) {
-            parcels = ParcelRegistry.findByOwner(playerUuid.get()).stream().map(Parcel::getName).toList();
+            parcels = ParcelRegistry.findByOwner(playerUuid.get()).stream()
+                    .map(Parcel::getName)
+                    .map(StringArgumentType::escapeIfRequired)
+                    .toList();
         }
         return SharedSuggestionProvider.suggest(parcels, builder);
     };
@@ -236,7 +252,9 @@ public interface SubCommand {
         ServerPlayer owner = source.getSource().getPlayerOrException();
         List<String> names = EstateRegistry.findByOwner(owner.getUUID()).stream()
                 .filter(estate -> estate instanceof NationEstate)
-                .map((Estate::getName)).toList();
+                .map((Estate::getName))
+                .map(StringArgumentType::escapeIfRequired)
+                .toList();
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
@@ -244,7 +262,9 @@ public interface SubCommand {
             OWNER_ESTATE_NAMES = (source, builder) -> {
         ServerPlayer owner = source.getSource().getPlayerOrException();
         List<String> names = EstateRegistry.findByOwner(owner.getUUID()).stream()
-                .map((Estate::getName)).toList();
+                .map(Estate::getName)
+                .map(StringArgumentType::escapeIfRequired)
+                .toList();
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
@@ -255,7 +275,9 @@ public interface SubCommand {
 
         estates = EstateRegistry.findByOwner(owner.getUUID()).stream()
                 .map(Estate::getName)
-                .filter(name -> !name.equalsIgnoreCase(primaryEstateName)).toList();
+                .filter(name -> !name.equalsIgnoreCase(primaryEstateName))
+                .map(StringArgumentType::escapeIfRequired)
+                .toList();
 
         return SharedSuggestionProvider.suggest(estates, builder);
     };
@@ -270,6 +292,7 @@ public interface SubCommand {
                 .map(parcel -> (NationalizedParcel)parcel)
                 .filter(nationalizedParcel -> nationalizedParcel.getNationEstate().getName().equalsIgnoreCase(nationName))
                 .map(nationalizedParcel -> nationalizedParcel.getEstate().getName())
+                .map(StringArgumentType::escapeIfRequired)
                 .collect(Collectors.toSet());
 
         return SharedSuggestionProvider.suggest(names, builder);
@@ -286,7 +309,9 @@ public interface SubCommand {
         }
 
         Set<String> names = estate.get().findParcels().stream()
-                .map(parcel -> parcel.getName()).collect(Collectors.toSet());
+                .map(parcel -> parcel.getName())
+                .map(StringArgumentType::escapeIfRequired)
+                .collect(Collectors.toSet());
 
         return SharedSuggestionProvider.suggest(names, builder);
     };
@@ -301,6 +326,7 @@ public interface SubCommand {
                 .map(parcel -> (NationalizedParcel)parcel)
                 .filter(nationalizedParcel -> nationalizedParcel.getNationEstate().getName().equalsIgnoreCase(nationName))
                 .map(nationalizedParcel -> nationalizedParcel.getEstate().getName())
+                .map(StringArgumentType::escapeIfRequired)
                 .collect(Collectors.toSet());
 
         return SharedSuggestionProvider.suggest(names, builder);
@@ -315,7 +341,10 @@ public interface SubCommand {
         if (estate.isPresent()) {
 //            Set<Parcel> parcels = ParcelRegistry.findAllByEstateId(estate.get().getId());
             Set<Parcel> parcels = estate.get().findParcels();
-            names = parcels.stream().map((Parcel::getName)).toList();
+            names = parcels.stream()
+                    .map((Parcel::getName))
+                    .map(StringArgumentType::escapeIfRequired)
+                    .toList();
         }
         return SharedSuggestionProvider.suggest(names, builder);
     };
@@ -331,7 +360,10 @@ public interface SubCommand {
             if (parcels.size() == 1) {
                 names.add("[cannot split an estate with a single parcel]");
             } else {
-                names = parcels.stream().map((Parcel::getName)).toList();
+                names = parcels.stream()
+                        .map((Parcel::getName))
+                        .map(StringArgumentType::escapeIfRequired)
+                        .toList();
             }
         }
         return SharedSuggestionProvider.suggest(names, builder);

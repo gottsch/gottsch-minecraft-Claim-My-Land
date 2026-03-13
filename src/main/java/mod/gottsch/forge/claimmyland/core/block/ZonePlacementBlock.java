@@ -75,32 +75,29 @@ public class ZonePlacementBlock extends BaseEntityBlock {
     }
 
     @Override
-    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest,
-                                       FluidState fluid) {
-
+    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+                                       boolean willHarvest, FluidState fluid) {
         if (WorldInfo.isClientSide(level)) {
             return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
         }
-
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof ZonePlacementBlockEntity zbe) {
             if (zbe.getCoords1() != null && zbe.getCoords1() != Coords.EMPTY
-                && zbe.getCoords2() != null && zbe.getCoords2() != Coords.EMPTY) {
+                    && zbe.getCoords2() != null && zbe.getCoords2() != Coords.EMPTY) {
                 ICoords coords1 = zbe.getCoords1();
                 ICoords coords2 = zbe.getCoords2();
-
-                ZonePlacementBlockEntity.removeParcelBorder(level, new Box(coords1, coords2), ModBlocks.ZONE_BORDER.get());
-
-                // clear blocks at 1 & 2
-                if (!coords1.toPos().equals(pos) && level.getBlockState(coords1.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+                // remove the companion placement block if it still exists
+                if (!coords1.toPos().equals(pos)
+                        && level.getBlockState(coords1.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
                     level.setBlock(coords1.toPos(), Blocks.AIR.defaultBlockState(), 3);
                 }
-                if (!coords2.toPos().equals(pos) && level.getBlockState(coords2.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+                if (!coords2.toPos().equals(pos)
+                        && level.getBlockState(coords2.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
                     level.setBlock(coords2.toPos(), Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }
-
         return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
     }
+
 }

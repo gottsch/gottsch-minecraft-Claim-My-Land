@@ -31,24 +31,24 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * Renders a small HUD overlay in the bottom-left corner of the screen showing
+ * renders a small HUD overlay in the bottom-left corner of the screen showing
  * the parcel and estate the local player is currently standing inside.
  *
- * <p>Data source: {@link ClientParcelCache} — the single-entry position cache
+ * <p>data source: {@link ClientParcelCache} — the single-entry position cache
  * updated by {@code CacheSyncPacket} on each server BST hit. When the cache
  * reports wilderness ({@code get() == null}) the HUD is hidden entirely.</p>
  *
- * <p>Layout (bottom-left, 3 lines, 10 px per line):</p>
+ * <p>layout (bottom-left, 3 lines, 10 px per line):</p>
  * <pre>
  *   ║ Land Claim                        ← GOLD title
  *   ║ GottschLand  (Nation)             ← estate name WHITE + type suffix in type color
  *   ║ MyPlot | Dev                      ← parcel name + owner, WHITE
  * </pre>
  *
- * <p>A solid 2 px colored left border runs the full panel height in the type color,
+ * <p>a solid 2 px colored left border runs the full panel height in the type color,
  * providing visual identification without a redundant type label line.</p>
  *
- * <p>Color convention (matches {@code EstateDisplayFormatter.getParcelColor()}):</p>
+ * <p>color convention (matches {@code EstateDisplayFormatter.getParcelColor()}):</p>
  * <ul>
  *   <li>NATION  → BLUE         ({@code 0x5555FF})</li>
  *   <li>CITIZEN → LIGHT_PURPLE ({@code 0xFF55FF})</li>
@@ -56,7 +56,7 @@ import net.minecraftforge.fml.common.Mod;
  *   <li>ZONE / others → YELLOW ({@code 0xFFFF55})</li>
  * </ul>
  *
- * <p>Registration: explicit registration on the Forge event bus is required from
+ * <p>registration: explicit registration on the Forge event bus is required from
  * {@code ClientSetup} — do NOT rely on {@code @Mod.EventBusSubscriber} auto-discovery
  * for this isolated package:</p>
  * <pre>
@@ -73,56 +73,56 @@ public class ParcelHud {
     // Layout constants
     // -----------------------------------------------------------------------
 
-    /** Horizontal distance from the left edge of the screen to the text. */
+    /** horizontal distance from the left edge of the screen to the text. */
     private static final int MARGIN_LEFT = 8;
 
     /**
-     * Vertical distance from the bottom edge of the screen to the bottom of the
+     * vertical distance from the bottom edge of the screen to the bottom of the
      * last rendered line. Sized to sit just above the hotbar (39 px) with a gap.
      */
     private static final int MARGIN_BOTTOM = 44;
 
-    /** Height of one text line including leading. */
+    /** height of one text line including leading. */
     private static final int LINE_HEIGHT = 10;
 
     /**
-     * Number of content lines rendered below the title bar
+     * number of content lines rendered below the title bar
      * (estate+type, parcel+owner).
      */
     private static final int LINE_COUNT = 2;
 
-    /** Width of the colored left border strip in pixels. */
+    /** width of the colored left border strip in pixels. */
     private static final int BORDER_WIDTH = 2;
 
-    /** Horizontal gap between the left border and the text. */
+    /** horizontal gap between the left border and the text. */
     private static final int BORDER_GAP = 3;
 
     // -----------------------------------------------------------------------
     // Color constants — must match EstateDisplayFormatter.getParcelColor()
     // -----------------------------------------------------------------------
 
-    /** Nation type color — BLUE ({@code ChatFormatting.BLUE}). */
+    /** nation type color — BLUE ({@code ChatFormatting.BLUE}). */
     private static final int COLOR_NATION  = 0x5555FF;
 
-    /** Citizen type color — LIGHT_PURPLE ({@code ChatFormatting.LIGHT_PURPLE}). */
+    /** citizen type color — LIGHT_PURPLE ({@code ChatFormatting.LIGHT_PURPLE}). */
     private static final int COLOR_CITIZEN = 0xFF55FF;
 
-    /** Player type color — GREEN ({@code ChatFormatting.GREEN}). */
+    /** player type color — GREEN ({@code ChatFormatting.GREEN}). */
     private static final int COLOR_PLAYER  = 0x55FF55;
 
-    /** Zone / default type color — YELLOW ({@code ChatFormatting.YELLOW}). */
+    /** zone / default type color — YELLOW ({@code ChatFormatting.YELLOW}). */
     private static final int COLOR_DEFAULT = 0xFFFF55;
 
-    /** Title text color — GOLD ({@code ChatFormatting.GOLD}). */
+    /** title text color — GOLD ({@code ChatFormatting.GOLD}). */
     private static final int COLOR_GOLD    = 0xFFAA00;
 
-    /** Standard white used for estate name and parcel+owner line. */
+    /** standard white used for estate name and parcel+owner line. */
     private static final int COLOR_WHITE   = 0xFFFFFF;
 
-    /** Semi-transparent black for the main panel background. */
+    /** semi-transparent black for the main panel background. */
     private static final int COLOR_BG      = 0x60000000;
 
-    /** Slightly more opaque black for the title bar background. */
+    /** slightly more opaque black for the title bar background. */
     private static final int COLOR_TITLE_BG = 0x90000000;
 
     // -----------------------------------------------------------------------
@@ -130,7 +130,7 @@ public class ParcelHud {
     // -----------------------------------------------------------------------
 
     /**
-     * Fires after the hotbar overlay is rendered — exactly once per frame at the
+     * fires after the hotbar overlay is rendered — exactly once per frame at the
      * correct z-order for a bottom-left HUD element.
      *
      * @param event the post-render overlay event
@@ -141,25 +141,28 @@ public class ParcelHud {
             return;
         }
 
-        ClientParcelCache.Entry entry = ClientParcelCache.get();
-        if (entry == null) {
-            return; // Wilderness — nothing to show.
-        }
-
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui) {
             return;
+        }
+
+        // hide HUD while chat (or any screen) is open
+        if (mc.screen != null) return;
+
+        ClientParcelCache.Entry entry = ClientParcelCache.get();
+        if (entry == null) {
+            return; // Wilderness — nothing to show.
         }
 
         renderHud(event.getGuiGraphics(), mc.font, entry);
     }
 
     // -----------------------------------------------------------------------
-    // Rendering helpers
+    // rendering helpers
     // -----------------------------------------------------------------------
 
     /**
-     * Draws the three-line parcel info panel (title + 2 content lines) at the
+     * draws the three-line parcel info panel (title + 2 content lines) at the
      * bottom-left of the screen, with a solid colored left border in the type color.
      *
      * @param graphics the current frame graphics context
@@ -226,7 +229,7 @@ public class ParcelHud {
     }
 
     /**
-     * Returns the short human-readable type label used in the {@code (Type)} suffix.
+     * returns the short human-readable type label used in the {@code (Type)} suffix.
      *
      * @param type the parcel type, may be null
      * @return a capitalized type name
@@ -243,7 +246,7 @@ public class ParcelHud {
     }
 
     /**
-     * Maps a {@link ParcelType} to the RGB color integer used for the type suffix
+     * maps a {@link ParcelType} to the RGB color integer used for the type suffix
      * text and the left border. Matches {@code EstateDisplayFormatter.getParcelColor()}.
      *
      * <ul>
@@ -267,7 +270,7 @@ public class ParcelHud {
     }
 
     /**
-     * Returns {@code value} if non-null and non-empty, otherwise returns
+     * returns {@code value} if non-null and non-empty, otherwise returns
      * {@code fallback}.
      *
      * @param value    the string to test

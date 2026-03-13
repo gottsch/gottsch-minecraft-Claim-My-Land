@@ -1404,26 +1404,40 @@ public class ParcelRegistry {
      *   - the proposed border overlaps any existing parcel border (any owner), OR
      *   - the proposed border overlaps another owner's buffer zone.
      * Returns 0 if no conflict exists.
-     *
-     * @author Mark Gottschling on Mar 11, 2026
      */
-    public static int resolveConflictState(Box proposedBox, UUID ownerId, UUID excludeParcelId) {
-        // rule 1: border-vs-border — any overlap is a conflict, excluding self
+    public static int resolveConflictState(Box proposedBox, UUID ownerId, UUID excludeParcelId, ParcelType placingType) {
+        // rule 1: border-vs-border — any overlap is a conflict, excluding self and allowed ancestors
         List<Parcel> borderOverlaps = find(proposedBox).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))
+                .filter(p -> !isAllowedAncestor(p.getType(), placingType))
                 .toList();
         if (!borderOverlaps.isEmpty()) {
             return 1;
         }
 
-        // rule 2: border-vs-buffer — conflict only if different owner, excluding self
+        // rule 2: border-vs-buffer — conflict only if different owner, excluding self and allowed ancestors
         List<Parcel> bufferOverlaps = findBuffer(proposedBox).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))
+                .filter(p -> !isAllowedAncestor(p.getType(), placingType))
                 .toList();
         boolean foreignBufferConflict = bufferOverlaps.stream()
                 .anyMatch(p -> !ownerId.equals(p.getOwnerId()));
         return foreignBufferConflict ? 1 : 0;
     }
+
+    /**
+     * Returns true if the enclosing parcel type is a permitted ancestor of the placing
+     * parcel type under the NATION > ZONE > CITIZEN hierarchy. Permitted ancestors
+     * are never conflicts.
+     */
+    private static boolean isAllowedAncestor(ParcelType enclosingType, ParcelType placingType) {
+        return switch (placingType) {
+            case ZONE    -> enclosingType == ParcelType.NATION;
+            case CITIZEN -> enclosingType == ParcelType.NATION || enclosingType == ParcelType.ZONE;
+            default      -> false; // NATION, PLAYER — no allowed ancestors
+        };
+    }
+
 
     // expose a detached parcel list
     public static List<Parcel> getParcels() {

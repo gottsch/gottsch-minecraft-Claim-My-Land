@@ -20,6 +20,8 @@
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
@@ -30,6 +32,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -63,27 +66,27 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     /**
      *
      */
+    @Override
     public void tickServer() {
-        if (getLevel().getGameTime() > getExpireTime()) {
-            // remove border
-            removeParcelBorder(getLevel(), getCoords());
-            // clean up preview ClientParcel on all tracking clients
-            if (getLevel() instanceof ServerLevel serverLevel && getParcelId() != null) {
-                CMLNetwork.removeParcelFromTracking(serverLevel, getParcelId(), getBlockPos());
-            }
-            // self destruct
-            selfDestruct();
-        }
+        // expireTime == 0 means it was never initialized — skip until populateBlockEntity sets it
+//        if (getExpireTime() == 0) return;
+//
+//        if (getLevel().getGameTime() > getExpireTime()) {
+//            if (getLevel() instanceof ServerLevel serverLevel && getParcelId() != null) {
+//                Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//                if (parcel.isPresent()) {
+//                    // committed parcel — hide the visual border
+//                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
+//                            serverLevel, parcel.get(), false, 0, getBlockPos().getY());
+//                    ACTIVE_BORDER_STONES.remove(this);
+//                } else {
+//                    // phase 1 preview — parcel never committed; remove from client registries
+//                    CMLNetwork.removePreviewParcelFromTracking(serverLevel, getParcelId(), getBlockPos());
+//                }
+//            }
+//            selfDestruct();
+//        }
     }
-
-    /**
-     *
-     */
-//    private void selfDestruct() {
-//        ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
-//        this.getLevel().setBlock(this.getBlockPos(), Blocks.AIR.defaultBlockState(), 3);
-//        this.getLevel().removeBlockEntity(this.getBlockPos());
-//    }
 
     @Override
     public void saveAdditional(CompoundTag tag) {

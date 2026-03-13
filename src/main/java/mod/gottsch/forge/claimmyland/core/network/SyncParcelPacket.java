@@ -91,7 +91,7 @@ public class SyncParcelPacket {
         this.dimension   = parcel.getDimension();
         this.borderStoneY = borderStoneY;
         this.isPreview = false;
-        this.isBorderVisible = true;
+        this.isBorderVisible = false;
         this.conflictState = 0;
     }
 
@@ -185,6 +185,12 @@ public class SyncParcelPacket {
 
     public static void handle(SyncParcelPacket packet, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
+            ClientParcel existing = ClientParcelRegistry.findById(packet.parcelId).orElse(null);
+            boolean borderVisible = existing != null ? existing.isBorderVisible() : packet.isBorderVisible;
+            int conflictState = existing != null ? existing.conflictState() : packet.conflictState;
+            int borderStoneY = existing != null && existing.borderStoneY() != 0
+                    ? existing.borderStoneY() : packet.borderStoneY;
+
             ClientParcel clientParcel = new ClientParcel(
                     packet.parcelId,
                     packet.estateId,
@@ -197,7 +203,7 @@ public class SyncParcelPacket {
                     packet.minX, packet.minY, packet.minZ,
                     packet.maxX, packet.maxY, packet.maxZ,
                     packet.dimension,
-                    packet.isBorderVisible, packet.conflictState, packet.borderStoneY,
+                    borderVisible, conflictState, borderStoneY,
                     packet.isPreview
             );
             ClientParcelRegistry.register(clientParcel);
@@ -225,7 +231,7 @@ public class SyncParcelPacket {
                 maxX, maxY, maxZ,
                 dimension,
                 isBorderVisible,
-                0, borderStoneY, isPreview
+                conflictState, borderStoneY, isPreview
         );
     }
 

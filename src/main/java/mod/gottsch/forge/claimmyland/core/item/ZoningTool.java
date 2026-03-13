@@ -259,7 +259,7 @@ public class ZoningTool extends BlockItem {
     private void clear(BlockPlaceContext context, ICoords coords1, ICoords coords2) {
         clearBlockIfZonePlacement(context.getLevel(), coords1);
         clearBlockIfZonePlacement(context.getLevel(), coords2);
-        ZonePlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.ZONE_BORDER.get(), 0);
+//        ZonePlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.ZONE_BORDER.get(), 0);
     }
 
     private void clearBlockIfZonePlacement(Level level, ICoords coords) {

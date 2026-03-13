@@ -151,7 +151,10 @@ public class ParcelDisplayFormatter {
                         optionalOwnerName.orElse(parcel.getEstate().getOwnerId().toString())
                 ).withStyle(ChatFormatting.WHITE)));
 
-        // coordinates
+        // location
+        lines.add(Component.literal(indent)
+                .append(Component.literal("Dimension: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(parcel.getDimension()).withStyle(ChatFormatting.WHITE)));
         lines.add(Component.literal(indent)
                 .append(Component.literal("Min Pos: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(formatLocation(parcel.getMinCoords()))
@@ -229,7 +232,8 @@ public class ParcelDisplayFormatter {
             String start,
             String end,
             String size,
-            String borderType
+            String borderType,
+            String dimension
     ) {
         List<Component> lines = new ArrayList<>();
 
@@ -250,6 +254,10 @@ public class ParcelDisplayFormatter {
         lines.add(Component.literal(indent)
                 .append(Component.literal("Type: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(parcelType).withStyle(ChatFormatting.GOLD)));
+
+        lines.add(Component.literal(indent)
+                .append(Component.literal("Dimension: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(dimension).withStyle(ChatFormatting.WHITE)));
 
         lines.add(Component.literal(indent)
                 .append(Component.literal("Coords: ").withStyle(ChatFormatting.GRAY))

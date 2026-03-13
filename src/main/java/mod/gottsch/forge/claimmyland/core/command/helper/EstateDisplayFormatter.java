@@ -300,6 +300,10 @@ public class EstateDisplayFormatter {
                             .append(Component.literal("-RELINQUISHED-").withStyle(ChatFormatting.RED)));
                 }
 
+                // location
+                lines.add(Component.literal(indent)
+                        .append(Component.literal("Dimension: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(parcel.getDimension()).withStyle(ChatFormatting.WHITE)));
                 lines.add(Component.literal(indent)
                         .append(Component.literal("Min Pos: ").withStyle(ChatFormatting.GRAY))
                         .append(Component.literal(formatLocation(parcel.getMinCoords()))

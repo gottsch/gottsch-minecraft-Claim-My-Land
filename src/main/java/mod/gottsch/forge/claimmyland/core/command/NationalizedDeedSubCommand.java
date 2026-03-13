@@ -42,7 +42,10 @@ public class NationalizedDeedSubCommand extends DeedsSubCommand {
 
     private static final SuggestionProvider<CommandSourceStack> OPS_NATION_ESTATE_NAMES = (source, builder) -> {
         List<String> names = EstateRegistry.getAll().stream()
-                .filter(Estate::isNation).map((Estate::getName)).toList();
+                .filter(Estate::isNation)
+                .map((Estate::getName))
+                .map(StringArgumentType::escapeIfRequired)
+                .toList();
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
@@ -52,7 +55,9 @@ public class NationalizedDeedSubCommand extends DeedsSubCommand {
         ServerPlayer owner = source.getSource().getPlayerOrException();
         List<String> names = EstateRegistry.findByOwner(owner.getUUID()).stream()
                 .filter(estate -> estate instanceof NationEstate)
-                .map((Estate::getName)).toList();
+                .map((Estate::getName))
+                .map(StringArgumentType::escapeIfRequired)
+                .toList();
         return SharedSuggestionProvider.suggest(names, builder);
     };
 

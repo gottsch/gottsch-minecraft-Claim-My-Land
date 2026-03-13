@@ -113,7 +113,7 @@ public class RenameEstateSubCommand implements SubCommand {
         UUID estateId = estate.get().getId();
 
         // NOTE temp replace spaces with underscore. future, update commands to use quoted values for names - StringArgumentType.escapeIfRequired(value);
-        estate.get().setName(newName.replace(" ", "_"));
+        estate.get().setName(newName);
         estate.get().findParcels().forEach(parcel ->
                 CMLNetwork.syncParcelToTrackingPlayers(source.getLevel(), parcel));
 
@@ -125,7 +125,7 @@ public class RenameEstateSubCommand implements SubCommand {
         }
 
         sendLines(source,
-                CommandResponseFormatter.formatEstateRenamed(oldName, newName.replace(" ", "_"), estateId));
+                CommandResponseFormatter.formatEstateRenamed(oldName, newName, estateId));
 
         save(source.getLevel());
 

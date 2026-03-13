@@ -58,16 +58,16 @@ public class LanguageGen extends LanguageProvider {
         add(ModItems.ZONING_PLACEMENT_TOOL.get(), "Zoning Tool");
 
         add(ModBlocks.BORDER_STONE.get(), "Border Stone");
-        add(ModBlocks.PLAYER_BORDER.get(), "Player Parcel Border");
-        add(ModBlocks.CITIZEN_BORDER.get(), "Citizen Parcel Border");
-        add(ModBlocks.NATION_BORDER.get(), "Nation Parcel Border");
-        add(ModBlocks.ZONE_BORDER.get(), "Zone Parcel Border");
-        add(ModBlocks.BUFFER.get(), "Parcel Buffer");
-
-        add(ModBlocks.PLAYER_HORIZONTAL_AREA.get(), "Player Parcel Area");
-        add(ModBlocks.CITIZEN_HORIZONTAL_AREA.get(), "Citizen Parcel Area");
-        add(ModBlocks.NATION_HORIZONTAL_AREA.get(), "Nation Parcel Area");
-        add(ModBlocks.ZONE_HORIZONTAL_AREA.get(), "Zone Parcel Area");
+//        add(ModBlocks.PLAYER_BORDER.get(), "Player Parcel Border");
+//        add(ModBlocks.CITIZEN_BORDER.get(), "Citizen Parcel Border");
+//        add(ModBlocks.NATION_BORDER.get(), "Nation Parcel Border");
+//        add(ModBlocks.ZONE_BORDER.get(), "Zone Parcel Border");
+//        add(ModBlocks.BUFFER.get(), "Parcel Buffer");
+//
+//        add(ModBlocks.PLAYER_HORIZONTAL_AREA.get(), "Player Parcel Area");
+//        add(ModBlocks.CITIZEN_HORIZONTAL_AREA.get(), "Citizen Parcel Area");
+//        add(ModBlocks.NATION_HORIZONTAL_AREA.get(), "Nation Parcel Area");
+//        add(ModBlocks.ZONE_HORIZONTAL_AREA.get(), "Zone Parcel Area");
 
 //        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
 //

@@ -97,16 +97,11 @@ public class ParcelBorderRenderer {
 
         RenderSystem.enableDepthTest();
         RenderSystem.lineWidth(2.0f);
-//        boolean debugThisFrame = (debugFrameCount++ % 200 == 0);
+
         for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
-            // add just inside the for loop, before the guards
-//            if (debugThisFrame) {
-//                ClaimMyLand.LOGGER.debug("ParcelBorderRenderer: parcel={}, isBorderVisible={}, isTier2={}, withinRadius={}",
-//                        parcel.parcelId(), parcel.isBorderVisible(), isTier2(parcel), isWithinRenderRadius(parcel, mc.player));
-//            }
             if (!parcel.isBorderVisible()) continue;
-            if (!isTier2(parcel)) continue;
             if (!isWithinRenderRadius(parcel, player)) continue;
+            if (!isVisibleToLocalPlayer(parcel, localPlayerId)) continue;
 
             int color = resolveOwnershipColor(parcel, localPlayerId);
             float r = ((color >> 16) & 0xFF) / 255f;
@@ -160,9 +155,14 @@ public class ParcelBorderRenderer {
         }
 
         float a;
+        float lineWidth = 2.0f;
         if (parcel.isPreview()) {
-            float pulse = (float) (Math.sin(System.currentTimeMillis() / 500.0) * 0.5 + 0.5);
-            a = 0.25f + pulse * 0.50f;
+//            float pulse = (float) (Math.sin(System.currentTimeMillis() / 500.0) * 0.5 + 0.5);
+//            a = 0.25f + pulse * 0.50f;
+
+            float pulseT = (float)((Math.sin(System.currentTimeMillis() / 200.0) + 1.0) / 2.0); // 0.0 → 1.0
+            a = 0.05f + 0.75f * pulseT;   // alpha: 0.05 → 0.80
+            lineWidth = 0.5f + 1.5f * pulseT;     // strokeWidth: 0.5 → 2.0
         } else {
             a = 0.8f;
         }
@@ -188,6 +188,8 @@ public class ParcelBorderRenderer {
         Matrix4f matrix = poseStack.last().pose();
         PoseStack.Pose pose = poseStack.last();
 
+        RenderSystem.lineWidth(lineWidth);
+
         // Bottom face
         line(consumer, matrix, pose, x0, y0, z0, x1, y0, z0, r, g, b, a);
         line(consumer, matrix, pose, x1, y0, z0, x1, y0, z1, r, g, b, a);
@@ -205,6 +207,8 @@ public class ParcelBorderRenderer {
         line(consumer, matrix, pose, x1, y0, z0, x1, y1, z0, r, g, b, a);
         line(consumer, matrix, pose, x1, y0, z1, x1, y1, z1, r, g, b, a);
         line(consumer, matrix, pose, x0, y0, z1, x0, y1, z1, r, g, b, a);
+
+        RenderSystem.lineWidth(2.0f);
     }
 
     private static void renderBufferBrackets(PoseStack poseStack,
@@ -230,10 +234,10 @@ public class ParcelBorderRenderer {
 
         int yBot = parcel.parcelType() == ParcelType.NATION
                 ? parcel.borderStoneY()
-                : parcel.minY();
+                : parcel.minY() - buf;
         int yTop = parcel.parcelType() == ParcelType.NATION
                 ? parcel.borderStoneY() + Config.SERVER.borders.nationBorderHeight.get()
-                : parcel.maxY();
+                : parcel.maxY() + buf;
 
         Matrix4f matrix = poseStack.last().pose();
 
@@ -474,15 +478,6 @@ public class ParcelBorderRenderer {
     // ---------------------------------------------------------------------------
 
     /**
-     * Returns {@code true} if the parcel's XZ area exceeds {@code largeParcelsThreshold}.
-     * Package-private so BorderStoneBlockEntity can use it via BorderStoneBlock.
-     */
-    static boolean isTier2(ClientParcel parcel) {
-        int area = (parcel.maxX() - parcel.minX()) * (parcel.maxZ() - parcel.minZ());
-        return area > Config.SERVER.borders.largeParcelsThreshold.get();
-    }
-
-    /**
      * Returns {@code true} if any part of the parcel's buffer-expanded bounding box
      * falls within {@code borderRenderRadius} blocks of the player.
      */
@@ -528,5 +523,18 @@ public class ParcelBorderRenderer {
         AREA_SPRITES.put(ParcelType.CITIZEN, atlas.getSprite(new ResourceLocation("claimmyland", "block/purple_horizontal")));
         AREA_SPRITES.put(ParcelType.ZONE, atlas.getSprite(new ResourceLocation("claimmyland", "block/yellow_horizontal")));
         AREA_SPRITES.put(ParcelType.PLAYER, atlas.getSprite(new ResourceLocation("claimmyland", "block/green_horizontal")));
+    }
+
+    /**
+     * returns true if the local player should see this parcel's border.
+     * only the owner sees their own borders — whitelisted players and
+     * bystanders do not, to avoid visual pollution on busy servers.
+     * preview parcels follow the same rule: only the placing player sees theirs.
+     *
+     * @author Mark Gottschling on Mar 11, 2026
+     */
+    private static boolean isVisibleToLocalPlayer(ClientParcel parcel, UUID localPlayerId) {
+        return parcel.ownerId() != null
+                && parcel.ownerId().equals(localPlayerId);
     }
 }

@@ -32,7 +32,7 @@ import net.minecraftforge.fml.common.Mod;
 /**
  * @author by Mark Gottschling on 2/17/2026
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "2.2")
 //@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT)
 public class KeyInputHandler {
 

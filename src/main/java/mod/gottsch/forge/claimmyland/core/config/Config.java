@@ -222,10 +222,10 @@ public class Config extends AbstractConfig {
 	}
 
 	public static class Borders {
-		public ForgeConfigSpec.LongValue ticksPerBorderStoneRefresh;
+//		public ForgeConfigSpec.LongValue ticksPerBorderStoneRefresh;
 		public ForgeConfigSpec.IntValue borderStoneLifeSpan;
 		public ForgeConfigSpec.IntValue foundationStoneLifeSpan;
-		public ForgeConfigSpec.IntValue largeParcelsThreshold;
+//		public ForgeConfigSpec.IntValue largeParcelsThreshold;
 		public ForgeConfigSpec.IntValue nationBorderHeight;
 		// default 20, min 1, max 256
 
@@ -236,20 +236,20 @@ public class Config extends AbstractConfig {
 					.comment(" The life span of a border stone in ticks.")
 					.defineInRange("borderStoneLifeSpan", 6000, 1200, Integer.MAX_VALUE);
 
-			ticksPerBorderStoneRefresh = builder
-					.comment(" The number of ticks between border refreshes.")
-					.defineInRange("ticksPerBorderStoneRefresh", 400, 200, Long.MAX_VALUE);
+//			ticksPerBorderStoneRefresh = builder
+//					.comment(" The number of ticks between border refreshes.")
+//					.defineInRange("ticksPerBorderStoneRefresh", 400, 200, Long.MAX_VALUE);
 
 			foundationStoneLifeSpan = builder
 					.comment(" The life span of a foundation stone in ticks.")
 					.defineInRange("foundationStoneLifeSpan", 6000, 1200, Integer.MAX_VALUE);
 
-			largeParcelsThreshold = builder
-					.comment(" Parcel area threshold (in blocks) above which physical border/buffer blocks",
-							" are replaced by the visual ParcelBorderRenderer.",
-							" Area is calculated as (maxX - minX) * (maxZ - minZ).",
-							" Default: 4096 (a 64x64 parcel).")
-					.defineInRange("largeParcelsThreshold", 4096, 1, Integer.MAX_VALUE);
+//			largeParcelsThreshold = builder
+//					.comment(" Parcel area threshold (in blocks) above which physical border/buffer blocks",
+//							" are replaced by the visual ParcelBorderRenderer.",
+//							" Area is calculated as (maxX - minX) * (maxZ - minZ).",
+//							" Default: 4096 (a 64x64 parcel).")
+//					.defineInRange("largeParcelsThreshold", 4096, 1, Integer.MAX_VALUE);
 
 			nationBorderHeight = builder
 					.comment(" Height in blocks of the visual border and buffer wall for Nation parcels.")

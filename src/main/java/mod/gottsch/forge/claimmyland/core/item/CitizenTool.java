@@ -258,7 +258,7 @@ public class CitizenTool extends BlockItem {
     private void clear(BlockPlaceContext context, ICoords coords1, ICoords coords2) {
         clearBlockIfCitizenPlacement(context.getLevel(), coords1);
         clearBlockIfCitizenPlacement(context.getLevel(), coords2);
-        CitizenPlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.CITIZEN_BORDER.get(), 0);
+//        CitizenPlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.CITIZEN_BORDER.get(), 0);
     }
 
     private void clearBlockIfCitizenPlacement(Level level, ICoords coords) {

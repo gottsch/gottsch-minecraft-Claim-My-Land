@@ -266,8 +266,8 @@ public abstract class Deed extends Item {
                     }
 
                     // remove the border
-                    ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder();
-                    ((FoundationStoneBlockEntity) blockEntity).removeHorizontalArea();
+//                    ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder();
+//                    ((FoundationStoneBlockEntity) blockEntity).removeHorizontalArea();
                     // remove the foundation stone
                     blockEntity.getLevel().setBlock(context.getClickedPos(), Blocks.AIR.defaultBlockState(), 3);
 
@@ -424,7 +424,7 @@ public abstract class Deed extends Item {
              */
             // place border blocks
             blockEntity.placeParcelBorder((ServerPlayer) player);
-            blockEntity.placeParcelHorizontalArea();
+//            blockEntity.placeParcelHorizontalArea();
         }
     }
 
@@ -475,8 +475,16 @@ public abstract class Deed extends Item {
         blockEntity.setParcelId(tag.contains(PARCEL_ID) ? tag.getUUID(PARCEL_ID) : null);
         blockEntity.setDeedId(tag.contains(DEED_ID) ? tag.getUUID(DEED_ID) : null);
         blockEntity.setOwnerId(tag.contains(OWNER_ID) ? tag.getUUID(OWNER_ID) : player.getUUID());
+
         // TODO update to use getParcelType()
-        blockEntity.setParcelType(tag.contains(PARCEL_TYPE) ? tag.getString(PARCEL_TYPE) : null);
+        String parcelType;
+        if (tag.contains(PARCEL_TYPE)) {
+            parcelType = tag.getString(PARCEL_TYPE);
+        } else {
+            parcelType = ((Deed) deed.getItem()).getParcelType().getSerializedName();
+        }
+
+        blockEntity.setParcelType(parcelType);
         blockEntity.setCoords(new Coords(pos));
         blockEntity.setRelativeBox(size);
         blockEntity.setExpireTime(blockEntity.getLevel().getGameTime() + Config.SERVER.borders.foundationStoneLifeSpan.get());

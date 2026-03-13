@@ -2,12 +2,17 @@
 package mod.gottsch.forge.claimmyland.datagen;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.*;
+import mod.gottsch.forge.claimmyland.core.block.BorderStone;
+import mod.gottsch.forge.claimmyland.core.block.FoundationStone;
+import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import net.minecraft.core.Direction;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.client.model.generators.*;
+import net.minecraftforge.client.model.generators.BlockStateProvider;
+import net.minecraftforge.client.model.generators.ConfiguredModel;
+import net.minecraftforge.client.model.generators.ModelFile;
+import net.minecraftforge.client.model.generators.ModelProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
@@ -30,97 +35,20 @@ public class BlockStates extends BlockStateProvider {
 		foundationStone(ModBlocks.PLAYER_FOUNDATION_STONE, mcLoc("block/polished_andesite"), mcLoc("block/andesite"));
 		foundationStone(ModBlocks.CITIZEN_FOUNDATION_STONE, mcLoc("block/polished_diorite"), mcLoc("block/diorite"));
 		foundationStone(ModBlocks.NATION_FOUNDATION_STONE, mcLoc("block/polished_granite"), mcLoc("block/granite"));
-
-		borderBlock(ModBlocks.PLAYER_BORDER, modLoc("block/green"), modLoc("block/red"));
-		borderBlock(ModBlocks.NATION_BORDER, modLoc("block/blue"), modLoc("block/red"));
-		borderBlock(ModBlocks.CITIZEN_BORDER, modLoc("block/purple"), modLoc("block/red"));
-		borderBlock(ModBlocks.ZONE_BORDER, modLoc("block/yellow"), modLoc("block/red"));
-
-		horizontalAreaBlock(ModBlocks.PLAYER_HORIZONTAL_AREA, modLoc("block/green_horizontal"), modLoc("block/bad_horizontal"));
-		horizontalAreaBlock(ModBlocks.NATION_HORIZONTAL_AREA, modLoc("block/blue_horizontal"), modLoc("block/bad_horizontal"));
-		horizontalAreaBlock(ModBlocks.CITIZEN_HORIZONTAL_AREA, modLoc("block/purple_horizontal"), modLoc("block/bad_horizontal"));
-		horizontalAreaBlock(ModBlocks.ZONE_HORIZONTAL_AREA, modLoc("block/yellow_horizontal"), modLoc("block/bad_horizontal"));
-
-		bufferBlock(ModBlocks.BUFFER, modLoc("block/buffer_block"), modLoc("block/bad_buffer_block"));
 	}
 
 	public void foundationStone(RegistryObject<Block> block, ResourceLocation polished, ResourceLocation stone) {
 		String name = block.getId().getPath();
 		myFoundationStone(name, (FoundationStone)block.get(), polished, stone, "minecraft:cutout");
-
-	}
-
-	public void borderStone(RegistryObject<Block> block, ResourceLocation polished) {
-		String name = block.getId().getPath();
-		BorderStone borderStone = (BorderStone)block.get();
-		ModelFile model = models().withExistingParent(name, modLoc(ModelProvider.BLOCK_FOLDER + "/border_stone")).texture("0", polished).renderType("minecraft:cutout");
-
-		getVariantBuilder(borderStone).forAllStatesExcept(state -> {
-			Direction facing = state.getValue(FoundationStone.FACING);
-			int yRot = 0;
-			Direction dir = state.getValue(BorderBlock.FACING);
-			if (dir == Direction.DOWN) {
-			}
-			else if (dir == Direction.UP) {
-			} else {
-				yRot = ((int) state.getValue(BorderBlock.FACING).toYRot() + 180) % 360;
-			}
-			return ConfiguredModel.builder()
-					.modelFile(model)
-					.rotationY(yRot)// (int) facing.getOpposite().toYRot())
-					.uvLock(true)
-					.build();
-		}, BorderBlock.WATERLOGGED);
-	}
-
-	public void borderBlock(RegistryObject<Block> block, ResourceLocation goodTexture, ResourceLocation badTexture) {
-		String name = block.getId().getPath();
-		myBorderBlock(name, (BorderBlock)block.get(), "border", goodTexture, badTexture, "minecraft:cutout");
-	}
-
-	public void bufferBlock(RegistryObject<Block> block, ResourceLocation goodTexture, ResourceLocation badTexture) {
-		String name = block.getId().getPath();
-
-		myBorderBlock(name, (BufferBlock)block.get(), "buffer", goodTexture, badTexture, "minecraft:translucent");
-	}
-
-	public void horizontalAreaBlock(RegistryObject<Block> block, ResourceLocation goodTexture, ResourceLocation badTexture) {
-		String name = block.getId().getPath();
-		horizontalAreaBlock(name, (HorizontalAreaBlock)block.get(), goodTexture, badTexture,"minecraft:translucent");
-	}
-
-	private void horizontalAreaBlock(String name, HorizontalAreaBlock block, ResourceLocation texture, ResourceLocation badTexture, String renderType) {
-		ModelFile model = models().withExistingParent(name , modLoc(ModelProvider.BLOCK_FOLDER + "/horizontal_area_block")).texture("0", texture).renderType(renderType);
-		ModelFile badModel = models().withExistingParent("bad_" + name , modLoc(ModelProvider.BLOCK_FOLDER + "/horizontal_area_block")).texture("0", badTexture).renderType(renderType);
-
-		getVariantBuilder(block).forAllStatesExcept(state -> {
-			ModelFile stateModel = model;
-			BorderStatus intersects = state.getValue(BorderBlock.INTERSECTS);
-			if (intersects != BorderStatus.GOOD) {
-				stateModel = badModel;
-			}
-			return ConfiguredModel.builder()
-					.modelFile(stateModel)
-					.uvLock(true)
-					.build();
-
-		}, BorderBlock.WATERLOGGED);
-//		horizontalAreaBlock(block, new ConfiguredModel(model), new ConfiguredModel(badModel));
-	}
-
-	@Deprecated
-	private void horizontalAreaBlock(Block block, ConfiguredModel... models) {
-		getVariantBuilder(block)
-				.partialState().setModels(models);
 	}
 
 	private void myFoundationStone(String name, FoundationStone block, ResourceLocation polished, ResourceLocation stone, String renderType) {
 		ModelFile model = models().withExistingParent(name, modLoc(ModelProvider.BLOCK_FOLDER + "/foundation_stone")).texture("2", polished).texture("9", stone).renderType(renderType);
 
-		getVariantBuilder(block).forAllStatesExcept(state -> {
+		getVariantBuilder(block).forAllStates(state -> {
 			Direction facing = state.getValue(FoundationStone.FACING);
 			int yRot = 0;
-			Direction dir = state.getValue(BorderBlock.FACING);
+			Direction dir = state.getValue(BorderStone.FACING);
 			if (dir == Direction.DOWN) {
 //				model = ringOpen;
 //				xRot = 90;
@@ -128,134 +56,15 @@ public class BlockStates extends BlockStateProvider {
 			else if (dir == Direction.UP) {
 //				xRot = -90;
 			} else {
-				yRot = ((int) state.getValue(BorderBlock.FACING).toYRot() + 180) % 360;
+				yRot = ((int) state.getValue(BorderStone.FACING).toYRot() + 180) % 360;
 			}
 			return ConfiguredModel.builder()
 					.modelFile(model)
 					.rotationY(yRot)// (int) facing.getOpposite().toYRot())
 					.uvLock(true)
 					.build();
-		}, BorderBlock.WATERLOGGED);
+		});
 	}
-
-	private void myBorderBlock(String name, BorderBlock block, String blockKey, ResourceLocation goodTexture, ResourceLocation badTexture, String renderType) {
-		ModelFile goodTop = models().withExistingParent("good_top_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_"+ blockKey +"_block")).texture("0", goodTexture).renderType(renderType);
-		ModelFile goodBottom = models().withExistingParent("good_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_"+ blockKey +"_block")).texture("0", goodTexture).renderType(renderType);
-		ModelFile goodLeft = models().withExistingParent("good_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/left_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
-		ModelFile goodRight = models().withExistingParent("good_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/right_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
-		ModelFile goodTopLeft = models().withExistingParent("good_top_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_left_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
-		ModelFile goodTopRight = models().withExistingParent("good_top_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_right_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
-		ModelFile goodBottomLeft = models().withExistingParent("good_bottom_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_left_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
-		ModelFile goodBottomRight = models().withExistingParent("good_bottom_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_right_" + blockKey + "_block")).texture("0", goodTexture).renderType(renderType);
-
-		ModelFile badTop = models().withExistingParent("bad_top_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-		ModelFile badBottom = models().withExistingParent("bad_bottom_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-		ModelFile badLeft = models().withExistingParent("bad_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/left_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-		ModelFile badRight = models().withExistingParent("bad_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/right_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-		ModelFile badTopLeft = models().withExistingParent("bad_top_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_left_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-		ModelFile badTopRight = models().withExistingParent("bad_top_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/top_right_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-		ModelFile badBottomLeft = models().withExistingParent("bad_bottom_left_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_left_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-		ModelFile badBottomRight = models().withExistingParent("bad_bottom_right_" + name, modLoc(ModelProvider.BLOCK_FOLDER + "/bottom_right_" + blockKey + "_block")).texture("0", badTexture).renderType(renderType);
-
-		getVariantBuilder(block).forAllStatesExcept(state -> {
-			ModelFile model = goodTop;
-			BorderStatus intersects = state.getValue(BorderBlock.INTERSECTS);
-			BorderPosition position = state.getValue(BorderBlock.POSITION);
-			Direction facing = state.getValue(BorderBlock.FACING);
-
-			if (intersects == BorderStatus.GOOD) {
-				if (position == BorderPosition.BOTTOM) {
-					model = goodBottom;
-				} else if (position == BorderPosition.LEFT) {
-					model = goodLeft;
-				} else if (position == BorderPosition.RIGHT) {
-					model = goodRight;
-				} else if (position == BorderPosition.TOP_LEFT) {
-					model = goodTopLeft;
-				} else if (position == BorderPosition.TOP_RIGHT) {
-					model = goodTopRight;
-				} else if (position == BorderPosition.BOTTOM_LEFT) {
-					model = goodBottomLeft;
-				} else if (position == BorderPosition.BOTTOM_RIGHT) {
-					model = goodBottomRight;
-				}
-			} else {
-				// bad models
-				if (position == BorderPosition.TOP) {
-					model = badTop;
-				} else if (position == BorderPosition.BOTTOM) {
-					model = badBottom;
-				} else if (position == BorderPosition.LEFT) {
-					model = badLeft;
-				} else if (position == BorderPosition.RIGHT) {
-					model = badRight;
-				} else if (position == BorderPosition.TOP_LEFT) {
-					model = badTopLeft;
-				} else if (position == BorderPosition.TOP_RIGHT) {
-					model = badTopRight;
-				} else if (position == BorderPosition.BOTTOM_LEFT) {
-					model = badBottomLeft;
-				} else if (position == BorderPosition.BOTTOM_RIGHT) {
-					model = badBottomRight;
-				}
-			}
-
-			int yRot = 0;
-			Direction dir = state.getValue(BorderBlock.FACING);
-			if (dir == Direction.DOWN) {
-//				model = ringOpen;
-//				xRot = 90;
-			}
-			else if (dir == Direction.UP) {
-//				xRot = -90;
-			} else {
-				yRot = ((int) state.getValue(BorderBlock.FACING).toYRot() + 180) % 360;
-			}
-			return ConfiguredModel.builder()
-					.modelFile(model)
-					.rotationY(yRot)// (int) facing.getOpposite().toYRot())
-					.uvLock(true)
-					.build();
-		}, BorderBlock.WATERLOGGED);
-	}
-
-//	public BlockModelBuilder twoTextures(String name, ResourceLocation parent,
-//										 String textureKey1, ResourceLocation texture1,
-//										 String textureKey2, ResourceLocation texture2) {
-//		return models().withExistingParent(name, parent)
-//				.texture(textureKey1, texture1)
-//				.texture(textureKey2, texture2);
-//	}
-
-//	public void sewerBlock(RegistryObject<Block> block, ResourceLocation texture, ResourceLocation texture1) {
-//		String name = block.getId().getPath();
-//		ModelFile model = twoTextures(name, modLoc(ModelProvider.BLOCK_FOLDER + "/template_sewer_block"), "0", texture, "1", texture1);
-//		ModelFile corner = twoTextures(name + "_corner", modLoc(ModelProvider.BLOCK_FOLDER + "/template_sewer_block_corner"), "0", texture, "1", texture1);
-//
-//		sewerBlock(block.get(), model, corner);
-//	}
-//
-//	public void sewerBlock(Block block, ModelFile sewer, ModelFile corner) {
-//		getVariantBuilder(block)
-//				.forAllStates(state -> {
-//					Direction facing = state.getValue(LedgeBlock.FACING);
-//					SewerBlock.SewerShape shape = state.getValue(SewerBlock.SHAPE);
-//					int yRot = ((int) state.getValue(FACING).toYRot() + DEFAULT_ANGLE_OFFSET) % 360;
-//					yRot = switch(shape) {
-//						case STRAIGHT -> yRot;
-//						case TOP_LEFT -> 180;
-//						case BOTTOM_LEFT -> 90;
-//						case TOP_RIGHT -> 270;
-//						case BOTTOM_RIGHT -> 0;
-//					};
-//
-//					return ConfiguredModel.builder()
-//							.modelFile(shape == SewerBlock.SewerShape.STRAIGHT ? sewer : corner)
-//							.rotationY(yRot)
-//							.uvLock(true)
-//							.build();
-//				});
-//	}
 
 	private ResourceLocation key(Block block) {
 		return ForgeRegistries.BLOCKS.getKey(block);

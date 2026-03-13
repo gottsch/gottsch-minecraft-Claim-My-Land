@@ -24,95 +24,75 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Builds and manages {@link PolygonOverlay} instances for the JourneyMap display,
- * one overlay per parcel stored in {@link ClientParcelRegistry}.
+ * Builds PolygonOverlay objects for JourneyMap and maintains the ACTIVE_OVERLAYS
+ * cache. Also manages the Foundation Stone preview overlay separately.
  *
- * <h3>Overlay cache</h3>
- * Because {@link journeymap.client.api.IClientAPI#remove(journeymap.client.api.display.Displayable)}
- * requires the original {@link PolygonOverlay} object (not a string ID), this class maintains
- * an internal {@code Map<UUID, PolygonOverlay>} of all overlays it has shown. The cache is
- * cleared and rebuilt whenever {@link #buildAll()} is called (i.e. on {@code MAPPING_STARTED}
- * and {@code DISPLAY_UPDATE}).
+ * Each claimed parcel gets two overlays (full-screen/webmap + minimap).
+ * The preview overlay is a single overlay stored in previewOverlay and
+ * identified by previewParcelId — never mixed with ACTIVE_OVERLAYS.
  *
- * <h3>Color scheme</h3>
- * <table>
- *   <tr><th>Parcel type</th><th>Fill</th><th>Stroke</th></tr>
- *   <tr><td>NATION</td><td>Blue 20% alpha</td><td>Blue 80% alpha</td></tr>
- *   <tr><td>CITIZEN</td><td>Light-purple 20% alpha</td><td>Light-purple 80% alpha</td></tr>
- *   <tr><td>ZONE</td><td>Yellow 20% alpha</td><td>Yellow 80% alpha</td></tr>
- *   <tr><td>PLAYER (default)</td><td>Green 20% alpha</td><td>Green 80% alpha</td></tr>
- * </table>
- *
- * <h3>Live updates</h3>
- * {@link #notifyParcelAdded(ClientParcel)} and {@link #notifyParcelRemoved(UUID)} are called
- * directly from the network packet handlers (inside {@code ctx.get().enqueueWork()}) after
- * {@link ClientParcelRegistry} is mutated. No custom Forge event layer is needed.
- *
- * @author Mark Gottschling on 4/4/2026
+ * @author Mark Gottschling on Mar 11, 2026
  */
 @OnlyIn(Dist.CLIENT)
 public class ParcelPolygonOverlayFactory {
 
     private static final Logger LOGGER = LogManager.getLogger(ClaimMyLand.MOD_ID);
 
-    /**
-     * cache of every overlay currently shown, keyed by parcel UUID.
-     * rebuilt from scratch on each {@link #buildAll()} call.
-     */
-    private static final Map<UUID, PolygonOverlay[]> ACTIVE_OVERLAYS = new HashMap<>();
-
-    // -------------------------------------------------------------------------
-    // Owned parcel colours  (ARGB — ~20% fill alpha, ~80% stroke alpha)
-    // -------------------------------------------------------------------------
-
+    // --- Parcel type colors (vivid) ---
     private static final Color NATION_FILL    = new Color(0x3300AAFF, true);
     private static final Color NATION_STROKE  = new Color(0xCC00AAFF, true);
-
     private static final Color CITIZEN_FILL   = new Color(0x33AA55FF, true);
     private static final Color CITIZEN_STROKE = new Color(0xCCAA55FF, true);
-
     private static final Color ZONE_FILL      = new Color(0x33FFFF55, true);
     private static final Color ZONE_STROKE    = new Color(0xCCFFFF55, true);
-
     private static final Color PLAYER_FILL    = new Color(0x3355FF55, true);
     private static final Color PLAYER_STROKE  = new Color(0xCC55FF55, true);
 
-    private ParcelPolygonOverlayFactory() {}
+    // --- Preview overlay colors ---
+    private static final Color PREVIEW_CLEAR_FILL   = new Color(0x3300FF00, true);
+    private static final Color PREVIEW_CLEAR_STROKE = new Color(0xCC00FF00, true);
+    private static final Color PREVIEW_CONFLICT_FILL   = new Color(0x33FF0000, true);
+    private static final Color PREVIEW_CONFLICT_STROKE = new Color(0xCCFF0000, true);
+
+    /** Cache of active parcel overlays keyed by parcel UUID. Each entry holds [fullOverlay, miniOverlay]. */
+    private static final Map<UUID, PolygonOverlay[]> ACTIVE_OVERLAYS = new HashMap<>();
+
+    /** The Foundation Stone preview overlay — stored separately from ACTIVE_OVERLAYS. */
+    private static PolygonOverlay previewOverlay = null;
+
+    /** The parcel ID associated with the current preview overlay, used for cleanup in notifyParcelRemoved(). */
+    private static UUID previewParcelId = null;
 
     // -------------------------------------------------------------------------
-    // bulk build — called on MAPPING_STARTED / DISPLAY_UPDATE
+    // Claimed parcel overlays
     // -------------------------------------------------------------------------
 
     /**
-     * builds a {@link PolygonOverlay} for every parcel currently held in
-     * {@link ClientParcelRegistry}, replacing {@link #ACTIVE_OVERLAYS}.
-     *
-     * @return list of overlays ready to be shown — may be empty
+     * Clears the ACTIVE_OVERLAYS cache and builds fresh overlays for every parcel
+     * in ClientParcelRegistry. Called by JourneyMapOverlayHandler on MAPPING_STARTED
+     * and DISPLAY_UPDATE (active=true).
      */
     public static List<PolygonOverlay> buildAll() {
         ACTIVE_OVERLAYS.clear();
+
         List<PolygonOverlay> result = new ArrayList<>();
         UUID localPlayerId = localPlayerId();
+
         for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
             PolygonOverlay[] overlays = buildOverlay(parcel, localPlayerId);
             if (overlays == null) continue;
+
             ACTIVE_OVERLAYS.put(parcel.parcelId(), overlays);
             result.add(overlays[0]);
             result.add(overlays[1]);
         }
+
         return result;
     }
 
     /**
-     * builds a single {@link PolygonOverlay} from a {@link ClientParcel}.
-     * <p>
-     * parcels not owned by the local player receive a desaturated version of the
-     * type colour. Labels show the estate name and are hidden on the minimap.
-     * </p>
-     *
-     * @param parcel        the parcel to render
-     * @param localPlayerId the local player's UUID — used to determine ownership colouring
-     * @return a configured overlay, or {@code null} if the dimension cannot be resolved
+     * Builds a fullscreen+webmap overlay and a minimap overlay for the given parcel.
+     * Returns null if the dimension cannot be resolved.
      */
     public static PolygonOverlay[] buildOverlay(ClientParcel parcel, UUID localPlayerId) {
         ResourceKey<Level> dimKey = dimensionKey(parcel.dimension());
@@ -124,10 +104,10 @@ public class ParcelPolygonOverlayFactory {
 
         int y = parcel.minY();
         List<BlockPos> corners = List.of(
-                new BlockPos(parcel.minX(), y, parcel.minZ()),
-                new BlockPos(parcel.maxX(), y, parcel.minZ()),
-                new BlockPos(parcel.maxX(), y, parcel.maxZ()),
-                new BlockPos(parcel.minX(), y, parcel.maxZ())
+                new BlockPos(parcel.minX(), y, parcel.minZ()), // NW
+                new BlockPos(parcel.maxX(), y, parcel.minZ()), // NE
+                new BlockPos(parcel.maxX(), y, parcel.maxZ()), // SE
+                new BlockPos(parcel.minX(), y, parcel.maxZ())  // SW
         );
         MapPolygon polygon = new MapPolygon(corners);
 
@@ -143,43 +123,33 @@ public class ParcelPolygonOverlayFactory {
                 .setStrokeOpacity(colors[1].getAlpha() / 255f)
                 .setStrokeWidth(2f);
 
-        // Fullscreen + webmap overlay — full label
+        // Full-screen + webmap overlay (with multi-line label)
         TextProperties fullscreenTextProps = new TextProperties()
                 .setColor(colors[1].getRGB())
                 .setFontShadow(true)
                 .setActiveUIs(EnumSet.of(Context.UI.Fullscreen, Context.UI.Webmap));
-
         String fullDisplayId = ClaimMyLand.MOD_ID + ":parcel:full:" + parcel.parcelId();
         PolygonOverlay fullOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, fullDisplayId, dimKey, shapeProps, polygon);
         fullOverlay.setLabel(buildFullLabel(parcel))
                 .setTextProperties(fullscreenTextProps);
 
-        // Minimap overlay — estate name only
+        // Minimap overlay (estate name only)
         TextProperties minimapTextProps = new TextProperties()
                 .setColor(colors[1].getRGB())
                 .setFontShadow(true)
                 .setActiveUIs(EnumSet.of(Context.UI.Minimap));
-
         String miniDisplayId = ClaimMyLand.MOD_ID + ":parcel:mini:" + parcel.parcelId();
         PolygonOverlay miniOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, miniDisplayId, dimKey, shapeProps, polygon);
         miniOverlay.setLabel(parcel.estateName())
                 .setTextProperties(minimapTextProps);
 
-        return new PolygonOverlay[]{fullOverlay, miniOverlay};
+        return new PolygonOverlay[] { fullOverlay, miniOverlay };
     }
-    // -------------------------------------------------------------------------
-    // live-update entry points — called directly from packet handlers
-    // -------------------------------------------------------------------------
 
     /**
-     * called after a {@link ClientParcel} is added to (or updated in)
-     * {@link ClientParcelRegistry}, inside {@code ctx.get().enqueueWork()}.
-     *
-     * <pre>{@code
-     * if (ModList.get().isLoaded("journeymap")) {
-     *     ParcelPolygonOverlayFactory.notifyParcelAdded(clientParcel);
-     * }
-     * }</pre>
+     * Called from SyncParcelPacket / CacheSyncPacket handlers when a parcel is
+     * added or re-synced. Removes any existing overlay for that ID first to avoid
+     * duplicates, then builds and shows fresh overlays.
      */
     public static void notifyParcelAdded(ClientParcel parcel) {
         notifyParcelRemoved(parcel.parcelId());
@@ -193,117 +163,142 @@ public class ParcelPolygonOverlayFactory {
     }
 
     /**
-     * called after a parcel is removed from {@link ClientParcelRegistry},
-     * inside {@code ctx.get().enqueueWork()}.
-     *
-     * <pre>{@code
-     * if (ModList.get().isLoaded("journeymap")) {
-     *     ParcelPolygonOverlayFactory.notifyParcelRemoved(parcelId);
-     * }
-     * }</pre>
+     * Called from RemoveParcelPacket handler when a parcel is demolished or removed.
+     * Also handles cleanup of the preview overlay if this parcel ID matches the
+     * current preview (i.e. the Foundation Stone was broken / claim was completed).
      */
     public static void notifyParcelRemoved(UUID parcelId) {
+        // Clear preview overlay if this is the preview parcel being removed
+        if (parcelId.equals(previewParcelId)) {
+            clearPreviewOverlay();
+        }
+
         PolygonOverlay[] existing = ACTIVE_OVERLAYS.remove(parcelId);
-        if (existing == null) return;
-        JourneyMapOverlayHandler.removeOverlay(existing[0]);
-        JourneyMapOverlayHandler.removeOverlay(existing[1]);
+        if (existing != null) {
+            JourneyMapOverlayHandler.removeOverlay(existing[0]);
+            JourneyMapOverlayHandler.removeOverlay(existing[1]);
+        }
     }
 
     /**
-     * Clears the overlay cache. Called implicitly by {@link #buildAll()}.
+     * Clears the ACTIVE_OVERLAYS cache without touching JourneyMap.
+     * Called implicitly by buildAll().
      */
     public static void clearCache() {
         ACTIVE_OVERLAYS.clear();
     }
 
     // -------------------------------------------------------------------------
-    // colour helpers
+    // Foundation Stone preview overlay
     // -------------------------------------------------------------------------
 
     /**
-     * returns {@code [fill, stroke]} vivid colours for a parcel owned by the local player.
+     * Shows (or refreshes) a temporary Foundation Stone preview overlay on JourneyMap.
+     * Green = no intersection with existing parcels; red = intersects one or more parcels.
+     * Any existing preview overlay is cleared first.
+     *
+     * @param parcelId   the preview parcel UUID (from FoundationStoneBlockEntity)
+     * @param minX       proposed parcel min X (absolute world coords)
+     * @param minY       proposed parcel min Y
+     * @param minZ       proposed parcel min Z
+     * @param maxX       proposed parcel max X
+     * @param maxY       proposed parcel max Y (unused by JM 2D display, kept for consistency)
+     * @param maxZ       proposed parcel max Z
+     * @param intersects true if the proposed bounds overlap an existing parcel
+     * @param dimension  the dimension ResourceKey for the overlay
+     *
+     * @author Mark Gottschling on Mar 11, 2026
      */
-    private static Color[] activeColorsForType(ParcelType type) {
-        if (type == null) return new Color[]{PLAYER_FILL, PLAYER_STROKE};
-        return switch (type) {
-            case NATION  -> new Color[]{NATION_FILL,  NATION_STROKE};
-            case CITIZEN -> new Color[]{CITIZEN_FILL, CITIZEN_STROKE};
-            case ZONE    -> new Color[]{ZONE_FILL,    ZONE_STROKE};
-            default      -> new Color[]{PLAYER_FILL,  PLAYER_STROKE};
-        };
+    public static void showPreviewOverlay(UUID parcelId,
+                                          int minX, int minY, int minZ,
+                                          int maxX, int maxY, int maxZ,
+                                          boolean intersects,
+                                          ResourceKey<Level> dimension) {
+        clearPreviewOverlay();
+
+        Color fillColor   = intersects ? PREVIEW_CONFLICT_FILL   : PREVIEW_CLEAR_FILL;
+        Color strokeColor = intersects ? PREVIEW_CONFLICT_STROKE : PREVIEW_CLEAR_STROKE;
+
+        ShapeProperties shapeProps = new ShapeProperties()
+                .setFillColor(fillColor.getRGB())
+                .setFillOpacity(fillColor.getAlpha() / 255f)
+                .setStrokeColor(strokeColor.getRGB())
+                .setStrokeOpacity(strokeColor.getAlpha() / 255f)
+                .setStrokeWidth(2f);
+
+        List<BlockPos> corners = List.of(
+                new BlockPos(minX, minY, minZ), // NW
+                new BlockPos(maxX, minY, minZ), // NE
+                new BlockPos(maxX, minY, maxZ), // SE
+                new BlockPos(minX, minY, maxZ)  // SW
+        );
+        MapPolygon polygon = new MapPolygon(corners);
+
+        String displayId = ClaimMyLand.MOD_ID + ":preview:" + parcelId;
+        previewOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, displayId, dimension, shapeProps, polygon);
+        previewParcelId = parcelId;
+
+        JourneyMapOverlayHandler.showOverlay(previewOverlay);
     }
 
     /**
-     * returns {@code [fill, stroke]} muted colours for a parcel owned by another player.
-     * the hue of the type colour is preserved but saturation is reduced to 30% and
-     * brightness to 60%, giving a clearly faded appearance while remaining identifiable
-     * by type.
+     * Removes the Foundation Stone preview overlay from JourneyMap and clears
+     * the stored reference. Safe to call when no preview is active.
+     *
+     * @author Mark Gottschling on Mar 11, 2026
      */
+    public static void clearPreviewOverlay() {
+        if (previewOverlay != null) {
+            JourneyMapOverlayHandler.removeOverlay(previewOverlay);
+            previewOverlay = null;
+            previewParcelId = null;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private static Color[] activeColorsForType(ParcelType type) {
+        return switch (type) {
+            case NATION  -> new Color[]{ NATION_FILL,  NATION_STROKE  };
+            case CITIZEN -> new Color[]{ CITIZEN_FILL, CITIZEN_STROKE };
+            case ZONE    -> new Color[]{ ZONE_FILL,    ZONE_STROKE    };
+            default      -> new Color[]{ PLAYER_FILL,  PLAYER_STROKE  };
+        };
+    }
+
     private static Color[] mutedColorsForType(ParcelType type) {
         Color[] active = activeColorsForType(type);
-        return new Color[]{
-                desaturate(active[0]),
-                desaturate(active[1])
-        };
+        return new Color[]{ desaturate(active[0]), desaturate(active[1]) };
     }
 
-    /**
-     * desaturates a colour by converting to HSB, reducing saturation to 30% and
-     * brightness to 60%, then converting back to RGB while preserving the original alpha.
-     */
     private static Color desaturate(Color color) {
         int alpha = color.getAlpha();
         float[] hsb = Color.RGBtoHSB(color.getRed(), color.getGreen(), color.getBlue(), null);
-        hsb[1] = hsb[1] * 0.30f;  // saturation → 30% of original
-        hsb[2] = hsb[2] * 0.60f;  // brightness  → 60% of original
-        int rgb = Color.HSBtoRGB(hsb[0], hsb[1], hsb[2]);
+        // Halve saturation, reduce brightness slightly
+        int rgb = Color.HSBtoRGB(hsb[0], hsb[1] * 0.5f, hsb[2] * 0.8f);
         return new Color((rgb & 0x00FFFFFF) | (alpha << 24), true);
     }
 
-    // -------------------------------------------------------------------------
-    // private utilities
-    // -------------------------------------------------------------------------
-
-    /**
-     * returns the local player's UUID, or {@code null} if no player is loaded
-     * (should not happen in normal gameplay but guards against edge cases during
-     * world load/unload).
-     */
     private static UUID localPlayerId() {
         Minecraft mc = Minecraft.getInstance();
         return (mc != null && mc.player != null) ? mc.player.getUUID() : null;
     }
 
-    /**
-     * builds the label shown on the fullscreen map.
-     * Format: {@code "<estate name> (<TYPE>)\nOwner: <ownerName>"}
-     */
     private static String buildFullLabel(ClientParcel parcel) {
         String typeName = parcel.parcelType() != null ? parcel.parcelType().name() : "PARCEL";
         return parcel.estateName() + " (" + typeName + ")\nOwner: " + parcel.ownerName();
     }
 
-    /**
-     * resolves a dimension string to a {@link ResourceKey}{@code <Level>}.
-     * falls back to {@link Level#OVERWORLD} if blank or unresolvable.
-     */
     private static ResourceKey<Level> dimensionKey(String dimension) {
         if (dimension == null || dimension.isBlank()) return Level.OVERWORLD;
-        return switch (dimension) {
-            case "minecraft:overworld"  -> Level.OVERWORLD;
-            case "minecraft:the_nether" -> Level.NETHER;
-            case "minecraft:the_end"    -> Level.END;
-            default -> {
-                try {
-                    yield ResourceKey.create(
-                            net.minecraft.core.registries.Registries.DIMENSION,
-                            new ResourceLocation(dimension));
-                } catch (Exception e) {
-                    LOGGER.warn("[{}] invalid dimension '{}' — defaulting to overworld.",
-                            ClaimMyLand.MOD_ID, dimension);
-                    yield Level.OVERWORLD;
-                }
-            }
-        };
+        try {
+            return ResourceKey.create(
+                    net.minecraft.core.registries.Registries.DIMENSION,
+                    new ResourceLocation(dimension));
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

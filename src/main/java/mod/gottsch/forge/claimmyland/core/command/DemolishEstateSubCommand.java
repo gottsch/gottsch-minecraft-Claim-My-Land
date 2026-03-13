@@ -158,11 +158,11 @@ public class DemolishEstateSubCommand implements SubCommand {
     }
 
     private void removeBorderStone(ServerLevel level, Parcel parcel) {
-        // NOTE this will only work if the border stone is at coords
-        ICoords coords = parcel.getCoords();
-        BlockEntity be = level.getBlockEntity(coords.toPos());
-        if (be instanceof BorderStoneBlockEntity borderStone) {
-            borderStone.removeParcelBorder(level, coords);
-        }
+//        // NOTE this will only work if the border stone is at coords
+//        ICoords coords = parcel.getCoords();
+//        BlockEntity be = level.getBlockEntity(coords.toPos());
+//        if (be instanceof BorderStoneBlockEntity borderStone) {
+//            borderStone.removeParcelBorder(level, coords);
+//        }
     }
 }

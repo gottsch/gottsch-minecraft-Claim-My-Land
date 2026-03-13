@@ -135,7 +135,7 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
      * as required by {@link IClientAPI#remove(journeymap.client.api.display.Displayable)}.
      * Called by {@link ParcelPolygonOverlayFactory} when a parcel is removed at runtime.
      */
-    static void removeOverlay(PolygonOverlay overlay) {
+    public static void removeOverlay(PolygonOverlay overlay) {
         if (jmApi == null) return;
         try {
             jmApi.remove(overlay);
