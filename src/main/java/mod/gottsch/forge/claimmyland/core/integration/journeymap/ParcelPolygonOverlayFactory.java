@@ -39,11 +39,11 @@ public class ParcelPolygonOverlayFactory {
     private static final Logger LOGGER = LogManager.getLogger(ClaimMyLand.MOD_ID);
 
     // --- Parcel type colors (vivid) ---
-    private static final Color NATION_FILL    = new Color(0x3300AAFF, true);
+    private static final Color NATION_FILL    = new Color(0x0300AAFF, true);
     private static final Color NATION_STROKE  = new Color(0xCC00AAFF, true);
     private static final Color CITIZEN_FILL   = new Color(0x33AA55FF, true);
     private static final Color CITIZEN_STROKE = new Color(0xCCAA55FF, true);
-    private static final Color ZONE_FILL      = new Color(0x33FFFF55, true);
+    private static final Color ZONE_FILL      = new Color(0x03FFFF55, true);
     private static final Color ZONE_STROKE    = new Color(0xCCFFFF55, true);
     private static final Color PLAYER_FILL    = new Color(0x3355FF55, true);
     private static final Color PLAYER_STROKE  = new Color(0xCC55FF55, true);
@@ -105,9 +105,9 @@ public class ParcelPolygonOverlayFactory {
         int y = parcel.minY();
         List<BlockPos> corners = List.of(
                 new BlockPos(parcel.minX(), y, parcel.minZ()), // NW
-                new BlockPos(parcel.maxX(), y, parcel.minZ()), // NE
-                new BlockPos(parcel.maxX(), y, parcel.maxZ()), // SE
-                new BlockPos(parcel.minX(), y, parcel.maxZ())  // SW
+                new BlockPos(parcel.maxX() + 1, y, parcel.minZ()), // NE
+                new BlockPos(parcel.maxX() + 1, y, parcel.maxZ() + 1), // SE
+                new BlockPos(parcel.minX(), y, parcel.maxZ() + 1)  // SW
         );
         MapPolygon polygon = new MapPolygon(corners);
 
@@ -121,7 +121,7 @@ public class ParcelPolygonOverlayFactory {
                 .setFillOpacity(colors[0].getAlpha() / 255f)
                 .setStrokeColor(colors[1].getRGB())
                 .setStrokeOpacity(colors[1].getAlpha() / 255f)
-                .setStrokeWidth(2f);
+                .setStrokeWidth(parcel.parcelType() == ParcelType.NATION ? 4f : 2f);
 
         // Full-screen + webmap overlay (with multi-line label)
         TextProperties fullscreenTextProps = new TextProperties()

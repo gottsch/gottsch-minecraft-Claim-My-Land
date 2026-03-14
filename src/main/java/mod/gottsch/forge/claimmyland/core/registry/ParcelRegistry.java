@@ -1410,6 +1410,8 @@ public class ParcelRegistry {
         List<Parcel> borderOverlaps = find(proposedBox).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))
                 .filter(p -> !isAllowedAncestor(p.getType(), placingType))
+                .filter(p -> !isAllowedDescendant(p.getType(), placingType))
+                .filter(p -> !isSameOwnerSibling(p, ownerId, placingType))
                 .toList();
         if (!borderOverlaps.isEmpty()) {
             return 1;
@@ -1419,6 +1421,7 @@ public class ParcelRegistry {
         List<Parcel> bufferOverlaps = findBuffer(proposedBox).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))
                 .filter(p -> !isAllowedAncestor(p.getType(), placingType))
+                .filter(p -> !isAllowedDescendant(p.getType(), placingType))
                 .toList();
         boolean foreignBufferConflict = bufferOverlaps.stream()
                 .anyMatch(p -> !ownerId.equals(p.getOwnerId()));
@@ -1438,6 +1441,21 @@ public class ParcelRegistry {
         };
     }
 
+    private static boolean isAllowedDescendant(ParcelType enclosedType, ParcelType placingType) {
+        return switch (placingType) {
+            case NATION -> enclosedType == ParcelType.ZONE || enclosedType == ParcelType.CITIZEN;
+            case ZONE   -> enclosedType == ParcelType.CITIZEN;
+            default     -> false; // CITIZEN, PLAYER — no allowed descendants
+        };
+    }
+
+//    private static boolean isSameOwnerSibling(Parcel p, UUID ownerId, ParcelType placingType) {
+//        return p.getType() == placingType && p.getOwnerId().equals(ownerId);
+//    }
+
+    private static boolean isSameOwnerSibling(Parcel p, UUID ownerId, ParcelType placingType) {
+        return p.getOwnerId().equals(ownerId);
+    }
 
     // expose a detached parcel list
     public static List<Parcel> getParcels() {

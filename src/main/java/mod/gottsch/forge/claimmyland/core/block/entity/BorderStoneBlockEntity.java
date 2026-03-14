@@ -98,24 +98,24 @@ public class BorderStoneBlockEntity extends BlockEntity {
     }
 
     public void tickServer() {
-        // expireTime == 0 means it was never initialized — skip until populateBlockEntity sets it
-        if (getExpireTime() == 0) return;
-
-        if (getLevel().getGameTime() > getExpireTime()) {
-            if (getLevel() instanceof ServerLevel serverLevel && getParcelId() != null) {
-                Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
-                if (parcel.isPresent()) {
-                    // committed parcel — hide the visual border
-                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
-                            serverLevel, parcel.get(), false, 0, getBlockPos().getY());
-                    ACTIVE_BORDER_STONES.remove(this);
-                } else {
-                    // phase 1 preview — parcel never committed; remove from client registries
-                    CMLNetwork.removePreviewParcelFromTracking(serverLevel, getParcelId(), getBlockPos());
-                }
-            }
-            selfDestruct();
-        }
+//        // expireTime == 0 means it was never initialized — skip until populateBlockEntity sets it
+//        if (getExpireTime() == 0) return;
+//
+//        if (getLevel().getGameTime() > getExpireTime()) {
+//            if (getLevel() instanceof ServerLevel serverLevel && getParcelId() != null) {
+//                Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//                if (parcel.isPresent()) {
+//                    // committed parcel — hide the visual border
+//                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
+//                            serverLevel, parcel.get(), false, 0, getBlockPos().getY());
+//                    ACTIVE_BORDER_STONES.remove(this);
+//                } else {
+//                    // phase 1 preview — parcel never committed; remove from client registries
+//                    CMLNetwork.removePreviewParcelFromTracking(serverLevel, getParcelId(), getBlockPos());
+//                }
+//            }
+//            selfDestruct();
+//        }
     }
 
     /**
@@ -190,7 +190,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
 
         int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? getParcelId() : null,
-                parcel.map(p -> p.getType()).orElse(ParcelType.fromString(getParcelType())));
+                parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())));
 
 
         ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
@@ -281,13 +281,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
         super.onLoad();
         ClaimMyLand.LOGGER.debug("BorderStoneBlockEntity.onLoad: parcelId={} level={}",
                 getParcelId(), level != null ? level.getClass().getSimpleName() : "null");
-//        if (level instanceof ServerLevel serverLevel && getParcelId() != null) {
-//            ParcelRegistry.findByParcelId(getParcelId()).ifPresent(parcel -> {
-//                BorderStoneBlockEntity.ACTIVE_BORDER_STONES.add(this);
-//                // Immediate send for late-loading chunks (owner may already be online)
-//                CMLNetwork.syncBorderVisibleToOwner(serverLevel, parcel, getBlockPos().getY());
-//            });
-//        }
+
         if (level instanceof ServerLevel serverLevel && getParcelId() != null) {
             Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
             if (parcel.isPresent()) {

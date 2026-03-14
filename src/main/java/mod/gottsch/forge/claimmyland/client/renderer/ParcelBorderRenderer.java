@@ -20,7 +20,6 @@ package mod.gottsch.forge.claimmyland.client.renderer;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
@@ -112,8 +111,8 @@ public class ParcelBorderRenderer {
             VertexConsumer lineConsumer = bufferSource.getBuffer(RenderType.lines());
             renderBorderWireframe(poseStack, camera, lineConsumer, parcel, r, g, b);
 
-            // --- Buffer brackets ---
-            TextureAtlasSprite bufSprite = parcel.conflictState() == 1
+            // --- buffer brackets ---
+            TextureAtlasSprite bufSprite = parcel.isConflict()
                     ? bufferSpriteConflict : bufferSprite;
             if (bufSprite != null) {
                 VertexConsumer quadConsumer = bufferSource.getBuffer(
@@ -122,12 +121,18 @@ public class ParcelBorderRenderer {
                 renderBufferBrackets(poseStack, camera, quadConsumer, parcel, bufSprite);
             }
 
-            // --- Horizontal area plane ---
+            // --- horizontal area plane ---
             TextureAtlasSprite areaSprite = AREA_SPRITES.get(parcel.parcelType());
+
             if (areaSprite != null) {
                 VertexConsumer quadConsumer = bufferSource.getBuffer(
                         RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
-                renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, areaSprite, r, g, b);
+//                renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, areaSprite, r, g, b);
+                if (parcel.isConflict()) {
+                    renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, bufferSpriteConflict, 1f, 1f, 1f);
+                } else {
+                    renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, areaSprite, r, g, b);
+                }
             }
         }
 
@@ -176,14 +181,15 @@ public class ParcelBorderRenderer {
 
         double x0 = parcel.minX() - camX;
         double z0 = parcel.minZ() - camZ;
-        double x1 = parcel.maxX() - camX;
-        double z1 = parcel.maxZ() - camZ;
+        // NOTE need to +1 to the max values to render aournd the outer edge of the block
+        double x1 = parcel.maxX() +1 - camX;
+        double z1 = parcel.maxZ() +1 - camZ;
         double y0 = parcel.parcelType() == ParcelType.NATION
                 ? parcel.borderStoneY() - camY
                 : parcel.minY() - camY;
         double y1 = parcel.parcelType() == ParcelType.NATION
-                ? parcel.borderStoneY() + Config.SERVER.borders.nationBorderHeight.get() - camY
-                : parcel.maxY() - camY;
+                ? parcel.borderStoneY() + Config.SERVER.borders.nationBorderHeight.get() +1 - camY
+                : parcel.maxY() +1 - camY;
 
         Matrix4f matrix = poseStack.last().pose();
         PoseStack.Pose pose = poseStack.last();
@@ -242,52 +248,52 @@ public class ParcelBorderRenderer {
         Matrix4f matrix = poseStack.last().pose();
 
         // NW corner: North face + West face (full height minus top and bottom 1 block)
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bx0, bz0 - 1, yBot + 1, yTop - 1);
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz0 - 1, bz0, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bx0 + 1, bz0, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz0, bz0 + 1, yBot + 1, yTop - 1);
 
         // NE corner: North face + East face
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bx1 + 1, bz0 - 1, yBot + 1, yTop - 1);
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz0 - 1, bz0, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bx1 + 1, bz0, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1 + 1, bz0, bz0 + 1, yBot + 1, yTop - 1);
 
         // SW corner: South face + West face
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bx0, bz1, yBot + 1, yTop - 1);
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz1, bz1 + 1, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bx0 + 1, bz1 + 1, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz1, bz1 + 1, yBot + 1, yTop - 1);
 
         // SE corner: South face + East face
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bx1 + 1, bz1, yBot + 1, yTop - 1);
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz1, bz1 + 1, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bx1 + 1, bz1 + 1, yBot + 1, yTop - 1);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1 + 1, bz1, bz1 + 1, yBot + 1, yTop - 1);
 
         // North top edge: outward vertical (fixed z=bz0-1) + top cap
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bx1 + 1, bz0 - 1, yTop - 1, yTop);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz0 - 1, bx1 + 1, bz0, yTop);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bx1 + 1, bz0, yTop - 1, yTop);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz0, bx1 + 1, bz0 + 1, yTop);
 
         // South top edge: outward vertical (fixed z=bz1) + top cap
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bx1 + 1, bz1, yTop - 1, yTop);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz1, bx1 + 1, bz1 + 1, yTop);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bx1 + 1, bz1 + 1, yTop - 1, yTop);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz1, bx1 + 1, bz1 + 1, yTop);
 
         // West top edge: outward vertical (fixed x=bx0-1) + top cap
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz0 - 1, bz1 + 1, yTop - 1, yTop);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz0 - 1, bx0, bz1 + 1, yTop);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz0, bz1 + 1, yTop - 1, yTop);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz0, bx0 + 1, bz1 + 1, yTop);
 
         // East top edge: outward vertical (fixed x=bx1) + top cap
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz0 - 1, bz1 + 1, yTop - 1, yTop);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz0 - 1, bx1 + 1, bz1 + 1, yTop);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1 + 1, bz0, bz1 + 1, yTop - 1, yTop);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz0, bx1 + 1, bz1 + 1, yTop);
 
         // North bottom edge: outward vertical (fixed z=bz0-1) + bottom cap
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bx1 + 1, bz0 - 1, yBot, yBot + 1);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz0 - 1, bx1 + 1, bz0, yBot);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bx1 + 1, bz0, yBot, yBot + 1);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz0, bx1 + 1, bz0 + 1, yBot);
 
         // South bottom edge: outward vertical (fixed z=bz1) + bottom cap
-        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bx1 + 1, bz1, yBot, yBot + 1);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz1, bx1 + 1, bz1 + 1, yBot);
+        tiledVerticalFaceAlongX(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bx1 + 1, bz1 + 1, yBot, yBot + 1);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz1, bx1 + 1, bz1 + 1, yBot);
 
         // West bottom edge: outward vertical (fixed x=bx0-1) + bottom cap
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz0 - 1, bz1 + 1, yBot, yBot + 1);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0 - 1, bz0 - 1, bx0, bz1 + 1, yBot);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz0, bz1 + 1, yBot, yBot + 1);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx0, bz0, bx0 + 1, bz1 + 1, yBot);
 
         // East bottom edge: outward vertical (fixed x=bx1) + bottom cap
-        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz0 - 1, bz1 + 1, yBot, yBot + 1);
-        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz0 - 1, bx1 + 1, bz1 + 1, yBot);
+        tiledVerticalFaceAlongZ(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1 + 1, bz0, bz1 + 1, yBot, yBot + 1);
+        tiledHorizontalFace(consumer, matrix, camX, camY, camZ, sprite, 1f, 1f, 1f, a, bx1, bz0, bx1 + 1, bz1 + 1, yBot);
     }
 
 
@@ -383,37 +389,12 @@ public class ParcelBorderRenderer {
 
         double camX = camera.getPosition().x;
         double camZ = camera.getPosition().z;
-//        float y = (float) (parcel.borderStoneY() - camera.getPosition().y);
         float y = (float) (parcel.borderStoneY() + 0.002 - camera.getPosition().y);
-
-        float x0 = (float) (parcel.minX() - camX);
-        float x1 = (float) (parcel.maxX() - camX);
-        float z0 = (float) (parcel.minZ() - camZ);
-        float z1 = (float) (parcel.maxZ() - camZ);
 
         Matrix4f matrix = poseStack.last().pose();
 
-        // tile the texture based on parcel dimensions in blocks
-        float uSize = sprite.getU1() - sprite.getU0();
-        float vSize = sprite.getV1() - sprite.getV0();
-        float uTiles = (parcel.maxX() - parcel.minX()); // 1 tile per block
-        float vTiles = (parcel.maxZ() - parcel.minZ());
-
-        float su0 = sprite.getU0();
-        float su1 = sprite.getU0() + uSize * uTiles;
-        float sv0 = sprite.getV0();
-        float sv1 = sprite.getV0() + vSize * vTiles;
-
-        // NW -> NE -> SE -> SW
-//        quad(consumer, matrix,
-//                x0, y, z0,
-//                x1, y, z0,
-//                x1, y, z1,
-//                x0, y, z1,
-//                su0, sv0, su1, sv1, r, g, b, a);
-        // replace the single quad call with a nested loop
-        for (int ix = parcel.minX(); ix < parcel.maxX(); ix++) {
-            for (int iz = parcel.minZ(); iz < parcel.maxZ(); iz++) {
+        for (int ix = parcel.minX(); ix <= parcel.maxX(); ix++) {
+            for (int iz = parcel.minZ(); iz <= parcel.maxZ(); iz++) {
                 float qx0 = (float) (ix - camX);
                 float qx1 = (float) (ix + 1 - camX);
                 float qz0 = (float) (iz - camZ);
@@ -523,6 +504,7 @@ public class ParcelBorderRenderer {
         AREA_SPRITES.put(ParcelType.CITIZEN, atlas.getSprite(new ResourceLocation("claimmyland", "block/purple_horizontal")));
         AREA_SPRITES.put(ParcelType.ZONE, atlas.getSprite(new ResourceLocation("claimmyland", "block/yellow_horizontal")));
         AREA_SPRITES.put(ParcelType.PLAYER, atlas.getSprite(new ResourceLocation("claimmyland", "block/green_horizontal")));
+
     }
 
     /**

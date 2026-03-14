@@ -278,6 +278,7 @@ public class LanguageGen extends LanguageProvider {
 
         // citizen placement
         add(LangUtil.chat("citizen_placement.not_valid_parent"), "That block is not within a valid parent parcel (nation | zone) or it is claimed.");
+        add(LangUtil.chat("citizen_placement.not_same_parent"), "That block is not within the same nation or zone parcel as the start block.");
 
         // zone placement
         add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or it is claimed.");

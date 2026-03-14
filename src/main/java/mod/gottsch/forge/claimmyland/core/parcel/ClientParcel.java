@@ -83,4 +83,8 @@ public record ClientParcel(
     public boolean isRelinquished() {
         return relinquished;
     }
+
+    public boolean isConflict() {
+        return conflictState == 1;
+    }
 }
