@@ -242,6 +242,7 @@ public class CacheSyncPacket {
                 int borderStoneY = existing != null && existing.borderStoneY() != 0
                         ? existing.borderStoneY()
                         : packet.borderStoneY;
+                UUID placingPlayer = existing != null ? existing.placingPlayer() : null;
 //                boolean isPreview = existing != null && existing.isPreview(); // preserve preview state
 
                 ClientParcel clientParcel = new ClientParcel(
@@ -257,7 +258,7 @@ public class CacheSyncPacket {
                         packet.maxX, packet.maxY, packet.maxZ,
                         packet.dimension,
                 borderVisible, conflictState, borderStoneY,
-                        false
+                        false, placingPlayer
                 );
                 ClaimMyLand.LOGGER.debug("CacheSyncPacket.handle: parcelId={}, borderVisible={} (from existing={})",
                         packet.parcelId, borderVisible, existing != null);

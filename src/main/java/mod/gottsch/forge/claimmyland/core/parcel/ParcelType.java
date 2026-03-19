@@ -49,6 +49,10 @@ public enum ParcelType implements StringRepresentable {
         }
     }
 
+    public boolean isLeaf() {
+        return this == CITIZEN || this == PLAYER;
+    }
+
     @Override
     public String toString() {
         return this.name();

@@ -42,16 +42,18 @@ public class BorderVisibilityPacket {
     private final boolean isBorderVisible;
     private final int conflictState;
     private final int borderStoneY;
+    private final UUID placingPlayerId;
 
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
 
-    public BorderVisibilityPacket(UUID parcelId, boolean isBorderVisible, int conflictState, int borderStoneY) {
+    public BorderVisibilityPacket(UUID parcelId, boolean isBorderVisible, int conflictState, int borderStoneY, UUID placingPlayerId) {
         this.parcelId = parcelId;
         this.isBorderVisible = isBorderVisible;
         this.conflictState = conflictState;
         this.borderStoneY = borderStoneY;
+        this.placingPlayerId = placingPlayerId;
     }
 
     // -------------------------------------------------------------------------
@@ -63,6 +65,13 @@ public class BorderVisibilityPacket {
         buf.writeBoolean(packet.isBorderVisible);
         buf.writeInt(packet.conflictState);
         buf.writeInt(packet.borderStoneY);
+        if (packet.placingPlayerId == null) {
+            // presence flag
+            buf.writeBoolean(false);
+        } else {
+            buf.writeBoolean(true);
+            buf.writeUUID(packet.placingPlayerId);
+        }
     }
 
     public static BorderVisibilityPacket decode(FriendlyByteBuf buf) {
@@ -70,7 +79,14 @@ public class BorderVisibilityPacket {
         boolean isBorderVisible = buf.readBoolean();
         int conflictState = buf.readInt();
         int borderStoneY = buf.readInt();
-        return new BorderVisibilityPacket(parcelId, isBorderVisible, conflictState, borderStoneY);
+        // TODO wrap in own method
+        boolean placingPlayerFlag = buf.readBoolean();
+        UUID placingPlayer = null;
+        if (placingPlayerFlag) {
+            placingPlayer = buf.readUUID();
+        }
+        ClaimMyLand.LOGGER.debug("placingPLayerId -> {}", String.valueOf(placingPlayer));
+        return new BorderVisibilityPacket(parcelId, isBorderVisible, conflictState, borderStoneY, placingPlayer);
     }
 
     // -------------------------------------------------------------------------
@@ -78,12 +94,13 @@ public class BorderVisibilityPacket {
     // -------------------------------------------------------------------------
 
     public static void handle(BorderVisibilityPacket packet, Supplier<NetworkEvent.Context> ctx) {
-        ClaimMyLand.LOGGER.debug("BorderVisibilityPacket.handle: parcelId={}, visible={}, conflictState={}, stoneY={}",
-                packet.parcelId, packet.isBorderVisible, packet.conflictState, packet.borderStoneY);
+        ClaimMyLand.LOGGER.debug("BorderVisibilityPacket.handle: parcelId={}, visible={}, conflictState={}, stoneY={}, placingPlayer={}",
+                packet.parcelId, packet.isBorderVisible, packet.conflictState, packet.borderStoneY, packet.placingPlayerId);
         ctx.get().enqueueWork(() -> {
             ClientParcelRegistry.findById(packet.parcelId).ifPresent(parcel -> {
+                ClaimMyLand.LOGGER.debug("found client parcel -> {}", parcel);
                 ClientParcelRegistry.register(
-                        parcel.withBorderVisibility(packet.isBorderVisible, packet.conflictState, packet.borderStoneY)
+                        parcel.withBorderVisibility(packet.isBorderVisible, packet.conflictState, packet.borderStoneY, packet.placingPlayerId)
                 );
             });
         });

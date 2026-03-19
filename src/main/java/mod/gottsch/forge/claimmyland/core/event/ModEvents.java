@@ -24,7 +24,6 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelChunkIndex;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -39,7 +38,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDestroyBlockEvent;
@@ -54,7 +52,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author Mark Gottschling on Sep 14, 2024
@@ -199,6 +196,8 @@ public class ModEvents {
             return;
         }
 
+        ClaimMyLand.LOGGER.debug("player is attempting to place block");
+
         // chunk pre-filter
         BlockPos pos = event.getPos();
         String dimension = getDimensionString(event.getLevel());
@@ -219,7 +218,10 @@ public class ModEvents {
         // prevent protected blocks from placing
         if (event.getEntity() instanceof Player player) {
 //            ClaimMyLand.LOGGER.debug("player is holding -> {}", ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
-
+//            ClaimMyLand.LOGGER.info("event.pos -> {}", event.getPos());
+//            ClaimMyLand.LOGGER.info("event.placedBlock -> {}", event.getPlacedBlock().getBlock());
+//            ClaimMyLand.LOGGER.info("event.placedAgainst -> {}", event.getPlacedAgainst().getBlock());
+//            ClaimMyLand.LOGGER.info("event.snapshot.pos -> {}", event.getBlockSnapshot().getPos());
 //            if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND))) {
             if (!ParcelRegistry.hasAccess(
                     (ServerPlayer) event.getEntity(),
@@ -228,12 +230,14 @@ public class ModEvents {
                     ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND))) {
 
                 event.setCanceled(true);
-//                if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-//                    ClaimMyLand.LOGGER.debug("denied block place -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
-//                }
+                /// //
+                if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+                    ClaimMyLand.LOGGER.debug("denied block place -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
+                }
 //                if (!event.getLevel().isClientSide()) {
 //                    sendProtectedMessage(event.getLevel(), (Player) event.getEntity());
 //                }
+                /// //
                 PlayerMessageHelper.sendFailure(player, "parcel.place_block.block_claimed");
 
             }
@@ -381,14 +385,19 @@ public class ModEvents {
                 ClaimMyLand.LOGGER.debug("player -> {} is hold item in main hand -> {}", event.getEntity().getDisplayName().getString(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
             } // TODO check other hand
 
+//            ClaimMyLand.LOGGER.info("event.pos -> {}", event.getPos());
+//            ClaimMyLand.LOGGER.info("event.face -> {}", event.getFace());
+//            ClaimMyLand.LOGGER.info("event.placement pos -> {}", event.getPos().relative(event.getFace()));
+
             BlockState state = event.getLevel().getBlockState(event.getPos());
 //            if (!ParcelRegistry.hasInteractAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), state, heldItem)) {
             if (!ParcelRegistry.hasInteractAccess(
                     (ServerPlayer) event.getEntity(),
-                    Coords.of(event.getPos()),
+                    Coords.of(event.getPos().relative(event.getFace())),
                     getDimensionString(event.getLevel()),
                     state,
                     heldItem)) {
+
                 event.setCanceled(true);
                 if (ClaimMyLand.LOGGER.isDebugEnabled()) {
                     ClaimMyLand.LOGGER.debug("denied right click -> {} @ {} w/ hand -> {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString(), event.getHand().toString());

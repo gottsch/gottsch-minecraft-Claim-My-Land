@@ -21,6 +21,7 @@ package mod.gottsch.forge.claimmyland.core.network;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -249,7 +250,7 @@ public class CMLNetwork {
                                 parcel.getMinCoords().getX(),
                                 parcel.getMinCoords().getY(),
                                 parcel.getMinCoords().getZ()))),
-                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY)
+                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY, null)
         );
     }
 
@@ -271,25 +272,6 @@ public class CMLNetwork {
 
         // send BorderVisibilityPacket for each active stone — but only if the stone block
         // still physically exists in the world (guards against stale ACTIVE_BORDER_STONES entries)
-//        for (BorderStoneBlockEntity stone : BorderStoneBlockEntity.ACTIVE_BORDER_STONES) {
-//            if (stone.getParcelId() == null || stone.getLevel() == null) {
-//                BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(stone);
-//                continue;
-//            }
-//            // verify the block entity is still actually loaded in the world
-//            BlockEntity worldBE = stone.getLevel().getBlockEntity(stone.getBlockPos());
-//            if (worldBE != stone) {
-//                // stale entry — block was removed without cleaning ACTIVE_BORDER_STONES
-//                BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(stone);
-//                continue;
-//            }
-//            ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel -> {
-//                int conflictState = ParcelRegistry.resolveConflictState(
-//                        stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(), parcel.getId());
-//                CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-//                        new BorderVisibilityPacket(parcel.getId(), true, conflictState, stone.getBlockPos().getY()));
-//            });
-//        }
         for (BorderStoneBlockEntity stone : BorderStoneBlockEntity.ACTIVE_BORDER_STONES) {
             if (stone.getParcelId() == null || stone.getLevel() == null) {
                 BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(stone);
@@ -300,35 +282,22 @@ public class CMLNetwork {
                 BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(stone);
                 continue;
             }
+            ClaimMyLand.LOGGER.debug("CMLNetwork: processing border stone...");
             ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel -> {
+
                 // Only send to the owner of this parcel
-                if (!player.getUUID().equals(parcel.getEstate().getOwnerId())) return;
+                if (!parcel.getEstate().isRelinquished() && !player.getUUID().equals(parcel.getEstate().getOwnerId())) return;
+                UUID playingPlayerId = resolvePlacingPlayerId(stone);
+                if (!player.getUUID().equals(playingPlayerId) && !player.getUUID().equals(parcel.getEstate().getOwnerId())) return;
+
                 int conflictState = ParcelRegistry.resolveConflictState(
                         stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(), parcel.getId(), parcel.getType());
 
-
                 CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new BorderVisibilityPacket(parcel.getId(), true, conflictState, stone.getBlockPos().getY()));
+                        new BorderVisibilityPacket(parcel.getId(), true, conflictState, stone.getBlockPos().getY(), playingPlayerId));
             });
         }
     }
-
-//    public static void syncPreviewParcelToTrackingPlayers(ServerLevel level, UUID parcelId,
-//                                                          UUID estateId, UUID ownerId,
-//                                                          ParcelType parcelType,
-//                                                          Box box, int stoneY, String dimension) {
-//        String ownerName = resolveOwnerName(level, ownerId);
-//        SyncParcelPacket packet = SyncParcelPacket.forPreview(
-//                parcelId, estateId, ownerId, ownerName, parcelType, box, stoneY, dimension);
-//        CHANNEL.send(
-//                PacketDistributor.TRACKING_CHUNK.with(() ->
-//                        level.getChunkAt(new BlockPos(
-//                                box.getMinCoords().getX(),
-//                                box.getMinCoords().getY(),
-//                                box.getMinCoords().getZ()))),
-//                packet
-//        );
-//    }
 
     /**
      * Sends a preview SyncParcelPacket to tracking players AND directly to the
@@ -370,9 +339,10 @@ public class CMLNetwork {
                                                                     int conflictState,
                                                                     int borderStoneY) {
         syncBorderVisibilityToTrackingPlayers(level, parcel, visible, conflictState, borderStoneY);
+        ClaimMyLand.LOGGER.debug("plaery -> {}", player);
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
-                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY)
+                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY, player.getUUID())
         );
     }
 
@@ -385,7 +355,7 @@ public class CMLNetwork {
                                                        boolean visible, int conflictState, int borderStoneY) {
         CHANNEL.send(
                 PacketDistributor.DIMENSION.with(level::dimension),
-                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY));
+                new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY, null));
     }
 
     /**
@@ -405,7 +375,29 @@ public class CMLNetwork {
 
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> owner),
-                new BorderVisibilityPacket(parcel.getId(), true, conflictState, borderStoneY));
+                new BorderVisibilityPacket(parcel.getId(), true, conflictState, borderStoneY, null));
+    }
+
+    public static void syncBorderVisibleToOwnerAndPlacer(ServerLevel level, Parcel parcel, int borderStoneY, UUID placingPlayerId) {
+        ClaimMyLand.LOGGER.debug("syncing border visible to placer");
+        UUID ownerId = parcel.getEstate().getOwnerId();
+        if (ownerId == null) return;
+        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
+        ClaimMyLand.LOGGER.debug("owner -> {}", owner);
+        if (owner == null) return;
+        int conflictState = ParcelRegistry.resolveConflictState(
+                parcel.getBox(), ownerId, parcel.getId(), parcel.getType());
+
+        CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> owner),
+                new BorderVisibilityPacket(parcel.getId(), true, conflictState, borderStoneY, placingPlayerId));
+
+        ServerPlayer placingPlayer = level.getServer().getPlayerList().getPlayer(placingPlayerId);
+        ClaimMyLand.LOGGER.debug("placingPlayer -> {}", placingPlayer);
+        if (placingPlayer == null) return;
+        CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> placingPlayer),
+                new BorderVisibilityPacket(parcel.getId(), true, conflictState, borderStoneY, placingPlayerId));
     }
 
     public static void syncPreviewParcelToOwner(ServerLevel level,
@@ -454,6 +446,13 @@ public class CMLNetwork {
     private static String resolveOwnerName(ServerLevel level, UUID ownerId) {
         if (ownerId == null) return "";
         return PlayerRegistry.getPlayerName(level, ownerId).orElse("");
+    }
+
+    public static UUID resolvePlacingPlayerId(BorderStoneBlockEntity stone) {
+        if (stone instanceof FoundationStoneBlockEntity foundationStone) {
+            return foundationStone.getPlacingPlayerId();
+        }
+        return stone.getPlacingPlayer() != null ? stone.getPlacingPlayer().getUUID() : null;
     }
 
 }

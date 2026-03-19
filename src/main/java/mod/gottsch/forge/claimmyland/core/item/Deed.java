@@ -403,30 +403,41 @@ public abstract class Deed extends Item {
      * @param previousCoords
      */
     protected void handleBlockPlaced(Level level, BlockPos pos, Player player, ItemStack deed, ICoords previousCoords) {
-        // get the block entity
         FoundationStoneBlockEntity blockEntity = (FoundationStoneBlockEntity) level.getBlockEntity(pos);
         if (blockEntity != null) {
-
-            // update data from deed or existing parcel
             populateFoundationStone(blockEntity, deed, pos, player);
-
-            //check if there is a stored position of foundation stone.
             if (previousCoords != Coords.EMPTY) {
                 removePreviousLocation(level, deed, previousCoords);
             }
-
-            // store position of new foundation stone
             storeCurrentLocation(level, deed, Coords.of(pos));
-
-            /*
-             * NOTE foundation stone is non-craftable nor in the crafting tab
-             * so need to initiate the borders manually.
-             */
-            // place border blocks
             blockEntity.placeParcelBorder((ServerPlayer) player);
-//            blockEntity.placeParcelHorizontalArea();
         }
     }
+//    protected void handleBlockPlaced(Level level, BlockPos pos, Player player, ItemStack deed, ICoords previousCoords) {
+//        // get the block entity
+//        FoundationStoneBlockEntity blockEntity = (FoundationStoneBlockEntity) level.getBlockEntity(pos);
+//        if (blockEntity != null) {
+//
+//            // update data from deed or existing parcel
+//            populateFoundationStone(blockEntity, deed, pos, player);
+//
+//            //check if there is a stored position of foundation stone.
+//            if (previousCoords != Coords.EMPTY) {
+//                removePreviousLocation(level, deed, previousCoords);
+//            }
+//
+//            // store position of new foundation stone
+//            storeCurrentLocation(level, deed, Coords.of(pos));
+//
+//            /*
+//             * NOTE foundation stone is non-craftable nor in the crafting tab
+//             * so need to initiate the borders manually.
+//             */
+//            // place border blocks
+//            blockEntity.placeParcelBorder((ServerPlayer) player);
+////            blockEntity.placeParcelHorizontalArea();
+//        }
+//    }
 
     /**
      *

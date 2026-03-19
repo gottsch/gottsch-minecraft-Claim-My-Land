@@ -876,7 +876,9 @@ public class ParcelRegistry {
                 .orElse(true);
     }
 
+    // main access check
     public static boolean hasAccess(ServerPlayer player, ICoords coords, String dimension, ItemStack itemStack) {
+//        ClaimMyLand.LOGGER.info("player checking access...");
         return resolveParcelCached(player, coords, dimension)
                 .map(parcel -> (itemStack != null && !itemStack.isEmpty())
                         ? parcel.grantsAccess(player.getUUID(), itemStack)
@@ -1006,30 +1008,30 @@ public class ParcelRegistry {
                         }
                     }
 
-                    ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getEstate().getBlockWhitelist());
+//                    ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getEstate().getBlockWhitelist());
                     for (String blockName : parcel.getEstate().getBlockWhitelist()) {
                         ResourceLocation location = new ResourceLocation(blockName);
-                        ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
+//                        ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
                         if (ModUtil.getName(state.getBlock()).equals(location)) {
                             return true;
                         }
                     }
 
                     if (heldItem != null && !heldItem.isEmpty()) {
-                        ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
+//                        ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
 
                         for (String tagName : parcel.getEstate().getItemTagWhitelist()) {
                             ResourceLocation location = new ResourceLocation(tagName);
-                            ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location);
+//                            ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location);
                             if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
                                 return true;
                             }
                         }
 
-                        ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getEstate().getItemWhitelist());
+//                        ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getEstate().getItemWhitelist());
                         for (String itemName : parcel.getEstate().getItemWhitelist()) {
                             ResourceLocation location = new ResourceLocation(itemName);
-                            ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+//                            ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
                             if (ModUtil.getName(heldItem.getItem()).equals(location)) {
                                 return true;
                             }
@@ -1064,8 +1066,8 @@ public class ParcelRegistry {
                                             BlockState state, ItemStack heldItem) {
         return resolveParcelCached(player, coords, dimension)
                 .map(parcel -> {
-                    ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}",
-                            state.getBlock().getName().getString(), parcel);
+//                    ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}",
+//                            state.getBlock().getName().getString(), parcel);
 
                     for (String tagName : parcel.getEstate().getBlockTagWhitelist()) {
                         if (TagHelper.doesBlockBelongToTag(state.getBlock(), new ResourceLocation(tagName))) return true;
@@ -1084,6 +1086,7 @@ public class ParcelRegistry {
                     return parcel.grantsAccess(player.getUUID(), heldItem);
                 })
                 .orElse(true);
+
     }
 
     /**
@@ -1094,7 +1097,16 @@ public class ParcelRegistry {
     public static Optional<Parcel> resolveParcelCached(UUID playerId, ICoords coords, String dimension) {
         Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
         if (cached.isPresent()) {
-            return Optional.of(cached.get().getParcel());
+            Parcel cachedParcel = cached.get().getParcel();
+            // only trust the cache if it is a leaf parcel type — parent types (nation/zone)
+            // may contain the coords but a child citizen/player parcel is the authoritative
+            // access check target at that position
+            if (cachedParcel.getType().isLeaf()) {
+                return Optional.of(cachedParcel);
+            }
+            // non-leaf cache hit — query BST for most specific parcel at target coords
+            // but do NOT update the cache — it correctly reflects the player's standing position
+            return resolveParcelAt(coords, coords);
         }
 
         Optional<Parcel> resolved = resolveParcelAt(coords, coords);
@@ -1107,6 +1119,22 @@ public class ParcelRegistry {
 
         return resolved;
     }
+//    public static Optional<Parcel> resolveParcelCached(UUID playerId, ICoords coords, String dimension) {
+//        Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
+//        if (cached.isPresent()) {
+//            return Optional.of(cached.get().getParcel());
+//        }
+//
+//        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
+//
+//        if (resolved.isPresent()) {
+//            REGION_CACHE.update(playerId, resolved.get());
+//        } else {
+//            REGION_CACHE.invalidatePlayer(playerId);
+//        }
+//
+//        return resolved;
+//    }
 
 
     /**
@@ -1117,27 +1145,57 @@ public class ParcelRegistry {
     public static Optional<Parcel> resolveParcelCached(ServerPlayer player, ICoords coords, String dimension) {
         UUID playerId = player.getUUID();
 
+//        ClaimMyLand.LOGGER.info("resolveParcelCached() coords -> {}", coords);
         Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
         if (cached.isPresent()) {
-            // Cache hit — no BST, no packet needed (client already has this entry)
-            return Optional.of(cached.get().getParcel());
+            Parcel cachedParcel = cached.get().getParcel();
+//            ClaimMyLand.LOGGER.info("resolveParcelCached() cached parcel -> {}", cachedParcel);
+            // only trust the cache if it is a leaf parcel type — parent types (nation/zone)
+            // may contain the coords but a child citizen/player parcel is the authoritative
+            // access check target at that position
+            if (cachedParcel.getType().isLeaf()) {
+//                ClaimMyLand.LOGGER.info("resolveParcelCached() isLeaf -> {}", cachedParcel.getType().isLeaf());
+                return Optional.of(cachedParcel);
+            }
+            // non-leaf cache hit — query BST for most specific parcel at target coords
+            // but do NOT update the cache — it correctly reflects the player's standing position
+//            ClaimMyLand.LOGGER.info("resolveParcelCached() NOT cached, resolving at {}", coords);
+            return resolveParcelAt(coords, coords);
         }
 
-        // Cache miss — query BST
+        // cache miss — query BST
         Optional<Parcel> resolved = resolveParcelAt(coords, coords);
 
         if (resolved.isPresent()) {
             REGION_CACHE.update(playerId, resolved.get());
-            // notify client so it can do instant protection checks
             CMLNetwork.syncCacheToPlayer(player, resolved.get());
         } else {
             REGION_CACHE.invalidatePlayer(playerId);
-            // tell client they are in wilderness
             CMLNetwork.syncWildernessToPlayer(player);
         }
 
         return resolved;
     }
+    //        if (cached.isPresent()) {
+//            // Cache hit — no BST, no packet needed (client already has this entry)
+//            return Optional.of(cached.get().getParcel());
+//        }
+//
+//        // Cache miss — query BST
+//        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
+//
+//        if (resolved.isPresent()) {
+//            REGION_CACHE.update(playerId, resolved.get());
+//            // notify client so it can do instant protection checks
+//            CMLNetwork.syncCacheToPlayer(player, resolved.get());
+//        } else {
+//            REGION_CACHE.invalidatePlayer(playerId);
+//            // tell client they are in wilderness
+//            CMLNetwork.syncWildernessToPlayer(player);
+//        }
+//
+//        return resolved;
+//    }
 
     /**
      * Tick-path variant used exclusively by the HUD sync in ModEvents.onPlayerTick().
@@ -1408,10 +1466,13 @@ public class ParcelRegistry {
     public static int resolveConflictState(Box proposedBox, UUID ownerId, UUID excludeParcelId, ParcelType placingType) {
         // rule 1: border-vs-border — any overlap is a conflict, excluding self and allowed ancestors
         List<Parcel> borderOverlaps = find(proposedBox).stream()
+                .peek(p -> ClaimMyLand.LOGGER.debug("resolveConflictState: excludeParcelId={}, overlap parcel id={}, match={}",
+                        excludeParcelId, p.getId(), p.getId().equals(excludeParcelId)))
+
                 .filter(p -> !p.getId().equals(excludeParcelId))
                 .filter(p -> !isAllowedAncestor(p.getType(), placingType))
                 .filter(p -> !isAllowedDescendant(p.getType(), placingType))
-                .filter(p -> !isSameOwnerSibling(p, ownerId, placingType))
+                .filter(p -> !isSameOwnerSibling(p, ownerId, placingType, proposedBox))
                 .toList();
         if (!borderOverlaps.isEmpty()) {
             return 1;
@@ -1453,8 +1514,14 @@ public class ParcelRegistry {
 //        return p.getType() == placingType && p.getOwnerId().equals(ownerId);
 //    }
 
-    private static boolean isSameOwnerSibling(Parcel p, UUID ownerId, ParcelType placingType) {
-        return p.getOwnerId().equals(ownerId);
+    //    private static boolean isSameOwnerSibling(Parcel p, UUID ownerId, ParcelType placingType) {
+//        return p.getOwnerId().equals(ownerId);
+//    }
+    private static boolean isSameOwnerSibling(Parcel p, UUID ownerId, ParcelType placingType, Box proposedBox) {
+        if (!p.getOwnerId().equals(ownerId)) return false;
+        if (p.getType() != placingType) return false;
+        // same owner parcels may overlap in buffer zones but actual borders must not touch
+        return !ModUtil.touching(proposedBox, p.getBox());
     }
 
     // expose a detached parcel list

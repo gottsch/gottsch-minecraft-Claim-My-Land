@@ -127,39 +127,84 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
         }
     }
 
+//    @Override
+//    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+//        BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
+//        if (blockEntity != null) {
+//            populateBlockEntity(level, blockEntity, Coords.of(pos));
+//        }
+//        super.onPlace(state, level, pos, oldState, isMoving);
+//    }
+
+    // first
     @Override
-    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity entity, ItemStack itemStack) {
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+                            @Nullable LivingEntity entity, ItemStack itemStack) {
+
         super.setPlacedBy(level, pos, state, entity, itemStack);
-
-    }
-
-    @Override
-    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
-        // get the block entity
+        if (level.isClientSide() || !(entity instanceof ServerPlayer placingPlayer)) return;
         BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
         if (blockEntity != null) {
+            blockEntity.setPlacingPlayer(placingPlayer);
+        }
+    }
 
-            // update data from deed or existing parcel
+    // second
+    @Override
+    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+        BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
+        if (blockEntity != null) {
             populateBlockEntity(level, blockEntity, Coords.of(pos));
-
-            /*
-             * NOTE foundation stone is non-craftable nor in the crafting tab
-             * so need to initiate the borders manually.
-             */
-
-            ServerPlayer placingPlayer = null;
-            if (level instanceof ServerLevel serverLevel && blockEntity.getParcelId() != null) {
-                placingPlayer = ParcelRegistry.findByParcelId(blockEntity.getParcelId())
-                        .map(p -> serverLevel.getServer().getPlayerList()
-                                .getPlayer(p.getEstate().getOwnerId()))
-                        .orElse(null);
-            }
-
-            // place border blocks
-            blockEntity.placeParcelBorder(placingPlayer);
+            blockEntity.placeParcelBorder(blockEntity.getPlacingPlayer());
+            blockEntity.setPlacingPlayer(null); // clear after use
         }
         super.onPlace(state, level, pos, oldState, isMoving);
     }
+
+    // THIS occurs first, so populateBlockEntity is not call, and thus getParcelId = null. No border
+//    @Override
+//    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+//                            @Nullable LivingEntity entity, ItemStack itemStack) {
+//
+//        super.setPlacedBy(level, pos, state, entity, itemStack);
+//
+//        if (level.isClientSide() || !(entity instanceof ServerPlayer placingPlayer)) return;
+//        BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
+//        if (blockEntity != null) {
+//            blockEntity.placeParcelBorder(placingPlayer);
+//        }
+//    }
+//    @Override
+//    public void setPlacedBy(Level level, BlockPos pos, BlockState state,
+//                            @Nullable LivingEntity entity, ItemStack itemStack) {
+//        super.setPlacedBy(level, pos, state, entity, itemStack);
+//
+//        if (level.isClientSide() || !(entity instanceof ServerPlayer placingPlayer)) return;
+//
+//        BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
+//        if (blockEntity == null || blockEntity.getParcelId() == null) return;
+//
+//        // if the placing player is not the registered estate owner (e.g. reclaiming
+//        // a relinquished parcel), re-fire placeParcelBorder() with the correct player
+//        // so the border visibility packet reaches them
+//        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(blockEntity.getParcelId());
+//        boolean placerIsEstateOwner = parcel
+//                .map(p -> p.getEstate().getOwnerId().equals(placingPlayer.getUUID()))
+//                .orElse(true);
+//
+//        if (!placerIsEstateOwner) {
+//            blockEntity.placeParcelBorder(placingPlayer);
+//        }
+//    }
+//
+//    @Override
+//    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+//        BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
+//        if (blockEntity != null) {
+//            populateBlockEntity(level, blockEntity, Coords.of(pos));
+//        }
+//        super.onPlace(state, level, pos, oldState, isMoving);
+//    }
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean b) {

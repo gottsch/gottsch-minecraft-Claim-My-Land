@@ -19,6 +19,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -27,6 +28,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
@@ -42,6 +44,7 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     private static final String DEED_ID = "deed_id";
     private static final String NATION_ID = "nation_id";
     private static final String NATION_ESTATE_ID = "nation_estate_id";
+    private static final String PLACING_PLAYER_ID = "placing_player_id";
 
     // unique id of of deed that created this block / block entity
     // TODO might not be necessary when adding TransferDeed
@@ -52,6 +55,9 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     private UUID nationId;
 
     private UUID nationEstateId;
+
+    // NOTE - not transient
+    private UUID placingPlayerId;
 
     /**
      *
@@ -69,23 +75,35 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
     @Override
     public void tickServer() {
         // expireTime == 0 means it was never initialized — skip until populateBlockEntity sets it
-//        if (getExpireTime() == 0) return;
+        if (getExpireTime() == 0) return;
 //
-//        if (getLevel().getGameTime() > getExpireTime()) {
-//            if (getLevel() instanceof ServerLevel serverLevel && getParcelId() != null) {
-//                Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
-//                if (parcel.isPresent()) {
-//                    // committed parcel — hide the visual border
-//                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
-//                            serverLevel, parcel.get(), false, 0, getBlockPos().getY());
-//                    ACTIVE_BORDER_STONES.remove(this);
-//                } else {
-//                    // phase 1 preview — parcel never committed; remove from client registries
-//                    CMLNetwork.removePreviewParcelFromTracking(serverLevel, getParcelId(), getBlockPos());
-//                }
-//            }
-//            selfDestruct();
-//        }
+        if (getLevel().getGameTime() > getExpireTime()) {
+            if (getLevel() instanceof ServerLevel serverLevel && getParcelId() != null) {
+                Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+                if (parcel.isPresent()) {
+                    // committed parcel — hide the visual border
+                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
+                            serverLevel, parcel.get(), false, 0, getBlockPos().getY());
+                    ACTIVE_BORDER_STONES.remove(this);
+                } else {
+                    // phase 1 preview — parcel never committed; remove from client registries
+                    CMLNetwork.removePreviewParcelFromTracking(serverLevel, getParcelId(), getBlockPos());
+                }
+            }
+            selfDestruct();
+        }
+    }
+
+    /**
+     *
+     */
+    public void selfDestruct() {
+        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
+            ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
+        }
+
+        this.getLevel().setBlockAndUpdate(this.getBlockPos(), Blocks.AIR.defaultBlockState());
+        this.getLevel().removeBlockEntity(this.getBlockPos());
     }
 
     @Override
@@ -102,6 +120,10 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         if (ObjectUtils.isNotEmpty(getNationEstateId())) {
             tag.putUUID(NATION_ESTATE_ID, getNationEstateId());
         }
+        if (ObjectUtils.isNotEmpty(getPlacingPlayerId())) {
+            ClaimMyLand.LOGGER.debug("saving placing player -> {}", getPlacingPlayerId());
+            tag.putUUID(PLACING_PLAYER_ID, getPlacingPlayerId());
+        }
     }
 
     @Override
@@ -116,6 +138,10 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         }
         if (tag.contains(NATION_ESTATE_ID)) {
             setNationEstateId(tag.getUUID(NATION_ESTATE_ID));
+        }
+        if (tag.contains(PLACING_PLAYER_ID)) {
+            setPlacingPlayerId(tag.getUUID(PLACING_PLAYER_ID));
+            ClaimMyLand.LOGGER.debug("loading placing player -> {}", getPlacingPlayerId());
         }
     }
 
@@ -170,5 +196,13 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
 
     public void setNationEstateId(UUID nationEstateId) {
         this.nationEstateId = nationEstateId;
+    }
+
+    public UUID getPlacingPlayerId() {
+        return placingPlayerId;
+    }
+
+    public void setPlacingPlayerId(UUID placingPlayerId) {
+        this.placingPlayerId = placingPlayerId;
     }
 }

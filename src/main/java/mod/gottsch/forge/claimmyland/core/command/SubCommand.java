@@ -173,6 +173,23 @@ public interface SubCommand {
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
+    static final SuggestionProvider<CommandSourceStack>
+            OPS_OWNER_ESTATE_NATION_NAMES = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, OWNER_NAME);
+
+        Set<String> names = new HashSet<>();
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (ownerUuid.isPresent()) {
+            names = ParcelRegistry.findByOwner(ownerUuid.get()).stream()
+                    .filter(parcel -> parcel instanceof NationalizedParcel)
+                    .map(parcel -> (NationalizedParcel) parcel)
+                    .map(nationalizedParcel -> nationalizedParcel.getNationEstate().getName())
+                    .map(StringArgumentType::escapeIfRequired)
+                    .collect(Collectors.toSet());
+        }
+        return SharedSuggestionProvider.suggest(names, builder);
+    };
+
     public static final SuggestionProvider<CommandSourceStack>
             OPS_OWNER_CITIZEN_ESTATE_NAMES = (source, builder) -> {
         String nationName = StringArgumentType.getString(source, NATION_NAME);
@@ -255,6 +272,18 @@ public interface SubCommand {
                 .map((Estate::getName))
                 .map(StringArgumentType::escapeIfRequired)
                 .toList();
+        return SharedSuggestionProvider.suggest(names, builder);
+    };
+
+    static final SuggestionProvider<CommandSourceStack>
+            OWNER_ESTATE_NATION_NAMES = (source, builder) -> {
+        ServerPlayer owner = source.getSource().getPlayerOrException();
+        Set<String> names = ParcelRegistry.findByOwner(owner.getUUID()).stream()
+                .filter(parcel -> parcel instanceof NationalizedParcel)
+                .map(parcel -> (NationalizedParcel) parcel)
+                .map(nationalizedParcel -> nationalizedParcel.getNationEstate().getName())
+                .map(StringArgumentType::escapeIfRequired)
+                .collect(Collectors.toSet());
         return SharedSuggestionProvider.suggest(names, builder);
     };
 

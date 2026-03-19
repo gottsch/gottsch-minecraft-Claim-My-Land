@@ -45,7 +45,7 @@ import net.minecraftforge.fml.common.Mod;
  *
  * @author by Mark Gottschling on 3/3/2026
  */
-//@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 public class ClientEvents {
 
     // -------------------------------------------------------------------------

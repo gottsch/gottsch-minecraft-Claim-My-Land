@@ -86,8 +86,13 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * is (1, -4, 1) -> (6, 6, 6).
      */
     private Box relativeBox;
-    //
+
+    @Deprecated
     private long expireTime;
+
+    // transient — not saved to NBT, only used during placement
+    @Nullable
+    private ServerPlayer placingPlayer;
 
     public BorderStoneBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.BORDER_STONE_ENTITY_TYPE.get(), pos, state);
@@ -118,22 +123,6 @@ public class BorderStoneBlockEntity extends BlockEntity {
 //        }
     }
 
-    /**
-     *
-     */
-    public void selfDestruct() {
-        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-            ClaimMyLand.LOGGER.debug("self-destructing @ {}", this.getBlockPos());
-        }
-
-        this.getLevel().setBlockAndUpdate(this.getBlockPos(), Blocks.AIR.defaultBlockState());
-        this.getLevel().removeBlockEntity(this.getBlockPos());
-    }
-
-
-
-
-
     public int getBufferSize(String type) {
         ParcelType parcelType = StringUtils.isNotBlank(type) ? ParcelType.valueOf(type) : ParcelType.PLAYER;
         return getBufferSize(parcelType);
@@ -157,7 +146,18 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * gets an absolute box at a coords using the block entity
      * @return
      */
+    public Box getAbsoluteBox(Parcel parcel) {
+        return parcel.getBox();
+    }
+
     public Box getAbsoluteBox() {
+        if (getParcelId() != null) {
+            Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+            if (parcel.isPresent()) {
+                return parcel.get().getBox();
+            }
+        }
+        // phase 1 preview — foundation stone IS the origin
         ICoords myCoords = Coords.of(this.worldPosition);
         return new Box(myCoords.add(getRelativeBox().getMinCoords()),
                 myCoords.add(getRelativeBox().getMaxCoords()));
@@ -180,14 +180,29 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @author Mark Gottschling on Mar 11, 2026
      */
     public void placeParcelBorder(ServerPlayer placingPlayer) {
+        ClaimMyLand.LOGGER.info("parcel id -> {}", getParcelId());
         if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;
 
-        Box absoluteBox = getAbsoluteBox();
         Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+        Box absoluteBox = parcel.isPresent() ? getAbsoluteBox(parcel.get()) : getAbsoluteBox();
+//        UUID ownerId = parcel.isPresent()
+//                ? parcel.get().getEstate().getOwnerId()
+//                : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
+
+        ClaimMyLand.LOGGER.info("parcel -> {}", parcel.get());
+        ClaimMyLand.LOGGER.info("isRelinquished -> {}", parcel.get().getEstate().isRelinquished());
+        ClaimMyLand.LOGGER.info("placing player -> {}", placingPlayer);
+        ClaimMyLand.LOGGER.info("this.ownerId -> {}", getOwnerId());
+
+        // resolve the effective owner for border visibility:
+        // reclaiming player takes precedence over the registered estate owner when they differ
         UUID ownerId = parcel.isPresent()
-                ? parcel.get().getEstate().getOwnerId()
+                ? (parcel.get().getEstate().isRelinquished() && placingPlayer != null
+                ? placingPlayer.getUUID()
+                : parcel.get().getEstate().getOwnerId())
                 : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
 
+        ClaimMyLand.LOGGER.info("ownerId -> {}", String.valueOf(ownerId));
 
         int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? getParcelId() : null,
                 parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())));
@@ -199,14 +214,17 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
         if (parcel.isPresent()) {
             if (placingPlayer != null) {
+                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrakcingPlayersAndSelf...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayersAndSelf(
                         serverLevel, placingPlayer, parcel.get(), true, conflictState, getBlockPos().getY());
             } else {
+                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrackingPlayers...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayers(
                         serverLevel, parcel.get(), true, conflictState, getBlockPos().getY());
             }
             ACTIVE_BORDER_STONES.add(this);
         } else if (placingPlayer != null) {
+            ClaimMyLand.LOGGER.info("syncPreviewParcelToTrackingPlayersAndSelf...");
             // phase 1 preview — parcel not yet registered; register on client first
             String dimension = level.dimension().location().toString();
             CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
@@ -285,9 +303,24 @@ public class BorderStoneBlockEntity extends BlockEntity {
         if (level instanceof ServerLevel serverLevel && getParcelId() != null) {
             Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
             if (parcel.isPresent()) {
+                // TODO get the ownerId / placingPlayer property - add to foundation stone BE if have to
                 // committed parcel — restore border visibility to owner
                 BorderStoneBlockEntity.ACTIVE_BORDER_STONES.add(this);
-                CMLNetwork.syncBorderVisibleToOwner(serverLevel, parcel.get(), getBlockPos().getY());
+
+                ClaimMyLand.LOGGER.debug("is foundation stone -> {}", (this instanceof FoundationStoneBlockEntity));
+                if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity) {
+                    ClaimMyLand.LOGGER.debug("foundation stone placing player -> {}", foundationStoneBlockEntity.getPlacingPlayerId());
+                }
+                if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity
+                && foundationStoneBlockEntity.getPlacingPlayerId() != null) {
+                    ClaimMyLand.LOGGER.debug("sent to placer");
+                    CMLNetwork.syncBorderVisibleToOwnerAndPlacer(serverLevel, parcel.get(), getBlockPos().getY(),
+                            foundationStoneBlockEntity.getPlacingPlayerId());
+                } else {
+                    ClaimMyLand.LOGGER.debug("just send to owner");
+                    CMLNetwork.syncBorderVisibleToOwner(serverLevel, parcel.get(), getBlockPos().getY());
+                }
+            // TODO this is bad... a parent class referencing a sub class?
             } else if (this instanceof FoundationStoneBlockEntity fsbe) {
                 // preview Foundation Stone — no committed parcel yet, re-sync preview to owner
                 Box absoluteBox = fsbe.getAbsoluteBox();
@@ -366,10 +399,21 @@ public class BorderStoneBlockEntity extends BlockEntity {
     public void setRelativeBox(Box relativeBox) {
         this.relativeBox = relativeBox;
     }
+    @Deprecated
     public long getExpireTime() {
         return expireTime;
     }
+    @Deprecated
     public void setExpireTime(long expireTime) {
         this.expireTime = expireTime;
+    }
+
+    @Nullable
+    public ServerPlayer getPlacingPlayer() {
+        return placingPlayer;
+    }
+
+    public void setPlacingPlayer(@Nullable ServerPlayer placingPlayer) {
+        this.placingPlayer = placingPlayer;
     }
 }

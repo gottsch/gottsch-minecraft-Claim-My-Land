@@ -78,6 +78,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🐛 Fixed
 
 - Fixed missing lang values.
+- Fixed block placement protection incorrectly denying access when a player stands in a
+  parent parcel (Nation/Zone) and places into a child parcel (Citizen/Player) they own —
+  `resolveParcelCached()` now bypasses the region cache for non-leaf parcel types and
+  falls through to a BST lookup to find the most specific (least significant) parcel at
+  the target position.
+- Fixed block interaction protection incorrectly denying access when a player clicks on 
+  the "floor" of a parcel (Zone/Citizen) - now uses the correct position, which is 1 above
+  the clicked block, to resolve the parcel access.
 
 ---
 

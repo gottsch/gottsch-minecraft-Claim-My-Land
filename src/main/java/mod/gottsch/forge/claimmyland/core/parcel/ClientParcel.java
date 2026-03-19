@@ -46,7 +46,8 @@ public record ClientParcel(
         boolean isBorderVisible,
         int conflictState,
         int borderStoneY,
-        boolean isPreview
+        boolean isPreview,
+        UUID placingPlayer
 ) {
 
     /**
@@ -55,13 +56,14 @@ public record ClientParcel(
      * are always transmitted together so a single with-er covers the full
      * packet payload.
      */
-    public ClientParcel withBorderVisibility(boolean isBorderVisible, int conflictState, int borderStoneY) {
+    public ClientParcel withBorderVisibility(boolean isBorderVisible, int conflictState, int borderStoneY, UUID placingPlayer) {
         return new ClientParcel(
                 parcelId, estateId, parcelName, estateName, ownerName, ownerId,
                 parcelType, relinquished,
                 minX, minY, minZ, maxX, maxY, maxZ,
                 dimension,
-                isBorderVisible, conflictState, borderStoneY, isPreview
+                isBorderVisible, conflictState, borderStoneY, isPreview,
+                placingPlayer
         );
     }
 

@@ -190,6 +190,7 @@ public class SyncParcelPacket {
             int conflictState = existing != null ? existing.conflictState() : packet.conflictState;
             int borderStoneY = existing != null && existing.borderStoneY() != 0
                     ? existing.borderStoneY() : packet.borderStoneY;
+            UUID placingPlayer = existing != null ? existing.placingPlayer() : null;
 
             ClientParcel clientParcel = new ClientParcel(
                     packet.parcelId,
@@ -204,7 +205,8 @@ public class SyncParcelPacket {
                     packet.maxX, packet.maxY, packet.maxZ,
                     packet.dimension,
                     borderVisible, conflictState, borderStoneY,
-                    packet.isPreview
+                    packet.isPreview,
+                    placingPlayer
             );
             ClientParcelRegistry.register(clientParcel);
 
@@ -231,7 +233,7 @@ public class SyncParcelPacket {
                 maxX, maxY, maxZ,
                 dimension,
                 isBorderVisible,
-                conflictState, borderStoneY, isPreview
+                conflictState, borderStoneY, isPreview, null
         );
     }
 

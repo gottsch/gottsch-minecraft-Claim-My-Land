@@ -73,21 +73,21 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
      * @return
      * @param <T>
      */
-    @javax.annotation.Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (!level.isClientSide()) {
-            return (lvl, pos, blockState, t) -> {
-                if (t instanceof BorderStoneBlockEntity entity) { // test and cast
-                    if (entity.getCoords() != null) {
-                        entity.tickServer();
-                    }
-                }
-            };
-        } else {
-            return null;
-        }
-    }
+//    @javax.annotation.Nullable
+//    @Override
+//    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+//        if (!level.isClientSide()) {
+//            return (lvl, pos, blockState, t) -> {
+//                if (t instanceof BorderStoneBlockEntity entity) { // test and cast
+//                    if (entity.getCoords() != null) {
+//                        entity.tickServer();
+//                    }
+//                }
+//            };
+//        } else {
+//            return null;
+//        }
+//    }
 
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState state2, boolean b) {

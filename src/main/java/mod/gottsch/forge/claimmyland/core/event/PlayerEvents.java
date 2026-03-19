@@ -62,12 +62,12 @@ import java.util.UUID;
 @EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
 public class PlayerEvents {
 
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            CMLNetwork.syncAllParcelsToPlayer(player);
-        }
-    }
+//    @SubscribeEvent
+//    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+//        if (event.getEntity() instanceof ServerPlayer player) {
+//            CMLNetwork.syncAllParcelsToPlayer(player);
+//        }
+//    }
 
     @SubscribeEvent
     public static void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {

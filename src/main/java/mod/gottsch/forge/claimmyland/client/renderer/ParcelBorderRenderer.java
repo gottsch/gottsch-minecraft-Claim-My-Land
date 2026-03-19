@@ -512,11 +512,13 @@ public class ParcelBorderRenderer {
      * only the owner sees their own borders — whitelisted players and
      * bystanders do not, to avoid visual pollution on busy servers.
      * preview parcels follow the same rule: only the placing player sees theirs.
+     * the placing player sees they parcel - this is for claiming a relinquished parcel
      *
      * @author Mark Gottschling on Mar 11, 2026
      */
     private static boolean isVisibleToLocalPlayer(ClientParcel parcel, UUID localPlayerId) {
-        return parcel.ownerId() != null
-                && parcel.ownerId().equals(localPlayerId);
+        return
+                (parcel.ownerId() != null && parcel.ownerId().equals(localPlayerId))
+                || (parcel.placingPlayer() != null && parcel.placingPlayer().equals(localPlayerId));
     }
 }

@@ -112,8 +112,8 @@ public class RenameEstateSubCommand implements SubCommand {
         String oldName = estate.get().getName();
         UUID estateId = estate.get().getId();
 
-        // NOTE temp replace spaces with underscore. future, update commands to use quoted values for names - StringArgumentType.escapeIfRequired(value);
         estate.get().setName(newName);
+
         estate.get().findParcels().forEach(parcel ->
                 CMLNetwork.syncParcelToTrackingPlayers(source.getLevel(), parcel));
 
