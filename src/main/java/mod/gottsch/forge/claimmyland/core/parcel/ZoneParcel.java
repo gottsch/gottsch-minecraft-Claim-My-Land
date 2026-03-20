@@ -135,6 +135,7 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
 
         List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
                 .filter(p -> !p.getId().equals(parentParcel.getId()) && !p.isNation())
+                .filter(p -> !p.getOwnerId().equals(getOwnerId()))
                 .toList();
 
         if (Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {

@@ -52,7 +52,7 @@ public class RelinquishEstateSubCommand implements SubCommand {
     public LiteralArgumentBuilder<CommandSourceStack> build() {
         return Commands.literal(RELINQUISH)
                 .then(Commands.argument(NATION_NAME, StringArgumentType.string())
-                        .suggests(OWNER_NATION_ESTATE_NAMES)
+                        .suggests(OWNER_ESTATE_NATION_NAMES)
                         .then(Commands.argument(CITIZEN_ESTATE_NAME, StringArgumentType.string())
                                 .suggests(OWNER_CITIZEN_ESTATE_NAMES)
                                 .executes(source -> {
@@ -70,7 +70,7 @@ public class RelinquishEstateSubCommand implements SubCommand {
                 .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
                         .suggests(OPS_OWNER_NAMES)
                         .then(Commands.argument(NATION_NAME, StringArgumentType.string())
-                                .suggests(OPS_OWNER_NATION_ESTATE_NAMES)
+                                .suggests(OPS_OWNER_ESTATE_NATION_NAMES)
                                 .then(Commands.argument(CITIZEN_ESTATE_NAME, StringArgumentType.string())
                                         .suggests(OPS_OWNER_CITIZEN_ESTATE_NAMES)
                                         .executes(source -> {

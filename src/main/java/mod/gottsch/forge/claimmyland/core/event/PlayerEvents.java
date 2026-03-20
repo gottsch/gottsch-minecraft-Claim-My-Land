@@ -42,6 +42,7 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.item.ItemEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
@@ -61,12 +62,12 @@ import java.util.UUID;
 @EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = EventBusSubscriber.Bus.FORGE)
 public class PlayerEvents {
 
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            CMLNetwork.syncAllParcelsToPlayer(player);
-        }
-    }
+//    @SubscribeEvent
+//    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
+//        if (event.getEntity() instanceof ServerPlayer player) {
+//            CMLNetwork.syncAllParcelsToPlayer(player);
+//        }
+//    }
 
     @SubscribeEvent
     public static void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
@@ -145,10 +146,14 @@ public class PlayerEvents {
      */
     @SubscribeEvent
     public static void onSpawnEntity(MobSpawnEvent.FinalizeSpawn event) {
+        if (!(event.getLevel() instanceof Level world)) {
+            return;
+        }
 
         // get the parcel
-        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(event.getEntity().blockPosition()));
-        if (parcel.isEmpty()) {
+        String dimension = world.dimension().location().toString();
+        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(event.getEntity().blockPosition()), dimension);
+                if (parcel.isEmpty()) {
             return;
         }
 

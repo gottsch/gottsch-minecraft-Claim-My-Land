@@ -23,6 +23,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -105,7 +106,6 @@ public class RenameParcelSubCommand implements SubCommand {
             return -1;
         }
 
-
         List<Parcel> parcels = ParcelRegistry.findByOwner(player.get());
         Optional<Parcel> optionalParcel = parcels.stream().filter(p -> p.getEstate().getName().equalsIgnoreCase(estateName)
                 && p.getName().equalsIgnoreCase(parcelName)).findFirst();
@@ -131,7 +131,15 @@ public class RenameParcelSubCommand implements SubCommand {
         }
 
         // update name
-        parcel.setName(newName.replace(" ", "_"));
+        parcel.setName(newName);
+
+        // sync up client
+        CMLNetwork.syncParcelToTrackingPlayers(source.getLevel(), parcel);
+        ServerPlayer serverPlayer = source.getLevel().getServer().getPlayerList().getPlayer(player.get());
+        if (serverPlayer != null) {
+            CMLNetwork.syncParcelToPlayer(source.getLevel(), serverPlayer, parcel);
+        }
+
         sendSuccess(source, "parcel.rename.success");
         save(source.getLevel());
 

@@ -19,6 +19,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.registry;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -43,7 +44,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class ClientParcelRegistry {
 
-    private static final Logger LOGGER = LogManager.getLogger();
+    private static final Logger LOGGER = ClaimMyLand.LOGGER;
 
     // CopyOnWriteArrayList — reads (render thread) never block,
     // writes (network/main thread) are infrequent.

@@ -68,6 +68,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
  *
  * @author Mark Gottschling on Mar 06, 2026
  */
+@Deprecated(forRemoval = true, since = "2.2")
 @OnlyIn(Dist.CLIENT)
 public class _ParcelHud {
 

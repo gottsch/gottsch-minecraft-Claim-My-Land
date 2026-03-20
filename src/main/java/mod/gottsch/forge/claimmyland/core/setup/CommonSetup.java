@@ -49,7 +49,7 @@ public class CommonSetup {
         Config.instance.addRollingFileAppender(ClaimMyLand.MOD_ID);
         ClaimMyLand.LOGGER.debug("file appender created");
 
-        CMLNetwork.register();  // ← ADD THIS
+        CMLNetwork.register();
 
         if (ModList.get().isLoaded("journeymap")) {
             JourneyMapIntegration.init();

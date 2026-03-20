@@ -7,9 +7,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
+import static mod.gottsch.forge.claimmyland.core.command.helper.FormatterConstants.newline;
 
 /**
  * @author Mark Gottschling on 3/4/2026
@@ -156,10 +157,10 @@ public class CommandResponseFormatter {
         List<Component> lines = new ArrayList<>();
         lines.add(Component.literal("✘ ERROR").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.RED));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.translatable(LangUtil.chat(titleKey))
                 .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
-        lines.add(Component.literal(""));
+        lines.add(newline());
 
         String[] reasons = Component.translatable(LangUtil.chat(reasonsKey))
                 .getString().split("~");
@@ -171,7 +172,7 @@ public class CommandResponseFormatter {
                     .append(Component.literal(reasons[i].trim())
                             .withStyle(ChatFormatting.GOLD, ChatFormatting.ITALIC)));
         }
-
+        lines.add(newline());
         return lines;
     }
 
@@ -200,12 +201,14 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("✔ " + type.getTitle().toUpperCase() + " WHITELISTED")
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.GREEN));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(entryName)
                 .withStyle(type.getColor(), ChatFormatting.BOLD));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Added to:").withStyle(ChatFormatting.GRAY));
         lines.add(buildEstateRef(estateName, estateId));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -219,12 +222,14 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("⚠ " + type.getTitle().toUpperCase() + " REMOVED")
                 .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.YELLOW));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(entryName)
                 .withStyle(type.getColor(), ChatFormatting.BOLD));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Removed from:").withStyle(ChatFormatting.GRAY));
         lines.add(buildEstateRef(estateName, estateId));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -262,17 +267,19 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("✔ ESTATE RENAMED")
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.GREEN));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Estate ID: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(estateId.toString()).withStyle(ChatFormatting.WHITE)));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Old Name:").withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("  " + oldName)
                 .withStyle(ChatFormatting.RED, ChatFormatting.STRIKETHROUGH));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("New Name:").withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("  " + newName)
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -282,16 +289,18 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("✔ ESTATE CREATED")
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.GREEN));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(estateName)
                 .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(BRANCH + "Estate ID: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(String.valueOf(estateId)).withStyle(ChatFormatting.WHITE)));
         lines.add(Component.literal(BRANCH + "Type: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(estateType).withStyle(ChatFormatting.YELLOW)));
         lines.add(Component.literal(LAST_BRANCH + "Status: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal("Active").withStyle(ChatFormatting.GREEN)));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -301,14 +310,16 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("✘ ESTATE DELETED")
                 .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.RED));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(estateName)
                 .withStyle(ChatFormatting.RED, ChatFormatting.STRIKETHROUGH));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(BRANCH + "Estate ID: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(estateId.toString()).withStyle(ChatFormatting.WHITE)));
         lines.add(Component.literal(LAST_BRANCH + "Parcels Removed: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(String.valueOf(parcelCount)).withStyle(ChatFormatting.YELLOW)));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -320,18 +331,20 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("⚠ OWNERSHIP TRANSFERRED")
                 .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.YELLOW));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(estateName)
                 .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
         lines.add(Component.literal("Estate ID: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(estateId.toString()).withStyle(ChatFormatting.WHITE)));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Previous Owner:").withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("  " + oldOwner).withStyle(ChatFormatting.RED));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("New Owner:").withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("  " + newOwner)
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -345,14 +358,16 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("✔ PARCEL CLAIMED")
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.GREEN));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Parcel #" + parcelId)
                 .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(BRANCH + "Estate: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(estateName).withStyle(ChatFormatting.YELLOW)));
         lines.add(Component.literal(LAST_BRANCH + "Location: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(location).withStyle(ChatFormatting.WHITE)));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -362,12 +377,14 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("⚠ PARCEL UNCLAIMED")
                 .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.YELLOW));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Parcel #" + parcelId)
                 .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(LAST_BRANCH + "Removed from: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(estateName).withStyle(ChatFormatting.YELLOW)));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -379,20 +396,22 @@ public class CommandResponseFormatter {
         lines.add(Component.literal("⚠ OWNERSHIP TRANSFERRED")
                 .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(ChatFormatting.YELLOW));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal(parcelName)
                 .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
         lines.add(Component.literal("Parcel ID: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(parcelId.toString()).withStyle(ChatFormatting.WHITE)));
         lines.add(Component.literal("Estate: ").withStyle(ChatFormatting.GRAY)
                 .append(Component.literal(estateName).withStyle(ChatFormatting.WHITE)));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("Previous Owner:").withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("  " + oldOwner).withStyle(ChatFormatting.RED));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         lines.add(Component.literal("New Owner:").withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("  " + newOwner)
                 .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -415,6 +434,8 @@ public class CommandResponseFormatter {
                 .withStyle(color, ChatFormatting.BOLD);
         lines.add(Component.literal(icon + " ").withStyle(color, ChatFormatting.BOLD).append(title));
         lines.add(Component.literal(SEPARATOR).withStyle(color));
+
+        lines.add(newline());
         return lines;
     }
 
@@ -439,16 +460,18 @@ public class CommandResponseFormatter {
         lines.add(Component.literal(icon + " " + icon2Label(icon))
                 .withStyle(color, ChatFormatting.BOLD));
         lines.add(Component.literal(SEPARATOR).withStyle(color));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         // title = translatable, bold white
         lines.add(Component.translatable(LangUtil.chat(titleKey))
                 .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
-        lines.add(Component.literal(""));
+        lines.add(newline());
         // body = translatable, grey
         lines.add(
                 Component.translatable(LangUtil.chat(bodyKey), (Object[]) bodyArgs)
 //                Component.translatable(LangUtil.chat(bodyKey), bodyArgs)
                 .withStyle(ChatFormatting.GRAY));
+
+        lines.add(newline());
         return lines;
     }
 

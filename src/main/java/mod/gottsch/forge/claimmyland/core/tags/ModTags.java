@@ -65,6 +65,10 @@ public class ModTags {
 						LEGACY_VAULT_WHITELIST,
 						MACAWS_FURNITURE_WHITELIST);
 
+		public static final TagKey<Block> FIRE_BLOCKS = TagKey.create(
+				Registries.BLOCK,
+				new ResourceLocation(ClaimMyLand.MOD_ID, "fire"));
+
 		public static TagKey<Block> mod(String domain, String path) {
 			return BlockTags.create(new ResourceLocation(domain, path));
 		}

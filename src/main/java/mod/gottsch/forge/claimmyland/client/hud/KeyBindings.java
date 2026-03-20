@@ -31,7 +31,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * @author by Mark Gottschling on 2/17/2026
  */
-@Deprecated
+@Deprecated(forRemoval = true, since = "2.2")
 //@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class KeyBindings {
 
