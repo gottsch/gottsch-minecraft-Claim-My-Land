@@ -64,10 +64,12 @@ public class ClientParcelCache {
         private final int minX, minY, minZ;
         private final int maxX, maxY, maxZ;
         private final String dimension;
+        private final String nationName;
 
         private Entry(
                 UUID parcelId, UUID estateId,
-                String parcelName, String estateName, String ownerName,
+                String parcelName, String estateName,
+                String nationName, String ownerName,
                 UUID ownerId, ParcelType parcelType,
                 int minX, int minY, int minZ,
                 int maxX, int maxY, int maxZ,
@@ -76,6 +78,7 @@ public class ClientParcelCache {
             this.estateId   = estateId;
             this.parcelName = parcelName;
             this.estateName = estateName;
+            this.nationName = nationName;
             this.ownerName  = ownerName;
             this.ownerId = ownerId;
             this.parcelType = parcelType;
@@ -110,6 +113,7 @@ public class ClientParcelCache {
         public int getMaxY()            { return maxY; }
         public int getMaxZ()            { return maxZ; }
         public String getDimension()    { return dimension; }
+        public String getNationName() { return nationName; }
 
         @Override
         public String toString() {
@@ -135,14 +139,16 @@ public class ClientParcelCache {
      */
     public static void update(
             UUID parcelId, UUID estateId,
-            String parcelName, String estateName, String ownerName,
+            String parcelName, String estateName,
+            String nationName, String ownerName,
             UUID ownerId, ParcelType parcelType,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
             String dimension) {
         current = new Entry(
                 parcelId, estateId,
-                parcelName, estateName, ownerName,
+                parcelName, estateName,
+                nationName, ownerName,
                 ownerId, parcelType,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,

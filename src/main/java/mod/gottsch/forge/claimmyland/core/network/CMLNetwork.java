@@ -24,6 +24,7 @@ import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.gottschcore.spatial.Box;
@@ -272,29 +273,34 @@ public class CMLNetwork {
 
         // send BorderVisibilityPacket for each active stone — but only if the stone block
         // still physically exists in the world (guards against stale ACTIVE_BORDER_STONES entries)
-        for (BorderStoneBlockEntity stone : BorderStoneBlockEntity.ACTIVE_BORDER_STONES) {
+        for (BorderStoneBlockEntity stone : ActiveBorderStoneRegistry.getAll()) {
             if (stone.getParcelId() == null || stone.getLevel() == null) {
-                BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(stone);
+                ActiveBorderStoneRegistry.remove(stone);
                 continue;
             }
             BlockEntity worldBE = stone.getLevel().getBlockEntity(stone.getBlockPos());
             if (worldBE != stone) {
-                BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(stone);
+                ActiveBorderStoneRegistry.remove(stone);
                 continue;
             }
             ClaimMyLand.LOGGER.debug("CMLNetwork: processing border stone...");
             ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel -> {
 
                 // Only send to the owner of this parcel
-                if (!parcel.getEstate().isRelinquished() && !player.getUUID().equals(parcel.getEstate().getOwnerId())) return;
-                UUID playingPlayerId = resolvePlacingPlayerId(stone);
-                if (!player.getUUID().equals(playingPlayerId) && !player.getUUID().equals(parcel.getEstate().getOwnerId())) return;
+//                if (!parcel.getEstate().isRelinquished() && !player.getUUID().equals(parcel.getEstate().getOwnerId())) return;
+//                UUID playingPlayerId = resolvePlacingPlayerId(stone);
+//                if (!player.getUUID().equals(playingPlayerId) && !player.getUUID().equals(parcel.getEstate().getOwnerId())) return;
+
+                UUID placingPlayerId = resolvePlacingPlayerId(stone);
+                boolean isOwner = player.getUUID().equals(parcel.getEstate().getOwnerId());
+                boolean isPlacer = placingPlayerId != null && player.getUUID().equals(placingPlayerId);
+                if (!isOwner && !isPlacer) return;
 
                 int conflictState = ParcelRegistry.resolveConflictState(
                         stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(), parcel.getId(), parcel.getType());
 
                 CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
-                        new BorderVisibilityPacket(parcel.getId(), true, conflictState, stone.getBlockPos().getY(), playingPlayerId));
+                        new BorderVisibilityPacket(parcel.getId(), true, conflictState, stone.getBlockPos().getY(), placingPlayerId));
             });
         }
     }
@@ -323,6 +329,20 @@ public class CMLNetwork {
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> placingPlayer),
                 packet);
+    }
+
+    /**
+     * Sends a BorderVisibilityPacket directly to a single player.
+     * Used by chunk-load resync to update players returning to a previously loaded area.
+     *
+     * @author Mark Gottschling on March 18, 2026
+     */
+    public static void syncBorderVisibilityToPlayer(ServerPlayer player, UUID parcelId,
+                                                    boolean visible, int conflictState,
+                                                    int borderStoneY) {
+        CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new BorderVisibilityPacket(parcelId, visible, conflictState, borderStoneY, null));
     }
 
     /**
@@ -455,4 +475,19 @@ public class CMLNetwork {
         return stone.getPlacingPlayer() != null ? stone.getPlacingPlayer().getUUID() : null;
     }
 
+    /**
+     * Performs a full parcel state resync to all players currently in the given level.
+     * Called periodically from ModEvents to ensure clients that were out of range
+     * during state changes (renames, transfers, border visibility) are brought back
+     * in sync.
+     *
+     * @author Mark Gottschling on March 18, 2026
+     */
+    public static void periodicResync(ServerLevel level) {
+        List<ServerPlayer> players = level.players();
+        if (players.isEmpty()) return;
+        for (ServerPlayer player : players) {
+            syncAllParcelsToPlayer(player);
+        }
+    }
 }

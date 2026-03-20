@@ -31,37 +31,28 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 /**
- * renders a small HUD overlay in the bottom-left corner of the screen showing
+ * Renders a small HUD overlay in the bottom-left corner of the screen showing
  * the parcel and estate the local player is currently standing inside.
  *
- * <p>data source: {@link ClientParcelCache} — the single-entry position cache
+ * <p>Data source: {@link ClientParcelCache} — the single-entry position cache
  * updated by {@code CacheSyncPacket} on each server BST hit. When the cache
  * reports wilderness ({@code get() == null}) the HUD is hidden entirely.</p>
  *
- * <p>layout (bottom-left, 3 lines, 10 px per line):</p>
+ * <p>Layout (bottom-left):</p>
  * <pre>
  *   ║ Land Claim                        ← GOLD title
  *   ║ GottschLand  (Nation)             ← estate name WHITE + type suffix in type color
  *   ║ MyPlot | Dev                      ← parcel name + owner, WHITE
+ *   ║ Nation: GottschNation             ← only for CITIZEN / ZONE parcels, AQUA
  * </pre>
  *
- * <p>a solid 2 px colored left border runs the full panel height in the type color,
- * providing visual identification without a redundant type label line.</p>
- *
- * <p>color convention (matches {@code EstateDisplayFormatter.getParcelColor()}):</p>
+ * <p>Color convention (matches {@code EstateDisplayFormatter.getParcelColor()}):</p>
  * <ul>
  *   <li>NATION  → BLUE         ({@code 0x5555FF})</li>
  *   <li>CITIZEN → LIGHT_PURPLE ({@code 0xFF55FF})</li>
  *   <li>PLAYER  → GREEN        ({@code 0x55FF55})</li>
  *   <li>ZONE / others → YELLOW ({@code 0xFFFF55})</li>
  * </ul>
- *
- * <p>registration: explicit registration on the Forge event bus is required from
- * {@code ClientSetup} — do NOT rely on {@code @Mod.EventBusSubscriber} auto-discovery
- * for this isolated package:</p>
- * <pre>
- *   MinecraftForge.EVENT_BUS.register(ParcelHud.class);
- * </pre>
  *
  * @author Mark Gottschling on Mar 06, 2026
  */
@@ -73,67 +64,48 @@ public class ParcelHud {
     // Layout constants
     // -----------------------------------------------------------------------
 
-    /** horizontal distance from the left edge of the screen to the text. */
+    /** Horizontal distance from the left edge of the screen to the text. */
     private static final int MARGIN_LEFT = 8;
 
     /**
-     * vertical distance from the bottom edge of the screen to the bottom of the
+     * Vertical distance from the bottom edge of the screen to the bottom of the
      * last rendered line. Sized to sit just above the hotbar (39 px) with a gap.
      */
     private static final int MARGIN_BOTTOM = 44;
 
-    /** height of one text line including leading. */
+    /** Height of one text line including leading. */
     private static final int LINE_HEIGHT = 10;
 
-    /**
-     * number of content lines rendered below the title bar
-     * (estate+type, parcel+owner).
-     */
-    private static final int LINE_COUNT = 2;
-
-    /** width of the colored left border strip in pixels. */
+    /** Width of the colored left border strip in pixels. */
     private static final int BORDER_WIDTH = 2;
 
-    /** horizontal gap between the left border and the text. */
+    /** Horizontal gap between the left border and the text. */
     private static final int BORDER_GAP = 3;
 
     // -----------------------------------------------------------------------
     // Color constants — must match EstateDisplayFormatter.getParcelColor()
     // -----------------------------------------------------------------------
 
-    /** nation type color — BLUE ({@code ChatFormatting.BLUE}). */
-    private static final int COLOR_NATION  = 0x5555FF;
-
-    /** citizen type color — LIGHT_PURPLE ({@code ChatFormatting.LIGHT_PURPLE}). */
-    private static final int COLOR_CITIZEN = 0xFF55FF;
-
-    /** player type color — GREEN ({@code ChatFormatting.GREEN}). */
-    private static final int COLOR_PLAYER  = 0x55FF55;
-
-    /** zone / default type color — YELLOW ({@code ChatFormatting.YELLOW}). */
-    private static final int COLOR_DEFAULT = 0xFFFF55;
-
-    /** title text color — GOLD ({@code ChatFormatting.GOLD}). */
-    private static final int COLOR_GOLD    = 0xFFAA00;
-
-    /** standard white used for estate name and parcel+owner line. */
-    private static final int COLOR_WHITE   = 0xFFFFFF;
-
-    /** semi-transparent black for the main panel background. */
-    private static final int COLOR_BG      = 0x60000000;
-
-    /** slightly more opaque black for the title bar background. */
-    private static final int COLOR_TITLE_BG = 0x90000000;
+    private static final int COLOR_NATION      = 0x5555FF;
+    private static final int COLOR_CITIZEN     = 0xFF55FF;
+    private static final int COLOR_PLAYER      = 0x55FF55;
+    private static final int COLOR_DEFAULT     = 0xFFFF55;
+    private static final int COLOR_GOLD        = 0xFFAA00;
+    private static final int COLOR_WHITE       = 0xFFFFFF;
+    /** Aqua — used for the "Nation: X" line on CITIZEN/ZONE parcels. */
+    private static final int COLOR_NATION_LINE = 0x55FFFF;
+    private static final int COLOR_BG          = 0x60000000;
+    private static final int COLOR_TITLE_BG    = 0x90000000;
 
     // -----------------------------------------------------------------------
     // Render event handler
     // -----------------------------------------------------------------------
 
     /**
-     * fires after the hotbar overlay is rendered — exactly once per frame at the
+     * Fires after the hotbar overlay is rendered — exactly once per frame at the
      * correct z-order for a bottom-left HUD element.
      *
-     * @param event the post-render overlay event
+     * @author Mark Gottschling on Mar 06, 2026
      */
     @SubscribeEvent
     public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Post event) {
@@ -158,81 +130,93 @@ public class ParcelHud {
     }
 
     // -----------------------------------------------------------------------
-    // rendering helpers
+    // Rendering
     // -----------------------------------------------------------------------
 
     /**
-     * draws the three-line parcel info panel (title + 2 content lines) at the
-     * bottom-left of the screen, with a solid colored left border in the type color.
+     * Draws the parcel info panel at the bottom-left of the screen.
      *
-     * @param graphics the current frame graphics context
-     * @param font     the active Minecraft font renderer
-     * @param entry    the current (non-null) cache entry
+     * <p>Renders 2 content lines normally, or 3 for CITIZEN/ZONE parcels
+     * (the extra line shows the parent nation name).</p>
+     *
+     * @author Mark Gottschling on Mar 06, 2026
      */
     private static void renderHud(GuiGraphics graphics, Font font, ClientParcelCache.Entry entry) {
         int screenHeight = graphics.guiHeight();
         int typeColor    = typeColor(entry.getParcelType());
 
         // --- Build display strings ---
-
-        // Title bar
-        String titleText = " Land Claim ";
-
-        // Line 1: estate name (white) + " (Type)" suffix (type color)
+        String titleText  = " Land Claim ";
         String estateName = notEmpty(entry.getEstateName(), "(unnamed estate)");
         String typeSuffix = " (" + typeLabel(entry.getParcelType()) + ")";
-
-        // Line 2: parcel name + " | " + owner (all white)
         String parcelName = notEmpty(entry.getParcelName(), "(unnamed parcel)");
-        String ownerName  = notEmpty(entry.getOwnerName(),  "Unknown");
+        String ownerName  = notEmpty(entry.getOwnerName(), "Unknown");
         String parcelLine = parcelName + " | " + ownerName;
+
+        // Nation line — only for CITIZEN and ZONE parcels
+        String nationLine = null;
+        if (entry.getParcelType() == ParcelType.CITIZEN || entry.getParcelType() == ParcelType.ZONE) {
+            String nationName = notEmpty(entry.getNationName(), null);
+            if (nationName != null) {
+                nationLine = "Nation: " + nationName;
+            }
+        }
+
+        int lineCount = (nationLine != null) ? 3 : 2;
 
         // --- Measure widths ---
         int titleWidth   = font.width(titleText);
         int line1Width   = font.width(estateName) + font.width(typeSuffix);
         int line2Width   = font.width(parcelLine);
         int contentWidth = Math.max(line1Width, line2Width);
-        int panelWidth   = Math.max(titleWidth, contentWidth);
+        if (nationLine != null) {
+            contentWidth = Math.max(contentWidth, font.width(nationLine));
+        }
+        int panelWidth = Math.max(titleWidth, contentWidth);
 
         // --- Compute panel geometry ---
-        // Content block sits above the hotbar; title bar sits above the content block.
-        int contentTop  = screenHeight - MARGIN_BOTTOM - (LINE_COUNT * LINE_HEIGHT);
-        int titleTop    = contentTop - LINE_HEIGHT - 2; // 2 px gap between title and content
+        int contentTop  = screenHeight - MARGIN_BOTTOM - (lineCount * LINE_HEIGHT);
+        int titleTop    = contentTop - LINE_HEIGHT - 2;
 
         int panelLeft   = MARGIN_LEFT - BORDER_GAP - BORDER_WIDTH - 2;
         int panelRight  = MARGIN_LEFT + panelWidth + 2;
-        int panelBottom = contentTop + (LINE_COUNT * LINE_HEIGHT) + 1;
+        int panelBottom = contentTop + (lineCount * LINE_HEIGHT) + 1;
 
-        // --- Draw title bar background ---
+        // --- Draw backgrounds ---
         graphics.fill(panelLeft, titleTop - 1, panelRight, titleTop + LINE_HEIGHT + 1, COLOR_TITLE_BG);
-
-        // --- Draw content panel background ---
         graphics.fill(panelLeft, contentTop - 1, panelRight, panelBottom, COLOR_BG);
 
-        // --- Draw colored left border (full height: title + content) ---
+        // --- Colored left border (full height: title + content) ---
         graphics.fill(panelLeft, titleTop - 1, panelLeft + BORDER_WIDTH, panelBottom, typeColor | 0xFF000000);
 
-        // --- Draw title text ---
+        // --- Title ---
         graphics.drawString(font, titleText, MARGIN_LEFT, titleTop, COLOR_GOLD, false);
 
-        // --- Draw content lines ---
+        // --- Content lines ---
         int x = MARGIN_LEFT;
         int y = contentTop;
 
-        // Line 1: estate name in white, type suffix in type color
+        // Line 1: estate name + type suffix
         graphics.drawString(font, estateName, x, y, COLOR_WHITE, false);
         graphics.drawString(font, typeSuffix, x + font.width(estateName), y, typeColor, false);
         y += LINE_HEIGHT;
 
-        // Line 2: parcel | owner in white
+        // Line 2: parcel | owner
         graphics.drawString(font, parcelLine, x, y, COLOR_WHITE, false);
+        y += LINE_HEIGHT;
+
+        // Line 3 (CITIZEN/ZONE only): Nation: <name>
+        if (nationLine != null) {
+            graphics.drawString(font, nationLine, x, y, COLOR_NATION_LINE, false);
+        }
     }
 
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+
     /**
-     * returns the short human-readable type label used in the {@code (Type)} suffix.
-     *
-     * @param type the parcel type, may be null
-     * @return a capitalized type name
+     * @author Mark Gottschling on Mar 06, 2026
      */
     private static String typeLabel(ParcelType type) {
         if (type == null) return "Unknown";
@@ -246,18 +230,7 @@ public class ParcelHud {
     }
 
     /**
-     * maps a {@link ParcelType} to the RGB color integer used for the type suffix
-     * text and the left border. Matches {@code EstateDisplayFormatter.getParcelColor()}.
-     *
-     * <ul>
-     *   <li>NATION  → BLUE         ({@code 0x5555FF})</li>
-     *   <li>CITIZEN → LIGHT_PURPLE ({@code 0xFF55FF})</li>
-     *   <li>PLAYER  → GREEN        ({@code 0x55FF55})</li>
-     *   <li>ZONE / others → YELLOW ({@code 0xFFFF55})</li>
-     * </ul>
-     *
-     * @param type the parcel type, may be null
-     * @return the RGB color integer (no alpha — border caller ORs in 0xFF000000)
+     * @author Mark Gottschling on Mar 06, 2026
      */
     private static int typeColor(ParcelType type) {
         if (type == null) return COLOR_DEFAULT;
@@ -265,17 +238,12 @@ public class ParcelHud {
             case NATION  -> COLOR_NATION;
             case CITIZEN -> COLOR_CITIZEN;
             case PLAYER  -> COLOR_PLAYER;
-            default      -> COLOR_DEFAULT; // ZONE and any future types
+            default      -> COLOR_DEFAULT;
         };
     }
 
     /**
-     * returns {@code value} if non-null and non-empty, otherwise returns
-     * {@code fallback}.
-     *
-     * @param value    the string to test
-     * @param fallback the fallback string
-     * @return a non-null, non-empty string
+     * @author Mark Gottschling on Mar 06, 2026
      */
     private static String notEmpty(String value, String fallback) {
         return (value != null && !value.isEmpty()) ? value : fallback;

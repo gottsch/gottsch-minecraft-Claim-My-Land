@@ -21,21 +21,26 @@ package mod.gottsch.forge.claimmyland.core.event;
 
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
+import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelChunkIndex;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.world.WorldInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
@@ -43,21 +48,24 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDestroyBlockEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.ExplosionEvent;
-import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.event.level.PistonEvent;
+import net.minecraftforge.event.level.*;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mark Gottschling on Sep 14, 2024
  */
 @Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class ModEvents {
+
+    private static final int RESYNC_INTERVAL = 6000; // 5 minutes @ 20 ticks/sec
+    private static final Map<ResourceKey<Level>, Integer> resyncTickCounters = new ConcurrentHashMap<>();
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onWorldLoad(LevelEvent.Load event) {
@@ -147,6 +155,42 @@ public class ModEvents {
         //   no parcel  → invalidates server cache, sends wilderness packet
 //        ParcelRegistry.resolveParcelCached(player, Coords.of(pos), dimension);
         ParcelRegistry.syncParcelToClient(player, Coords.of(pos), dimension);
+    }
+
+    @SubscribeEvent
+    public static void onChunkWatch(ChunkWatchEvent.Watch event) {
+        ChunkPos chunk = event.getPos();
+        ServerPlayer player = event.getPlayer();
+        Set<BorderStoneBlockEntity> stones = ActiveBorderStoneRegistry.getInChunk(chunk);
+        if (stones.isEmpty()) return;
+
+        for (BorderStoneBlockEntity stone : stones) {
+            if (stone.getParcelId() == null || stone.getLevel() == null) continue;
+            if (!(stone.getLevel() instanceof ServerLevel serverLevel)) continue;
+            ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel -> {
+                // resync full parcel state (name, ownership, etc.) to this player
+                CMLNetwork.syncParcelToPlayer(serverLevel, player, parcel);
+                // resync border visibility
+                int conflictState = ParcelRegistry.resolveConflictState(
+                        stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(),
+                        parcel.getId(), parcel.getType());
+                CMLNetwork.syncBorderVisibilityToPlayer(player,
+                        parcel.getId(), true, conflictState, stone.getBlockPos().getY());
+            });
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        event.getServer().getAllLevels().forEach(level -> {
+            if (level.players().isEmpty()) return;
+            int count = resyncTickCounters.merge(level.dimension(), 1, Integer::sum);
+            if (count >= RESYNC_INTERVAL) {
+                resyncTickCounters.put(level.dimension(), 0);
+                CMLNetwork.periodicResync(level);
+            }
+        });
     }
 
     @SubscribeEvent

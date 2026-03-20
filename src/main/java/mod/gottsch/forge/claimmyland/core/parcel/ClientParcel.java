@@ -36,6 +36,7 @@ public record ClientParcel(
         UUID estateId,
         String parcelName,
         String estateName,
+        String nationName,
         String ownerName,
         UUID ownerId,
         ParcelType parcelType,
@@ -58,7 +59,7 @@ public record ClientParcel(
      */
     public ClientParcel withBorderVisibility(boolean isBorderVisible, int conflictState, int borderStoneY, UUID placingPlayer) {
         return new ClientParcel(
-                parcelId, estateId, parcelName, estateName, ownerName, ownerId,
+                parcelId, estateId, parcelName, estateName, nationName, ownerName, ownerId,
                 parcelType, relinquished,
                 minX, minY, minZ, maxX, maxY, maxZ,
                 dimension,

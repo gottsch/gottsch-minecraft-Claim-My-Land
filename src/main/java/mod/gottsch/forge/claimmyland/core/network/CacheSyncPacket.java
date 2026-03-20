@@ -23,6 +23,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.cache.ClientParcelCache;
 import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
+import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
@@ -66,6 +67,7 @@ public class CacheSyncPacket {
     @Nullable private final UUID estateId;
     private final String parcelName;
     private final String estateName;
+    private final String nationName;
     private final String ownerName;
     private final UUID ownerId;
     private final ParcelType parcelType;
@@ -88,6 +90,7 @@ public class CacheSyncPacket {
             this.estateId  = null;
             this.parcelName  = WILDERNESS;
             this.estateName  = WILDERNESS;
+            this.nationName = WILDERNESS;
             this.ownerName   = WILDERNESS;
             this.ownerId = null;
             this.parcelType   = ParcelType.NONE;
@@ -101,6 +104,7 @@ public class CacheSyncPacket {
             this.estateId   = parcel.getEstate().getId();
             this.parcelName = parcel.getName() != null ? parcel.getName() : WILDERNESS;
             this.estateName = parcel.getEstate().getName() != null ? parcel.getEstate().getName() : WILDERNESS;
+            this.nationName = (parcel instanceof NationalizedParcel n) ? n.getNationEstate().getName() : WILDERNESS;
             // Owner name is resolved by the caller (CMLNetwork.syncCacheToPlayer)
             // using PlayerRegistry.getPlayerName(ServerLevel, UUID) before the
             // packet is constructed, so it arrives here already resolved.
@@ -124,7 +128,8 @@ public class CacheSyncPacket {
      */
     private CacheSyncPacket(
             @Nullable UUID parcelId, @Nullable UUID estateId,
-            String parcelName, String estateName, String ownerName,
+            String parcelName, String estateName,
+            String nationName, String ownerName,
             UUID ownerId, ParcelType parcelType, boolean relinquished,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
@@ -134,6 +139,7 @@ public class CacheSyncPacket {
         this.estateId   = estateId;
         this.parcelName = parcelName;
         this.estateName = estateName;
+        this.nationName = nationName;
         this.ownerName  = ownerName;
         this.ownerId = ownerId;
         this.parcelType = parcelType;
@@ -158,6 +164,7 @@ public class CacheSyncPacket {
             buf.writeUUID(packet.estateId);
             buf.writeUtf(packet.parcelName);
             buf.writeUtf(packet.estateName);
+            buf.writeUtf(packet.nationName != null ? packet.nationName : "");
             buf.writeUtf(packet.ownerName);
             buf.writeUUID(packet.ownerId);
             buf.writeUtf(packet.parcelType.getSerializedName());
@@ -181,6 +188,8 @@ public class CacheSyncPacket {
         UUID estateId   = buf.readUUID();
         String parcelName  = buf.readUtf();
         String estateName  = buf.readUtf();
+        String nationName = buf.readUtf();
+        if (nationName.isEmpty()) nationName = null;
         String ownerName   = buf.readUtf();
         UUID ownerId = buf.readUUID();
         ParcelType type    = ParcelType.fromString(buf.readUtf());
@@ -192,7 +201,8 @@ public class CacheSyncPacket {
 
         return new CacheSyncPacket(
                 parcelId, estateId,
-                parcelName, estateName, ownerName,
+                parcelName, estateName,
+                nationName, ownerName,
                 ownerId, type, relinquished,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
@@ -217,6 +227,7 @@ public class CacheSyncPacket {
                         packet.estateId,
                         packet.parcelName,
                         packet.estateName,
+                        packet.nationName,
                         packet.ownerName,
                         packet.ownerId,
                         packet.parcelType,
@@ -244,12 +255,16 @@ public class CacheSyncPacket {
                         : packet.borderStoneY;
                 UUID placingPlayer = existing != null ? existing.placingPlayer() : null;
 //                boolean isPreview = existing != null && existing.isPreview(); // preserve preview state
+                String nationName     = packet.nationName != null   // prefer fresh packet value
+                        ? packet.nationName
+                        : (existing != null ? existing.nationName() : null);
 
                 ClientParcel clientParcel = new ClientParcel(
                         packet.parcelId,
                         packet.estateId,
                         packet.parcelName,
                         packet.estateName,
+                        nationName,
                         packet.ownerName,
                         packet.ownerId,
                         packet.parcelType,
@@ -280,6 +295,7 @@ public class CacheSyncPacket {
     @Nullable public UUID getEstateId()   { return estateId; }
     public String getParcelName()         { return parcelName; }
     public String getEstateName()         { return estateName; }
+    public String getNationName() { return nationName; }
     public String getOwnerName()          { return ownerName; }
     public ParcelType getParcelType()     { return parcelType; }
     public int getMinX()                  { return minX; }

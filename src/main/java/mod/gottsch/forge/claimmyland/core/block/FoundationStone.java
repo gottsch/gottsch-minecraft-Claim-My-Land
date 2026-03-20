@@ -20,25 +20,20 @@
 package mod.gottsch.forge.claimmyland.core.block;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.gottschcore.block.FacingBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
@@ -104,7 +99,7 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
 //                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
 //                            serverLevel, parcel.get(), false, 0, pos.getY());
                     CMLNetwork.syncBorderVisibilityToDimension(serverLevel, parcel.get(), false, 0, pos.getY());
-                    BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(blockEntity);
+                    ActiveBorderStoneRegistry.remove(blockEntity);
                 } else {
                     // phase 1 preview — parcel never committed; remove from client registries
                     CMLNetwork.removePreviewParcelFromTracking(

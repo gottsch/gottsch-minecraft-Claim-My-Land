@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.block.entity;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -84,7 +85,7 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
                     // committed parcel — hide the visual border
                     CMLNetwork.syncBorderVisibilityToTrackingPlayers(
                             serverLevel, parcel.get(), false, 0, getBlockPos().getY());
-                    ACTIVE_BORDER_STONES.remove(this);
+                    ActiveBorderStoneRegistry.remove(this);
                 } else {
                     // phase 1 preview — parcel never committed; remove from client registries
                     CMLNetwork.removePreviewParcelFromTracking(serverLevel, getParcelId(), getBlockPos());

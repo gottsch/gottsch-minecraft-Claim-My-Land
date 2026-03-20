@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.network;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
+import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
@@ -48,6 +49,7 @@ public class SyncParcelPacket {
     private final UUID estateId;
     private final String parcelName;
     private final String estateName;
+    private final String nationName;
     private final String ownerName;
     private final UUID ownerId;
     private final ParcelType parcelType;
@@ -78,6 +80,9 @@ public class SyncParcelPacket {
         this.estateId    = parcel.getEstate().getId();
         this.parcelName  = parcel.getName() != null ? parcel.getName() : "";
         this.estateName  = parcel.getEstate().getName() != null ? parcel.getEstate().getName() : "";
+        this.nationName = (parcel instanceof NationalizedParcel np)
+                ? np.getNationEstate().getName()
+                : null;
         this.ownerName   = resolvedOwnerName != null ? resolvedOwnerName : "";
         this.ownerId = parcel.getEstate().getOwnerId();
         this.parcelType  = parcel.getType() != null ? parcel.getType() : ParcelType.NONE;
@@ -100,7 +105,8 @@ public class SyncParcelPacket {
      */
     SyncParcelPacket(
             UUID parcelId, UUID estateId,
-            String parcelName, String estateName, String ownerName,
+            String parcelName, String estateName, String nationName,
+            String ownerName,
             UUID ownerId, ParcelType parcelType, boolean relinquished,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
@@ -113,6 +119,7 @@ public class SyncParcelPacket {
         this.estateId    = estateId;
         this.parcelName  = parcelName;
         this.estateName  = estateName;
+        this.nationName = nationName;
         this.ownerName   = ownerName;
         this.ownerId = ownerId;
         this.parcelType  = parcelType;
@@ -135,6 +142,7 @@ public class SyncParcelPacket {
         buf.writeUUID(packet.estateId);
         buf.writeUtf(packet.parcelName);
         buf.writeUtf(packet.estateName);
+        buf.writeUtf(packet.nationName != null ? packet.nationName : "");
         buf.writeUtf(packet.ownerName);
         buf.writeUUID(packet.ownerId);
         buf.writeUtf(packet.parcelType.getSerializedName());
@@ -153,6 +161,8 @@ public class SyncParcelPacket {
         UUID estateId = buf.readUUID();
         String parcelName  = buf.readUtf();
         String estateName  = buf.readUtf();
+        String nationName = buf.readUtf();
+        if (nationName.isEmpty()) nationName = null;
         String ownerName   = buf.readUtf();
         UUID ownerId = buf.readUUID();
         ParcelType type    = ParcelType.fromString(buf.readUtf());
@@ -167,7 +177,8 @@ public class SyncParcelPacket {
 
         return new SyncParcelPacket(
                 parcelId, estateId,
-                parcelName, estateName, ownerName,
+                parcelName, estateName,
+                nationName, ownerName,
                 ownerId, type, relinquished,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
@@ -197,6 +208,7 @@ public class SyncParcelPacket {
                     packet.estateId,
                     packet.parcelName,
                     packet.estateName,
+                    packet.nationName,
                     packet.ownerName,
                     packet.ownerId,
                     packet.parcelType,
@@ -227,7 +239,8 @@ public class SyncParcelPacket {
     public ClientParcel toClientParcel() {
         return new ClientParcel(
                 parcelId, estateId,
-                parcelName, estateName, ownerName,
+                parcelName, estateName,
+                nationName, ownerName,
                 ownerId, parcelType, relinquished,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
@@ -248,7 +261,8 @@ public class SyncParcelPacket {
                 parcelId,
                 estateId,
                 "",             // parcelName
-                "",             // estateName
+                "",             // estateName,
+                "",             // nationName
                 ownerName != null ? ownerName : "",
                 ownerId,
                 parcelType != null ? parcelType : ParcelType.PLAYER,

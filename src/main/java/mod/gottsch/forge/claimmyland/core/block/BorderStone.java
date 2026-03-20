@@ -24,6 +24,7 @@ import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
@@ -219,7 +220,7 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
                 if (parcel.isPresent()) {
                     // committed parcel — hide the visual border
                     CMLNetwork.syncBorderVisibilityToDimension(serverLevel, parcel.get(), false, 0, pos.getY());
-                    BorderStoneBlockEntity.ACTIVE_BORDER_STONES.remove(blockEntity);
+                    ActiveBorderStoneRegistry.remove(blockEntity);
                 } else {
                     // phase 1 preview — parcel never committed; remove from client registries
                     CMLNetwork.removePreviewParcelFromTracking(

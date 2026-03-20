@@ -25,6 +25,7 @@ import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
@@ -35,7 +36,6 @@ import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -44,9 +44,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Mark Gottschling on Sep 18, 2024
@@ -63,7 +61,6 @@ public class BorderStoneBlockEntity extends BlockEntity {
     private static final int ONE_MINUTE = 60 * TICKS_PER_SECOND;
     private static final int FIVE_MINUTES = 5 * ONE_MINUTE;
 
-    public static final Set<BorderStoneBlockEntity> ACTIVE_BORDER_STONES = ConcurrentHashMap.newKeySet();
 
     // TODO rename RELATIVE_BOX
     private static final String SIZE = "size";
@@ -189,11 +186,6 @@ public class BorderStoneBlockEntity extends BlockEntity {
 //                ? parcel.get().getEstate().getOwnerId()
 //                : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
 
-        ClaimMyLand.LOGGER.info("parcel -> {}", parcel.get());
-        ClaimMyLand.LOGGER.info("isRelinquished -> {}", parcel.get().getEstate().isRelinquished());
-        ClaimMyLand.LOGGER.info("placing player -> {}", placingPlayer);
-        ClaimMyLand.LOGGER.info("this.ownerId -> {}", getOwnerId());
-
         // resolve the effective owner for border visibility:
         // reclaiming player takes precedence over the registered estate owner when they differ
         UUID ownerId = parcel.isPresent()
@@ -222,7 +214,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
                 CMLNetwork.syncBorderVisibilityToTrackingPlayers(
                         serverLevel, parcel.get(), true, conflictState, getBlockPos().getY());
             }
-            ACTIVE_BORDER_STONES.add(this);
+            ActiveBorderStoneRegistry.add(this);
         } else if (placingPlayer != null) {
             ClaimMyLand.LOGGER.info("syncPreviewParcelToTrackingPlayersAndSelf...");
             // phase 1 preview — parcel not yet registered; register on client first
@@ -305,7 +297,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
             if (parcel.isPresent()) {
                 // TODO get the ownerId / placingPlayer property - add to foundation stone BE if have to
                 // committed parcel — restore border visibility to owner
-                BorderStoneBlockEntity.ACTIVE_BORDER_STONES.add(this);
+                ActiveBorderStoneRegistry.add(this);
 
                 ClaimMyLand.LOGGER.debug("is foundation stone -> {}", (this instanceof FoundationStoneBlockEntity));
                 if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity) {
