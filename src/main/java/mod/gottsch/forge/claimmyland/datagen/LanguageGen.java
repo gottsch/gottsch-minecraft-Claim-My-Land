@@ -58,16 +58,16 @@ public class LanguageGen extends LanguageProvider {
         add(ModItems.ZONING_PLACEMENT_TOOL.get(), "Zoning Tool");
 
         add(ModBlocks.BORDER_STONE.get(), "Border Stone");
-        add(ModBlocks.PLAYER_BORDER.get(), "Player Parcel Border");
-        add(ModBlocks.CITIZEN_BORDER.get(), "Citizen Parcel Border");
-        add(ModBlocks.NATION_BORDER.get(), "Nation Parcel Border");
-        add(ModBlocks.ZONE_BORDER.get(), "Zone Parcel Border");
-        add(ModBlocks.BUFFER.get(), "Parcel Buffer");
-
-        add(ModBlocks.PLAYER_HORIZONTAL_AREA.get(), "Player Parcel Area");
-        add(ModBlocks.CITIZEN_HORIZONTAL_AREA.get(), "Citizen Parcel Area");
-        add(ModBlocks.NATION_HORIZONTAL_AREA.get(), "Nation Parcel Area");
-        add(ModBlocks.ZONE_HORIZONTAL_AREA.get(), "Zone Parcel Area");
+//        add(ModBlocks.PLAYER_BORDER.get(), "Player Parcel Border");
+//        add(ModBlocks.CITIZEN_BORDER.get(), "Citizen Parcel Border");
+//        add(ModBlocks.NATION_BORDER.get(), "Nation Parcel Border");
+//        add(ModBlocks.ZONE_BORDER.get(), "Zone Parcel Border");
+//        add(ModBlocks.BUFFER.get(), "Parcel Buffer");
+//
+//        add(ModBlocks.PLAYER_HORIZONTAL_AREA.get(), "Player Parcel Area");
+//        add(ModBlocks.CITIZEN_HORIZONTAL_AREA.get(), "Citizen Parcel Area");
+//        add(ModBlocks.NATION_HORIZONTAL_AREA.get(), "Nation Parcel Area");
+//        add(ModBlocks.ZONE_HORIZONTAL_AREA.get(), "Zone Parcel Area");
 
 //        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
 //
@@ -173,6 +173,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.nation.unable_to_locate"), "A nation with that name does not exist.");
         add(LangUtil.chat("estate.nation.not_owner"), "You are not the owner of the nation.");
 
+        add(LangUtil.chat("estate.prevent_fire_spread.success"), "The prevent fire spread setting was updated.");
 
         // parcels
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
@@ -195,6 +196,9 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.add.failure"), "Unable to add the parcel.");
         add(LangUtil.chat("parcel.add.failure_with_overlaps"), "Unable to add the parcel. It intersects with another parcel.");
         add(LangUtil.chat("parcel.add.failure_too_small"), "Unable to add the parcel. The dimension(s) are too small (< 2).");
+        add(LangUtil.chat("parcel.add.structure_warning"), "Claim registered — warning: parcel overlaps a shared vanilla structure.");
+        add(LangUtil.chat("parcel.add.structure_denied"), "Claim denied — parcel overlaps a protected vanilla structure.");
+
 
         add(LangUtil.chat("parcel.demolish.success"), "The parcel has been demolished.");
         add(LangUtil.chat("parcel.demolish.failure"), "Unable to demolish the parcel.");
@@ -256,6 +260,8 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("deed.claim.intersects"), "You cannot claimed this parcel as it intersects with another.");
         add(LangUtil.chat("deed.claim.insufficient_size"), "Unable to claim.");
         add(LangUtil.chat("deed.claim.insufficient_size.detail"), "The deed's size [%s] is insufficient to claim parcel of size [%s].");
+        add(LangUtil.chat("deed.claim.structure_warning"), "Claim registered — warning: parcel overlaps a shared vanilla structure.");
+        add(LangUtil.chat("deed.claim.structure_denied"), "Claim denied — parcel overlaps a protected vanilla structure.");
 
         add(LangUtil.chat("deed.claim.unable_to_claim"), "Unable to claim.");
         add(LangUtil.chat("deed.claim.unable_to_claim.detail"), "You are unable to claim parcel at [%s] of size [%s].");
@@ -272,6 +278,7 @@ public class LanguageGen extends LanguageProvider {
 
         // citizen placement
         add(LangUtil.chat("citizen_placement.not_valid_parent"), "That block is not within a valid parent parcel (nation | zone) or it is claimed.");
+        add(LangUtil.chat("citizen_placement.not_same_parent"), "That block is not within the same nation or zone parcel as the start block.");
 
         // zone placement
         add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or it is claimed.");
@@ -301,6 +308,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.entity_spawn.whitelist"), "Entity Spawn Whitelist: ");
         add(LangUtil.chat("estate.entity_spawn_tag.whitelist"), "Entity Spawn Tag Whitelist: ");
 
+        add(LangUtil.chat("estate.tenants"), "Tenant Estates:");
         /*
          *  Util.tooltips
          */

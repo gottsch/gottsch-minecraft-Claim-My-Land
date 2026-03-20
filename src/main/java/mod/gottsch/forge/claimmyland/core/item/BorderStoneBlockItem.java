@@ -49,7 +49,8 @@ public class BorderStoneBlockItem extends BlockItem {
         // to/change prevent this, the BlockEntity code would have to change
         // in some way to check for non-existing parcel - results in having different
         // code in the BorderStoneBE and the FoundationStoneBE
-        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
+        String dimension = context.getLevel().dimension().location().toString();
+        Optional<Parcel> parcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()), dimension);
         if (parcel.isEmpty()) {
             return InteractionResult.FAIL;
         } else {

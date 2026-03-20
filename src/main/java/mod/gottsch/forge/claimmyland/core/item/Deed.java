@@ -41,6 +41,8 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -187,7 +189,9 @@ public abstract class Deed extends Item {
             return InteractionResult.SUCCESS;
         }
 
-        if (context.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+        ResourceLocation dimId = context.getLevel().dimension().location();
+        List<? extends String> excluded = Config.SERVER.dimensions.excludedDimensions.get();
+        if (excluded.stream().anyMatch(e -> e.equals(dimId.toString()))) {
             return InteractionResult.SUCCESS;
         }
 
@@ -236,7 +240,8 @@ public abstract class Deed extends Item {
                 /*
                  * check if parcel is within another existing parcel
                  */
-                Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords);
+                String dimension = context.getLevel().dimension().location().toString();
+                Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords, dimension);
 
                 Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
@@ -261,8 +266,8 @@ public abstract class Deed extends Item {
                     }
 
                     // remove the border
-                    ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder();
-                    ((FoundationStoneBlockEntity) blockEntity).removeHorizontalArea();
+//                    ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder();
+//                    ((FoundationStoneBlockEntity) blockEntity).removeHorizontalArea();
                     // remove the foundation stone
                     blockEntity.getLevel().setBlock(context.getClickedPos(), Blocks.AIR.defaultBlockState(), 3);
 
@@ -275,11 +280,20 @@ public abstract class Deed extends Item {
                             parcel.getMinCoords().toShortString(),
                             ModUtil.getSize(parcel.getBox()).toShortString());
 
+                    if (claimResult == ClaimResult.SUCCESS_WITH_WARNINGS) {
+                        PlayerMessageHelper.sendWarning(context.getPlayer(),
+                                "deed.claim.structure_warning");
+                    }
+
                 } else {
-                    // send the respective failure message.
                     switch (claimResult) {
+                        case STRUCTURE_DENIED -> {
+                            PlayerMessageHelper.sendFailure(context.getPlayer(),
+                                    "deed.claim.structure_denied");
+                        }
                         case INTERSECTS -> {
-                            PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.claim.intersects");
+                            PlayerMessageHelper.sendFailure(context.getPlayer(),
+                                    "deed.claim.intersects");
                         }
                         case INSUFFICIENT_SIZE -> {
                             PlayerMessageHelper.sendFailure(context.getPlayer(),
@@ -296,6 +310,7 @@ public abstract class Deed extends Item {
                                     ModUtil.getSize(parcel.getBox()));
                         }
                     }
+
                 }
                 return claimResult.isSuccess()  ? InteractionResult.CONSUME : InteractionResult.FAIL;
             }
@@ -388,30 +403,41 @@ public abstract class Deed extends Item {
      * @param previousCoords
      */
     protected void handleBlockPlaced(Level level, BlockPos pos, Player player, ItemStack deed, ICoords previousCoords) {
-        // get the block entity
         FoundationStoneBlockEntity blockEntity = (FoundationStoneBlockEntity) level.getBlockEntity(pos);
         if (blockEntity != null) {
-
-            // update data from deed or existing parcel
             populateFoundationStone(blockEntity, deed, pos, player);
-
-            //check if there is a stored position of foundation stone.
             if (previousCoords != Coords.EMPTY) {
                 removePreviousLocation(level, deed, previousCoords);
             }
-
-            // store position of new foundation stone
             storeCurrentLocation(level, deed, Coords.of(pos));
-
-            /*
-             * NOTE foundation stone is non-craftable nor in the crafting tab
-             * so need to initiate the borders manually.
-             */
-            // place border blocks
-            blockEntity.placeParcelBorder();
-            blockEntity.placeParcelHorizontalArea();
+            blockEntity.placeParcelBorder((ServerPlayer) player);
         }
     }
+//    protected void handleBlockPlaced(Level level, BlockPos pos, Player player, ItemStack deed, ICoords previousCoords) {
+//        // get the block entity
+//        FoundationStoneBlockEntity blockEntity = (FoundationStoneBlockEntity) level.getBlockEntity(pos);
+//        if (blockEntity != null) {
+//
+//            // update data from deed or existing parcel
+//            populateFoundationStone(blockEntity, deed, pos, player);
+//
+//            //check if there is a stored position of foundation stone.
+//            if (previousCoords != Coords.EMPTY) {
+//                removePreviousLocation(level, deed, previousCoords);
+//            }
+//
+//            // store position of new foundation stone
+//            storeCurrentLocation(level, deed, Coords.of(pos));
+//
+//            /*
+//             * NOTE foundation stone is non-craftable nor in the crafting tab
+//             * so need to initiate the borders manually.
+//             */
+//            // place border blocks
+//            blockEntity.placeParcelBorder((ServerPlayer) player);
+////            blockEntity.placeParcelHorizontalArea();
+//        }
+//    }
 
     /**
      *
@@ -460,8 +486,16 @@ public abstract class Deed extends Item {
         blockEntity.setParcelId(tag.contains(PARCEL_ID) ? tag.getUUID(PARCEL_ID) : null);
         blockEntity.setDeedId(tag.contains(DEED_ID) ? tag.getUUID(DEED_ID) : null);
         blockEntity.setOwnerId(tag.contains(OWNER_ID) ? tag.getUUID(OWNER_ID) : player.getUUID());
+
         // TODO update to use getParcelType()
-        blockEntity.setParcelType(tag.contains(PARCEL_TYPE) ? tag.getString(PARCEL_TYPE) : null);
+        String parcelType;
+        if (tag.contains(PARCEL_TYPE)) {
+            parcelType = tag.getString(PARCEL_TYPE);
+        } else {
+            parcelType = ((Deed) deed.getItem()).getParcelType().getSerializedName();
+        }
+
+        blockEntity.setParcelType(parcelType);
         blockEntity.setCoords(new Coords(pos));
         blockEntity.setRelativeBox(size);
         blockEntity.setExpireTime(blockEntity.getLevel().getGameTime() + Config.SERVER.borders.foundationStoneLifeSpan.get());

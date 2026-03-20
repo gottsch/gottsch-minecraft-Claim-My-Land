@@ -20,21 +20,22 @@
 package mod.gottsch.forge.claimmyland.core.block;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.gottschcore.block.FacingBlock;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
+import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.*;
-import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityTicker;
-import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import org.jetbrains.annotations.Nullable;
+
+import java.util.Optional;
 
 /**
  * @author Mark Gottschling on Sep 14, 2024.
@@ -67,45 +68,47 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
      * @return
      * @param <T>
      */
-    @javax.annotation.Nullable
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (!level.isClientSide()) {
-            return (lvl, pos, blockState, t) -> {
-                if (t instanceof BorderStoneBlockEntity entity) { // test and cast
-                    if (entity.getCoords() != null) {
-                        entity.tickServer();
-                    }
-                }
-            };
-        } else {
-            return null;
-        }
-    }
+//    @javax.annotation.Nullable
+//    @Override
+//    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
+//        if (!level.isClientSide()) {
+//            return (lvl, pos, blockState, t) -> {
+//                if (t instanceof BorderStoneBlockEntity entity) { // test and cast
+//                    if (entity.getCoords() != null) {
+//                        entity.tickServer();
+//                    }
+//                }
+//            };
+//        } else {
+//            return null;
+//        }
+//    }
 
-    /**
-     * Called whenever the block is remove - either destroyed by player or level.destroyBlock()
-     * @param state
-     * @param level
-     * @param pos
-     * @param state2
-     * @param b
-     */
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState state2, boolean b) {
-        if (!level.isClientSide()) {
-            FoundationStoneBlockEntity blockEntity = (FoundationStoneBlockEntity) level.getBlockEntity(pos);
-            if (blockEntity != null) {
-                /*
-                 * NOTE the stone and border will be removed, but if the stone is caused by
-                 * onDestroyedByPlayer(), then the owning Deed will still contain the
-                 * pos of this block. Checks must be added to the Deed to ensure that the old
-                 * stone exists before attempting to remove it. This is because the Deed
-                 * adds a new stone and then attempts to remove the old stone. But if the
-                 * stones are in the same location, weird things happen.
-                 */
-                blockEntity.removeParcelBorder();
-                blockEntity.removeHorizontalArea();
+        if (!level.isClientSide() && level instanceof ServerLevel serverLevel) {
+            if (!serverLevel.getServer().isRunning()) return;
+            FoundationStoneBlockEntity blockEntity =
+                    (FoundationStoneBlockEntity) level.getBlockEntity(pos);
+            if (blockEntity != null && blockEntity.getParcelId() != null) {
+                Optional<Parcel> parcel = ParcelRegistry.findByParcelId(blockEntity.getParcelId());
+                ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: parcelId={}, parcelPresent={}",
+                        blockEntity.getParcelId(), parcel.isPresent());
+                if (parcel.isPresent()) {
+                    // committed parcel — hide the visual border
+//                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
+//                            serverLevel, parcel.get(), false, 0, pos.getY());
+                    CMLNetwork.syncBorderVisibilityToDimension(serverLevel, parcel.get(), false, 0, pos.getY());
+                    ActiveBorderStoneRegistry.remove(blockEntity);
+                } else {
+                    // phase 1 preview — parcel never committed; remove from client registries
+                    CMLNetwork.removePreviewParcelFromTracking(
+                            serverLevel, blockEntity.getParcelId(), pos);
+                }
+            } else if (blockEntity == null) {
+                ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: blockEntity is NULL at pos={}", pos);
+            } else {
+                ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: parcelId is null");
             }
         }
         super.onRemove(state, level, pos, state2, b);

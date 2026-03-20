@@ -1,32 +1,18 @@
 package mod.gottsch.forge.claimmyland.core.block.entity;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.BorderBlock;
-import mod.gottsch.forge.claimmyland.core.block.BorderStatus;
-import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.config.Config;
-import mod.gottsch.forge.claimmyland.core.parcel.NationParcel;
-import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
-import mod.gottsch.forge.claimmyland.core.parcel.ZoneParcel;
-import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.ModUtil;
-import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import org.apache.commons.lang3.ObjectUtils;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Optional;
 
 // TODO abstract most of this out to PlacementBlockEntity
 /**
@@ -58,84 +44,6 @@ public class CitizenPlacementBlockEntity extends BorderStoneBlockEntity {
     @Override
     public int getBufferSize(ParcelType type) {
       return Config.SERVER.general.parcelBufferRadius.get();
-    }
-
-    @Override
-    public Block getBorderBlock() {
-        return ModBlocks.CITIZEN_BORDER.get();
-    }
-
-    @Override
-    protected BlockState getBorderBlockState(Box box) {
-        Block borderBlock = getBorderBlock();
-        // get the default block state of the border block
-        BlockState blockState = borderBlock.defaultBlockState();
-
-        /*
-         * check if parcel is within another existing parcel
-         */
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(box.getMinCoords());
-
-        if (registryParcel.isEmpty()) {
-            // if a citizen placement is not within a zone or a nation then bad
-            blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-        } else {
-            // determine what parcel type is the zone in
-            if (registryParcel.get().getType() != ParcelType.NATION
-                    && registryParcel.get().getType() != ParcelType.ZONE) {
-                blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-            } else {
-                // if any part of the parcel is outside the nation, then bad
-                if (!ModUtil.contains(registryParcel.get().getBox(), box)) {
-                    blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-                } else {
-                    // proceed with a normal overlaps check, filtering out nation parcels
-                    List<Parcel> overlaps = ParcelRegistry.findBuffer(box);
-                    overlaps = overlaps.stream()
-                            .filter(p -> !(p instanceof NationParcel || p instanceof ZoneParcel))
-                            .toList();
-
-                     if(Parcel.hasBoxToBufferedIntersections(box, getOwnerId(), overlaps)) {
-                         blockState = blockState.setValue(BorderBlock.INTERSECTS, BorderStatus.BAD);
-                     }
-                }
-            }
-        }
-        return blockState;
-    }
-
-    @Override
-    protected BlockState getBufferBlockState(Box box, Box bufferedBox) {
-        return Blocks.AIR.defaultBlockState();
-    }
-
-    /**
-     * like that of BorderStoneBlockEntity, but doesn't add the buffer border
-     */
-    @Override
-    public void placeParcelBorder() {
-        // add the border
-        Box box = new Box(getCoords1(), getCoords2());
-        BlockState borderState = getBorderBlockState(box);
-        placeParcelBorder(box, borderState);
-    }
-
-    @Override
-    public void removeParcelBorder(Level level, ICoords coords) {
-        Box box = getBorderDisplayBox(coords);
-        replaceParcelBorder(level, box, getBorderBlock(), Blocks.AIR.defaultBlockState());
-    }
-
-    /**
-     * static variant where all values are provided
-     */
-    public static void removeParcelBorder(Level level, Box box, Block borderBlock) {
-        replaceParcelBorder(level, box, borderBlock, Blocks.AIR.defaultBlockState());
-    }
-
-    @Override
-    public Box getBorderDisplayBox(ICoords coords) {
-        return getAbsoluteBox(coords);
     }
 
     @Override

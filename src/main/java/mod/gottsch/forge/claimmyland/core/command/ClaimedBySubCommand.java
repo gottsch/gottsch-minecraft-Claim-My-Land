@@ -99,7 +99,8 @@ public class ClaimedBySubCommand implements SubCommand {
                         p.getAbsoluteBox().getMinCoords().toShortString(),
                         p.getAbsoluteBox().getMaxCoords().toShortString(),
                         ModUtil.getSize(p.getBox()).toShortString(),
-                        borderType
+                        borderType,
+                        p.getDimension()
                 ));
 
                 // blank line between parcels, not after the last one

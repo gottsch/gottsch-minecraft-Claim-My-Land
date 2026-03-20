@@ -97,12 +97,14 @@ public class CitizenDeed extends Deed {
         CompoundTag tag = deed.getOrCreateTag();
 
         // check if parcel is within another existing parcel
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos));
+        String dimension = blockEntity.getLevel().dimension().location().toString();
+        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(Coords.of(pos), dimension);
 
         // override some properties if within another parcel
         // if claiming an existing citizen parcel
         if (registryParcel.isPresent()) {
             if (registryParcel.get().getType() == ParcelType.CITIZEN) {
+                ClaimMyLand.LOGGER.debug("populating citizen foundation stone; placing player -> {}", String.valueOf(player));
                 // unwrap
                 CitizenParcel citizenParcel = (CitizenParcel) registryParcel.get();
                 // update block entity with properties of that of the existing citizen parcel
@@ -110,6 +112,7 @@ public class CitizenDeed extends Deed {
                 blockEntity.setNationEstateId(citizenParcel.getNationEstate().getId());
                 blockEntity.setRelativeBox(registryParcel.get().getSize());
                 blockEntity.setCoords(registryParcel.get().getCoords());
+                blockEntity.setPlacingPlayerId(player.getUUID());
             }
         }
     }

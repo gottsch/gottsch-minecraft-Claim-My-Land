@@ -22,12 +22,12 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 import java.util.UUID;
 
 /**
- * Lightweight immutable client-side representation of a parcel.
- * Populated from {@link mod.gottsch.forge.claimmyland.core.network.SyncParcelPacket}
+ * lightweight immutable client-side representation of a parcel.
+ * populated from {@link mod.gottsch.forge.claimmyland.core.network.SyncParcelPacket}
  * and stored in {@link mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry}.
  *
- * <p>Contains only the fields needed for HUD display and look-based queries.
- * Not related to the server-side {@link Parcel} hierarchy.</p>
+ * <p>contains only the fields needed for HUD and border display and look-based queries.
+ * not related to the server-side {@link Parcel} hierarchy.</p>
  *
  * @author Mark Gottschling on 3/3/2026
  */
@@ -36,16 +36,40 @@ public record ClientParcel(
         UUID estateId,
         String parcelName,
         String estateName,
+        String nationName,
         String ownerName,
         UUID ownerId,
         ParcelType parcelType,
         boolean relinquished,
         int minX, int minY, int minZ,
         int maxX, int maxY, int maxZ,
-        String dimension
+        String dimension,
+        boolean isBorderVisible,
+        int conflictState,
+        int borderStoneY,
+        boolean isPreview,
+        UUID placingPlayer
 ) {
+
     /**
-     * Returns true if the given block coords fall within this parcel's bounds
+     * returns a copy of this record with isBorderVisible and conflictState
+     * updated. called from BorderVisibilityPacket.handle() — both fields
+     * are always transmitted together so a single with-er covers the full
+     * packet payload.
+     */
+    public ClientParcel withBorderVisibility(boolean isBorderVisible, int conflictState, int borderStoneY, UUID placingPlayer) {
+        return new ClientParcel(
+                parcelId, estateId, parcelName, estateName, nationName, ownerName, ownerId,
+                parcelType, relinquished,
+                minX, minY, minZ, maxX, maxY, maxZ,
+                dimension,
+                isBorderVisible, conflictState, borderStoneY, isPreview,
+                placingPlayer
+        );
+    }
+
+    /**
+     * returns true if the given block coords fall within this parcel's bounds
      * in the given dimension.
      */
     public boolean contains(int x, int y, int z, String dim) {
@@ -56,10 +80,14 @@ public record ClientParcel(
     }
 
     /**
-     * Returns true if this parcel's estate has been relinquished.
-     * Driven by the relinquished flag on the Estate, not by owner name.
+     * returns true if this parcel's estate has been relinquished.
+     * driven by the relinquished flag on the Estate, not by owner name.
      */
     public boolean isRelinquished() {
         return relinquished;
+    }
+
+    public boolean isConflict() {
+        return conflictState == 1;
     }
 }

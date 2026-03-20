@@ -39,6 +39,7 @@ public abstract class AbstractEstate implements Estate {
     public static final String ENTITY_SPAWN_TAG_WHITELIST_KEY = "entitySpawnTagWhitelist";
     public static final String ENTITY_SPAWN_WHITELIST_KEY = "entitySpawnWhitelist";
 
+
     // the unique id of the claim
     private UUID id;
     private String name;
@@ -56,6 +57,7 @@ public abstract class AbstractEstate implements Estate {
     private Set<String> entitySpawnWhitelist;
 
     private boolean relinquished;
+    private boolean preventFireSpread = true;  // default ON
 
     public AbstractEstate() {
         setId(UUID.randomUUID());
@@ -245,6 +247,9 @@ public abstract class AbstractEstate implements Estate {
             });
             tag.put(ENTITY_SPAWN_WHITELIST_KEY, entitySpawnWhitelist);
         }
+
+        tag.putBoolean(PREVENT_FIRE_SPREAD_KEY, isPreventFireSpread());
+
         return tag;
     }
 
@@ -350,6 +355,12 @@ public abstract class AbstractEstate implements Estate {
                 String spawn = element.getAsString();
                 getEntitySpawnWhitelist().add(spawn);
             });
+        }
+
+        if (tag.contains(PREVENT_FIRE_SPREAD_KEY)) {
+            setPreventFireSpread(tag.getBoolean(PREVENT_FIRE_SPREAD_KEY));
+        } else {
+            setPreventFireSpread(true);  // default ON for existing estates
         }
     }
 
@@ -478,6 +489,16 @@ public abstract class AbstractEstate implements Estate {
     @Override
     public void setParcelType(ParcelType parcelType) {
         this.parcelType = parcelType;
+    }
+
+    @Override
+    public boolean isPreventFireSpread() {
+        return preventFireSpread;
+    }
+
+    @Override
+    public void setPreventFireSpread(boolean preventFireSpread) {
+        this.preventFireSpread = preventFireSpread;
     }
 
     @Override

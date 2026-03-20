@@ -39,6 +39,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.Callable;
 
 /**
  *
@@ -141,6 +142,9 @@ public abstract class AbstractParcel implements Parcel {
      */
     @Override
     public boolean grantsAccess(UUID entityId) {
+        ClaimMyLand.LOGGER.info("this parcel -> {}", this);
+        ClaimMyLand.LOGGER.info("entityId -> {}, parcel.owner -> {}", entityId, this.getOwnerId());
+
         // if a parcel has no owner, anyone has access to modify
         if (getOwnerId() == null) {
             ClaimMyLand.LOGGER.debug("parcel has no owner");

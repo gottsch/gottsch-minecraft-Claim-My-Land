@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.command;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandResponseFormatter;
@@ -29,12 +28,8 @@ import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
-import mod.gottsch.forge.claimmyland.core.util.LangUtil;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
@@ -54,7 +49,7 @@ public class RelinquishParcelSubCommand implements SubCommand {
     public LiteralArgumentBuilder<CommandSourceStack> build() {
         return Commands.literal(RELINQUISH)
                 .then(Commands.argument(NATION_NAME, StringArgumentType.string())
-                        .suggests(OWNER_NATION_ESTATE_NAMES)
+                        .suggests(OWNER_ESTATE_NATION_NAMES)
                         .then(Commands.argument(CITIZEN_ESTATE_NAME, StringArgumentType.string())
                                 .suggests(OWNER_CITIZEN_ESTATE_NAMES)
                                 .then(Commands.argument(PARCEL_NAME, StringArgumentType.string())
@@ -75,7 +70,7 @@ public class RelinquishParcelSubCommand implements SubCommand {
                 .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
                         .suggests(OPS_OWNER_NAMES)
                         .then(Commands.argument(NATION_NAME, StringArgumentType.string())
-                                .suggests(OPS_OWNER_NATION_ESTATE_NAMES)
+                                .suggests(OPS_OWNER_ESTATE_NATION_NAMES)
                                 .then(Commands.argument(CITIZEN_ESTATE_NAME, StringArgumentType.string())
                                         .suggests(OPS_OWNER_CITIZEN_ESTATE_NAMES)
                                         .then(Commands.argument(PARCEL_NAME, StringArgumentType.string())

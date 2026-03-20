@@ -24,11 +24,17 @@ package mod.gottsch.forge.claimmyland.core.parcel;
  */
 public enum ClaimResult {
     SUCCESS,
+    SUCCESS_WITH_WARNINGS,
     INTERSECTS,
     INSUFFICIENT_SIZE,
-    FAILURE;
+    FAILURE,
+    STRUCTURE_DENIED;
 
     public boolean isSuccess() {
-        return this == SUCCESS;
+        return this == SUCCESS || this == SUCCESS_WITH_WARNINGS;
+    }
+
+    public boolean isFailure() {
+        return this == FAILURE || this == STRUCTURE_DENIED;
     }
 }

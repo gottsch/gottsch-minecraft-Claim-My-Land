@@ -21,11 +21,13 @@ package mod.gottsch.forge.claimmyland.core.block;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.ZonePlacementBlockEntity;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import mod.gottsch.forge.gottschcore.world.WorldInfo;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -74,24 +76,48 @@ public class ZonePlacementBlock extends BaseEntityBlock {
         return SHAPE;
     }
 
+//    @Override
+//    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player,
+//                                       boolean willHarvest, FluidState fluid) {
+//        if (WorldInfo.isClientSide(level)) {
+//            return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
+//        }
+//        BlockEntity be = level.getBlockEntity(pos);
+//        if (be instanceof ZonePlacementBlockEntity zbe) {
+//            if (zbe.getCoords1() != null && zbe.getCoords1() != Coords.EMPTY
+//                    && zbe.getCoords2() != null && zbe.getCoords2() != Coords.EMPTY) {
+//                ICoords coords1 = zbe.getCoords1();
+//                ICoords coords2 = zbe.getCoords2();
+//                // remove the companion placement block if it still exists
+//                if (!coords1.toPos().equals(pos)
+//                        && level.getBlockState(coords1.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+//                    level.setBlock(coords1.toPos(), Blocks.AIR.defaultBlockState(), 3);
+//                }
+//                if (!coords2.toPos().equals(pos)
+//                        && level.getBlockState(coords2.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
+//                    level.setBlock(coords2.toPos(), Blocks.AIR.defaultBlockState(), 3);
+//                }
+//            }
+//        }
+//        return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
+//    }
+
     @Override
-    public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest,
-                                       FluidState fluid) {
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (state.getBlock() != newState.getBlock()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ZonePlacementBlockEntity zbe
+                    && zbe.getCoords1() != null && zbe.getCoords1() != Coords.EMPTY
+                    && zbe.getCoords2() != null && zbe.getCoords2() != Coords.EMPTY) {
 
-        if (WorldInfo.isClientSide(level)) {
-            return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
-        }
+                // remove visual preview border from client
+                if (level instanceof ServerLevel serverLevel && zbe.getParcelId() != null) {
+                    CMLNetwork.removePreviewParcelFromTracking(serverLevel, zbe.getParcelId(), pos);
+                }
 
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof ZonePlacementBlockEntity zbe) {
-            if (zbe.getCoords1() != null && zbe.getCoords1() != Coords.EMPTY
-                && zbe.getCoords2() != null && zbe.getCoords2() != Coords.EMPTY) {
+                // remove the companion placement block
                 ICoords coords1 = zbe.getCoords1();
                 ICoords coords2 = zbe.getCoords2();
-
-                ZonePlacementBlockEntity.removeParcelBorder(level, new Box(coords1, coords2), ModBlocks.ZONE_BORDER.get());
-
-                // clear blocks at 1 & 2
                 if (!coords1.toPos().equals(pos) && level.getBlockState(coords1.toPos()).is(ModBlocks.ZONE_PLACEMENT_BLOCK.get())) {
                     level.setBlock(coords1.toPos(), Blocks.AIR.defaultBlockState(), 3);
                 }
@@ -99,8 +125,7 @@ public class ZonePlacementBlock extends BaseEntityBlock {
                     level.setBlock(coords2.toPos(), Blocks.AIR.defaultBlockState(), 3);
                 }
             }
+            super.onRemove(state, level, pos, newState, isMoving);
         }
-
-        return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
     }
 }

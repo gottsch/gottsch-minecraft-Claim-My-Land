@@ -300,6 +300,10 @@ public class EstateDisplayFormatter {
                             .append(Component.literal("-RELINQUISHED-").withStyle(ChatFormatting.RED)));
                 }
 
+                // location
+                lines.add(Component.literal(indent)
+                        .append(Component.literal("Dimension: ").withStyle(ChatFormatting.GRAY))
+                        .append(Component.literal(parcel.getDimension()).withStyle(ChatFormatting.WHITE)));
                 lines.add(Component.literal(indent)
                         .append(Component.literal("Min Pos: ").withStyle(ChatFormatting.GRAY))
                         .append(Component.literal(formatLocation(parcel.getMinCoords()))
@@ -362,6 +366,8 @@ public class EstateDisplayFormatter {
             lines.add(newline());
         }
 
+        lines.add(newline());
+                
         return lines;
     }
 
@@ -483,7 +489,7 @@ public class EstateDisplayFormatter {
                 lines.addAll(formatTenantEstateList(level, nationalizedEstates, indent + LangUtil.INDENT2));
             }
         }
-
+        lines.add(newline());
         return lines;
     }
 
@@ -507,6 +513,7 @@ public class EstateDisplayFormatter {
             }
             lines.add(component);
         }
+        lines.add(newline());
         return lines;
     }
 

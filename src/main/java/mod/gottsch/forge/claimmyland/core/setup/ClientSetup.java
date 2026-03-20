@@ -20,8 +20,11 @@
 package mod.gottsch.forge.claimmyland.core.setup;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.client.hud.ParcelHud;
+import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
@@ -38,7 +41,8 @@ public class ClientSetup {
      */
     public static void init(final FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
-
+            MinecraftForge.EVENT_BUS.register(ParcelHud.class);  // static subscriber — Class, not new instance
+            MinecraftForge.EVENT_BUS.register(ParcelBorderRenderer.class);
         });
     }
 }

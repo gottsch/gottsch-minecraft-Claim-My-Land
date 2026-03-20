@@ -15,6 +15,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-03-xx
+### 🎉 Highlights
+
+- **Multi-dimension support** — parcels can now be claimed in any dimension (Nether, End, modded dimensions), with per-dimension protection controlled via server config
+- **Visual border renderer** — parcel borders are now rendered as 3D wireframes, replacing physical border blocks for all parcel sizes. Borders are only visible to the parcel owner.
+- **JourneyMap Foundation Stone preview** — when placing a Foundation Stone, a coloured polygon appears on the JourneyMap showing the parcel boundary before you commit the claim
+- **Structure intersection protection** — claiming parcels that overlap configured structure types can now be blocked via server config
+- **Spaces in estate and parcel names** — rename commands now accept names with spaces; use quotes in the command: `/cml estate rename myEstate "My Estate"`
+- **Dimension display** — parcel and estate detail commands now show which dimension a parcel is in
+- **Fire spread prevention** — estate owners can now prevent fire from spreading within their claimed parcels
+
+---
+
+### ➕ Added
+
+#### Multi-Dimension Parcel Support
+- Parcels can now be claimed in any dimension
+- Server config `excludedDimensions` list controls which dimensions are unclaimable; an empty list means all dimensions are claimable (including modded ones)
+- Parcel chunk index is now dimension-aware — block events in unclaimed chunks in any dimension exit efficiently
+
+#### Visual Border Renderer
+- Parcel boundaries are now rendered as client-side 3D wireframes — no physical blocks are placed in the world
+- Three visual layers per parcel: full wireframe box in ownership colour, buffer bracket quads using a stripe texture, and a horizontal area plane at border stone Y
+- Borders are visible to the parcel owner only — no visual pollution for other players
+- Conflict state (overlapping claims) renders the wireframe in red
+- Borders persist correctly across server restarts and chunk reloads
+- Physical border block, buffer block, and horizontal area block classes removed entirely
+
+#### JourneyMap Foundation Stone Preview
+- Placing a Foundation Stone now shows a live polygon overlay on the JourneyMap showing the exact parcel boundary that will be claimed
+- Overlay is green when the area is clear, red when it intersects an existing parcel
+- Preview clears automatically when the Foundation Stone is broken or the claim is committed
+
+#### Structure Intersection Protection
+- Server config can specify structure types (by resource location) that cannot be overlapped by claimed parcels
+- Policy is lazily built from config on first use and invalidated on config reload
+- Structures matched via `getAllStructuresAt()` with tag membership resolution — handles modded structures via tags
+
+#### Fire Spread Prevention
+- New per-estate property: `preventFireSpread` (default: `true` — fire spread blocked)
+- Covers both `minecraft:fire` and `minecraft:soul_fire` via `claimmyland:fire_blocks` block tag; modded fire blocks can be added to the tag via datapack
+- New command: `/cml estate preventFireSpread <estateName> <true|false>`
+- Master on/off switch available in server config
+
+#### Display Dimension in Commands
+- Estate detail, parcel list, parcel detail, and `/cml claimedby` commands all now include a **Dimension** line showing the resource location (e.g. `minecraft:overworld`, `minecraft:the_nether`)
+
+#### Estate & Parcel Name Improvements
+- Estate and parcel names can now contain spaces — use quotes when entering them in commands: `"My Estate"`
+- Tab-complete suggestions for names with spaces are automatically presented with quotes
+
+---
+
+### ⚙️ Changed
+
+- **Border stones no longer expire** — since borders are only visible to the owner there is no visual pollution concern; the owner removes the stone at their discretion
+- **Server backup system** — `reinitBackup()` now correctly initialises at `ServerStartingEvent` (was incorrectly called during `common_setup` before config values were available)
+
+---
+
+### 🐛 Fixed
+
+- Fixed missing lang values.
+- Fixed block placement protection incorrectly denying access when a player stands in a
+  parent parcel (Nation/Zone) and places into a child parcel (Citizen/Player) they own —
+  `resolveParcelCached()` now bypasses the region cache for non-leaf parcel types and
+  falls through to a BST lookup to find the most specific (least significant) parcel at
+  the target position.
+- Fixed block interaction protection incorrectly denying access when a player clicks on 
+  the "floor" of a parcel (Zone/Citizen) - now uses the correct position, which is 1 above
+  the clicked block, to resolve the parcel access.
+
+---
+
+### 🗑️ Removed
+
+- Removed physical `BorderBlock`, `NationBorderBlock`, `BufferBlock`, and `HorizontalAreaBlock` block classes and all their registrations
+- Removed physical block placement and removal methods from `BorderStoneBlockEntity` and `CitizenPlacementBlockEntity`
+
+---
+
+### 🔧 Technical / Developer Notes
+
+- New `ParcelBorderRenderer` — `RenderLevelStageEvent`-based client-side renderer; three render passes: wireframe (`RenderType.lines()`), buffer bracket quads (atlas-sampled stripe texture, UV-tiled per block), horizontal area plane
+- `ACTIVE_BORDER_STONES` — tracks all live `BorderStoneBlockEntity` instances; used for login drain and visibility sync
+- `CMLNetwork.syncBorderVisibleToOwner()` — sends `BorderVisibilityPacket(true)` to the parcel owner only; no-ops if owner is offline
+- `CMLNetwork.syncBorderVisibilityToDimension()` — uses `PacketDistributor.DIMENSION` for hide packets from `onRemove()` where no player reference is available
+- `SyncParcelPacket.handle()` now preserves `isBorderVisible`, `conflictState`, and `borderStoneY` from the existing `ClientParcelRegistry` entry when updating a parcel — prevents any parcel update (rename, sync) from inadvertently hiding an active border
+- `ParcelPolygonOverlayFactory` — new `showPreviewOverlay()` / `clearPreviewOverlay()` methods for Foundation Stone JM preview; stored separately from `ACTIVE_OVERLAYS`
+- `FoundationStoneEvents` — new `@OnlyIn(Dist.CLIENT)` event handler class that triggers the JM preview overlay on Foundation Stone right-click
+- `StructurePolicyFactory` — lazy-built, invalidated on config reload; structure tag membership resolved via `holder.is(tagKey)`
+- `isInProtectedDimension()` — centralised dimension protection check; uses blacklist semantics (empty exclusion list = all dimensions protected)
+- `StringArgumentType.escapeIfRequired()` applied to all estate and parcel name suggestion streams so names with spaces are presented with quotes in the tab-complete list
+
+---
+
 ## [2.1.0] - 2026-03-08
 
 > **💡 Recommended:** Since this mod is heavily command-based, we recommend using [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.

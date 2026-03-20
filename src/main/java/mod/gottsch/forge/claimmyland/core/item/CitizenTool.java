@@ -21,14 +21,20 @@ package mod.gottsch.forge.claimmyland.core.item;
 
 import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.CitizenPlacementBlockEntity;
+import mod.gottsch.forge.claimmyland.core.block.entity.ZonePlacementBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
+import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -40,7 +46,9 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.dimension.BuiltinDimensionTypes;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Mark Gottschling on Oct 7, 2024
@@ -59,18 +67,24 @@ public class CitizenTool extends BlockItem {
         if (context.getLevel().isClientSide()) {
             return InteractionResult.FAIL;
         }
-        if (context.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD) {
+        ResourceLocation dimId = context.getLevel().dimension().location();
+        List<? extends String> excluded = Config.SERVER.dimensions.excludedDimensions.get();
+        if (excluded.stream().anyMatch(e -> e.equals(dimId.toString()))) {
             return InteractionResult.FAIL;
         }
 
-        Optional<Parcel> parentParcel = ParcelRegistry.findLeastSignificant(Coords.of(context.getClickedPos()));
+        // wrap the context in a BlockPlaceContext to get the position of the placed block,
+        // not the position of the block face that was clicked. without this, findLeastSignificant()
+        // will be using the wrong coords and could possibly miss the parcel if on an edge.
+        BlockPlaceContext placeContext = new BlockPlaceContext(context);
+
+        Optional<Parcel> parentParcel = ParcelRegistry.findLeastSignificant(Coords.of(placeContext.getClickedPos()), dimId.toString());
         if (parentParcel.isEmpty() || !isValidParent(parentParcel.get())) {
             PlayerMessageHelper.sendFailure(context.getPlayer(), "citizen_placement.not_valid_parent");
             return InteractionResult.FAIL;
         }
 
         CompoundTag tag = context.getItemInHand().getOrCreateTag();
-        BlockPlaceContext placeContext = new BlockPlaceContext(context);
 
         if (isClickingCitizenPlacementBlock(context)) {
             return handleParcelCreation(context, placeContext, tag, parentParcel.get());
@@ -99,16 +113,16 @@ public class CitizenTool extends BlockItem {
             return InteractionResult.SUCCESS;
         }
 
-        tryCreateCitizenParcel(context, parentParcel, box);
+        InteractionResult result = tryCreateCitizenParcel(context, parentParcel, box, coords1, coords2);
 
         clear(placeContext, coords1, coords2);
         tag.remove(COORDS1);
         tag.remove(COORDS2);
 
-        return InteractionResult.SUCCESS;
+        return result;
     }
 
-    private void tryCreateCitizenParcel(UseOnContext context, Parcel parentParcel, Box box) {
+    private InteractionResult tryCreateCitizenParcel(UseOnContext context, Parcel parentParcel, Box box, ICoords coords1, ICoords coords2) {
         Optional<Parcel> created = ParcelTypeRegistry.create(ParcelType.CITIZEN,
                 parentParcel.isNation()
                         ? parentParcel.getEstate()
@@ -116,7 +130,7 @@ public class CitizenTool extends BlockItem {
                 );
         if (created.isEmpty()) {
             PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");
-            return;
+            return InteractionResult.SUCCESS;
         }
 
         Parcel citizen = created.get();
@@ -125,12 +139,28 @@ public class CitizenTool extends BlockItem {
         citizen.setSize(new Box(Coords.of(0, 0, 0), box.getSize()));
 
         ClaimResult claimResult = citizen.handleEmbeddedClaim(context.getLevel(), parentParcel, citizen.getBox());
-        if (claimResult == ClaimResult.SUCCESS) {
-            PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
+
+        if (claimResult.isSuccess()) {
+            // clean up preview border
+            CitizenPlacementBlockEntity be = (CitizenPlacementBlockEntity) context.getLevel().getBlockEntity(coords2.toPos());
+            if (be != null && context.getLevel() instanceof ServerLevel serverLevel) {
+                CMLNetwork.removePreviewParcelFromTracking(serverLevel, be.getParcelId(), coords2.toPos());
+            }
+
+            if (claimResult == ClaimResult.SUCCESS_WITH_WARNINGS) {
+                PlayerMessageHelper.sendWarning(context.getPlayer(), "parcel.add.structure_warning");
+            } else {
+                PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
+            }
             CommandHelper.save(context.getLevel());
         } else {
-            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
+            switch (claimResult) {
+                case STRUCTURE_DENIED -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.structure_denied");
+                default -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
+            }
         }
+
+        return InteractionResult.SUCCESS;
     }
 
     // -------------------------------------------------------------------------
@@ -141,54 +171,56 @@ public class CitizenTool extends BlockItem {
                                                    CompoundTag tag) {
         Level level = context.getLevel();
         ICoords clickedCoords = Coords.of(placeContext.getClickedPos());
-
-        level.setBlock(placeContext.getClickedPos(), ModBlocks.CITIZEN_PLACEMENT_BLOCK.get().defaultBlockState(), 3);
+        String dimension = context.getLevel().dimension().location().toString();
 
         boolean hasValidCoords1 = tag.contains(COORDS1)
                 && level.getBlockEntity(loadCoords(tag, COORDS1).toPos()) instanceof CitizenPlacementBlockEntity;
 
-        if (!hasValidCoords1) {
-            // First corner: just record coords1
-            tag.put(COORDS1, clickedCoords.save(new CompoundTag()));
-            return InteractionResult.SUCCESS;
+        if (hasValidCoords1) {
+            boolean hasValidCoords2 = tag.contains(COORDS2)
+                    && level.getBlockEntity(loadCoords(tag, COORDS2).toPos()) instanceof CitizenPlacementBlockEntity;
+
+            if (hasValidCoords2) {
+                // Both corners already set: reset and start fresh from clicked position
+                clear(placeContext, tag);
+                tag.remove(COORDS2);
+                tag.put(COORDS1, clickedCoords.save(new CompoundTag()));
+                level.setBlock(placeContext.getClickedPos(), ModBlocks.CITIZEN_PLACEMENT_BLOCK.get().defaultBlockState(), 3);
+                return InteractionResult.SUCCESS;
+            }
+
+            // second corner — validate parent matches before placing
+            ICoords coords1 = loadCoords(tag, COORDS1);
+            Optional<Parcel> parentAtCoords1 = ParcelRegistry.findLeastSignificant(coords1, dimension);
+            Optional<Parcel> parentAtCoords2 = ParcelRegistry.findLeastSignificant(clickedCoords, dimension);
+
+            if (parentAtCoords1.isEmpty() || parentAtCoords2.isEmpty()) {
+                PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");
+                return InteractionResult.FAIL;
+            }
+
+            if (!parentAtCoords1.get().getId().equals(parentAtCoords2.get().getId())) {
+                PlayerMessageHelper.sendFailure(context.getPlayer(), "citizen_placement.not_same_parent");
+                return InteractionResult.FAIL;
+            }
+
+            // validation passed — place block and link
+            level.setBlock(placeContext.getClickedPos(), ModBlocks.CITIZEN_PLACEMENT_BLOCK.get().defaultBlockState(), 3);
+            return placeSecondCorner(context, placeContext, tag, clickedCoords);
         }
 
-        boolean hasValidCoords2 = tag.contains(COORDS2)
-                && level.getBlockEntity(loadCoords(tag, COORDS2).toPos()) instanceof CitizenPlacementBlockEntity;
-
-        if (hasValidCoords2) {
-            // Both corners already set: reset and start fresh from clicked position
-            clear(placeContext, tag);
-            tag.remove(COORDS2);
-            tag.put(COORDS1, clickedCoords.save(new CompoundTag()));
-            return InteractionResult.SUCCESS;
-        }
-
-        // Second corner: validate and set coords2
-        return placeSecondCorner(context, placeContext, tag, clickedCoords);
+        // First corner: just place and record coords1
+        level.setBlock(placeContext.getClickedPos(), ModBlocks.CITIZEN_PLACEMENT_BLOCK.get().defaultBlockState(), 3);
+        tag.put(COORDS1, clickedCoords.save(new CompoundTag()));
+        return InteractionResult.SUCCESS;
     }
 
     private InteractionResult placeSecondCorner(UseOnContext context, BlockPlaceContext placeContext,
                                                 CompoundTag tag, ICoords coords2) {
         ICoords coords1 = loadCoords(tag, COORDS1);
 
-        Optional<Parcel> parentAtCoords1 = ParcelRegistry.findLeastSignificant(coords1);
-        Optional<Parcel> parentAtCoords2 = ParcelRegistry.findLeastSignificant(coords2);
-
-        if (parentAtCoords1.isEmpty() || parentAtCoords2.isEmpty()) {
-            PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");
-            return InteractionResult.SUCCESS;
-        }
-
-        if (!parentAtCoords1.get().getId().equals(parentAtCoords2.get().getId())) {
-            PlayerMessageHelper.sendFailure(context.getPlayer(), "citizen_placement.not_same_zone");
-            return InteractionResult.SUCCESS;
-        }
-
         tag.put(COORDS2, coords2.save(new CompoundTag()));
-
         linkCitizenPlacementBlocks(context.getLevel(), placeContext, coords1, coords2, context.getPlayer());
-
         return InteractionResult.SUCCESS;
     }
 
@@ -204,7 +236,22 @@ public class CitizenTool extends BlockItem {
         blockEntity1.setCoords2(coords2);
         blockEntity1.setOwnerId(player.getUUID());
 
-        blockEntity2.placeParcelBorder();
+//        blockEntity2.placeParcelBorder((ServerPlayer) player);
+        UUID previewId = UUID.randomUUID();
+        blockEntity1.setParcelId(previewId);
+        blockEntity2.setParcelId(previewId);
+
+        if (level instanceof ServerLevel serverLevel) {
+            Box box = new Box(coords1, coords2);
+            String dimension = level.dimension().location().toString();
+            int conflictState = ParcelRegistry.resolveConflictState(box, player.getUUID(), null, ParcelType.CITIZEN);
+            CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
+                    serverLevel, (ServerPlayer) player,
+                    previewId, previewId,
+                    player.getUUID(), ParcelType.CITIZEN,
+                    box, placeContext.getClickedPos().getY(),
+                    dimension, conflictState);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -238,7 +285,7 @@ public class CitizenTool extends BlockItem {
     private void clear(BlockPlaceContext context, ICoords coords1, ICoords coords2) {
         clearBlockIfCitizenPlacement(context.getLevel(), coords1);
         clearBlockIfCitizenPlacement(context.getLevel(), coords2);
-        CitizenPlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.CITIZEN_BORDER.get(), 0);
+//        CitizenPlacementBlockEntity.removeParcelBorder(context.getLevel(), new Box(coords1, coords2), ModBlocks.CITIZEN_BORDER.get(), 0);
     }
 
     private void clearBlockIfCitizenPlacement(Level level, ICoords coords) {

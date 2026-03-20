@@ -44,34 +44,6 @@ public class ModBlocks {
     public static final RegistryObject<Block> CITIZEN_FOUNDATION_STONE = Registration.BLOCKS.register("citizen_foundation_stone",
             () -> new CitizenFoundationStone(BlockBehaviour.Properties.copy(Blocks.COBBLESTONE)));
 
-
-    public static final RegistryObject<Block> PLAYER_BORDER = Registration.BLOCKS.register("player_border",
-            () -> new BorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> NATION_BORDER = Registration.BLOCKS.register("nation_border",
-            () -> new NationBorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> CITIZEN_BORDER = Registration.BLOCKS.register("citizen_border",
-            () -> new BorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> ZONE_BORDER = Registration.BLOCKS.register("zone_border",
-            () -> new BorderBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> PLAYER_HORIZONTAL_AREA = Registration.BLOCKS.register("player_horizontal_area",
-            () -> new HorizontalAreaBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> CITIZEN_HORIZONTAL_AREA = Registration.BLOCKS.register("citizen_horizontal_area",
-            () -> new HorizontalAreaBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> NATION_HORIZONTAL_AREA = Registration.BLOCKS.register("nation_horizontal_area",
-            () -> new HorizontalAreaBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> ZONE_HORIZONTAL_AREA = Registration.BLOCKS.register("zone_horizontal_area",
-            () -> new HorizontalAreaBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
-    public static final RegistryObject<Block> BUFFER = Registration.BLOCKS.register("buffer",
-            () -> new BufferBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).replaceable().randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
-
     public static final RegistryObject<Block> CITIZEN_PLACEMENT_BLOCK = Registration.BLOCKS.register("citizen_placement",
             () -> new CitizenPlacementBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).randomTicks().noCollission().instabreak().pushReaction(PushReaction.IGNORE)));
 

@@ -369,7 +369,7 @@ public class PlayerRegistry {
      * Returns the NEXT index that would be assigned, without consuming it.
      * Use for preview/display purposes (e.g. Foundation Stone placement feedback).
      */
-    @Deprecated
+    @Deprecated(since="2.1")
     public static synchronized int peekEstateNameIndex(UUID playerId) {
         return ESTATE_NAME_COUNTERS.getOrDefault(playerId, 0) + 1;
     }
