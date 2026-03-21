@@ -14,8 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **Back up your world before installing v2.** Copy your entire world folder to a safe location before upgrading. Once you have loaded the world in v2, downgrading back to v1 is not supported.
 
 ---
+## [2.3.0] - 2026-03-xx
 
-## [2.2.0] - 2026-03-xx
+## [2.2.0] - 2026-03-19
 ### 🎉 Highlights
 
 - **Multi-dimension support** — parcels can now be claimed in any dimension (Nether, End, modded dimensions), with per-dimension protection controlled via server config

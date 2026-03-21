@@ -424,6 +424,7 @@ public class Config extends AbstractConfig {
 
 	public static class Rendering {
 		public IntValue borderRenderRadius;
+		public final ForgeConfigSpec.IntValue conflictHighlightTimeoutSeconds;
 
 		Rendering(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV,
@@ -435,6 +436,12 @@ public class Config extends AbstractConfig {
 							" Parcels whose buffer boundary is entirely outside this radius are skipped.",
 							" Default: 256.")
 					.defineInRange("borderRenderRadius", 256, 64, 2048);
+
+			conflictHighlightTimeoutSeconds = builder
+					.comment(" How long (in seconds) conflict highlights remain visible after a Foundation Stone",
+							" preview clears. Highlights also clear if the player moves 32+ blocks away.",
+							" Range: 10–300. Default: 60.")
+					.defineInRange("conflictHighlightTimeoutSeconds", 60, 10, 300);
 
 			builder.pop();
 		}
