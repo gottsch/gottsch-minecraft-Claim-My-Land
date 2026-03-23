@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -88,7 +89,7 @@ public class RollingJsonSaver<T> {
     /**
      * Manually trigger a save
      */
-    public void save() {
+    public Optional<File> save() {
         try {
             // Get the data to save
             T data = dataSupplier.get();
@@ -109,8 +110,10 @@ public class RollingJsonSaver<T> {
             // Clean up old files
             cleanupOldFiles();
 
+            return Optional.of(saveFile);
         } catch (IOException e) {
             LOGGER.error("Failed to save data", e);
+            return Optional.empty();
         }
     }
 

@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.event;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.forge.claimmyland.core.cache.ClientParcelCache;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import net.minecraft.client.Minecraft;
@@ -59,12 +60,16 @@ public class ClientEvents {
     @SubscribeEvent
     public static void onPlayerLogout(final PlayerEvent.PlayerLoggedOutEvent event) {
         ClientParcelCache.setWilderness();
+        ParcelBorderRenderer.clearConflictHighlights();
+
         ClaimMyLand.LOGGER.debug("ClientEvents: cache cleared on logout");
     }
 
     @SubscribeEvent
     public static void onPlayerChangeDimension(final PlayerEvent.PlayerChangedDimensionEvent event) {
         ClientParcelCache.setWilderness();
+        ParcelBorderRenderer.clearConflictHighlights();
+
         ClaimMyLand.LOGGER.debug("ClientEvents: cache cleared on dimension change");
     }
 

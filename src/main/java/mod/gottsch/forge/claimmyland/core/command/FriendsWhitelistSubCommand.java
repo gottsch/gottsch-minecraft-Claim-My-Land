@@ -292,7 +292,7 @@ public class FriendsWhitelistSubCommand implements SubCommand {
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
         estate.ifPresentOrElse(action -> {
                     List<Component> messages = WhitelistFormatter
-                            .formatStandAlonePlayerWhitelist(source.getLevel(), action.getPlayerWhitelist(), "PLAYER WHITELIST - " + estateName, action.getId());
+                            .formatStandAlonePlayerWhitelist(source.getLevel(), action.getPlayerWhitelist(), "PLAYER WHITELIST - " + estateName, action.getId(), estateName);
 
                     sendLines(source, messages);
 //                    messages.forEach(component -> {

@@ -204,7 +204,7 @@ public class EstateDisplayFormatter {
                 .append(Component.literal("Friends Whitelist ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(" (" + playerWhitelist.size() + " friends)").withStyle(ChatFormatting.YELLOW)));
         if (!playerWhitelist.isEmpty()) {
-            lines.addAll(WhitelistFormatter.formatEstateDetailsPlayerWhitelist(level, playerWhitelist, LangUtil.INDENT2));
+            lines.addAll(WhitelistFormatter.formatEstateDetailsPlayerWhitelist(level, playerWhitelist, LangUtil.INDENT2, estate.getName()));
         }
         lines.add(newline());
 
@@ -384,20 +384,65 @@ public class EstateDisplayFormatter {
         Optional<String> optionalOwnerName = PlayerRegistry.getPlayerName(level, estate.getOwnerId());
 
         // clickable estate name
-        MutableComponent clickableName = Component.literal(estate.getName())
-                .withStyle(color, ChatFormatting.BOLD);
-        if (isOps && optionalOwnerName.isPresent()) {
-            clickableName.withStyle(opsEstateDetailsStyle(optionalOwnerName.get(), estate.getName()));
-        } else if (!isOps) {
-            clickableName.withStyle(playerEstateDetailsStyle(estate.getName()));
-        }
-
-        // estate header line
-        lines.add(Component.literal(prefix + branch)
-                .append(clickableName)
+//        MutableComponent clickableName = Component.literal(estate.getName())
+//                .withStyle(color, ChatFormatting.BOLD);
+//        if (isOps && optionalOwnerName.isPresent()) {
+//            clickableName.withStyle(opsEstateDetailsStyle(optionalOwnerName.get(), estate.getName()));
+//        } else if (!isOps) {
+//            clickableName.withStyle(playerEstateDetailsStyle(estate.getName()));
+//        }
+        MutableComponent estateLine = Component.literal(prefix + branch)
+                .append(Component.literal(estate.getName()).withStyle(color, ChatFormatting.BOLD))
                 .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(estate.getId().toString()).withStyle(ChatFormatting.WHITE))
-                .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
+                .append(Component.literal("]").withStyle(ChatFormatting.GRAY));
+
+        Set<Parcel> parcels = estate.findParcels();
+
+        // Action icons — only shown to the estate owner (permission gate)
+        // isOps uses owner-scoped commands; non-ops uses player-scoped commands
+        if (isOps && optionalOwnerName.isPresent()) {
+            String ownerName = optionalOwnerName.get();
+            estateLine.append(estateInfoIconOps(ownerName, estate.getName()));
+            estateLine.append(estateRenameIcon(estate.getName()));
+            // Zone estates use "remove <nationName> <zoneName>"; all others use "demolish <estateName>"
+            if (isZone(estate)) {
+                // Nation name needed for remove command — resolve from the parcel's nation estate
+                String nationName = parcels.stream()
+                        .filter(p -> p instanceof NationalizedParcel)
+                        .map(p -> ((NationalizedParcel) p).getNationEstate().getName())
+                        .findFirst().orElse("");
+                if (!nationName.isEmpty()) {
+                    estateLine.append(estateRemoveIcon(nationName, estate.getName()));
+                }
+            } else {
+                estateLine.append(estateDemolishIcon(estate.getName()));
+            }
+            estateLine.append(estateTransferIcon(estate.getName()));
+        } else {
+            estateLine.append(estateInfoIcon(estate.getName()));
+            estateLine.append(estateRenameIcon(estate.getName()));
+            if (isZone(estate)) {
+                String nationName = parcels.stream()
+                        .filter(p -> p instanceof NationalizedParcel)
+                        .map(p -> ((NationalizedParcel) p).getNationEstate().getName())
+                        .findFirst().orElse("");
+                if (!nationName.isEmpty()) {
+                    estateLine.append(estateRemoveIcon(nationName, estate.getName()));
+                }
+            } else {
+                estateLine.append(estateDemolishIcon(estate.getName()));
+            }
+            estateLine.append(estateTransferIcon(estate.getName()));
+        }
+        lines.add(estateLine);
+
+//        // estate header line
+//        lines.add(Component.literal(prefix + branch)
+//                .append(clickableName)
+//                .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
+//                .append(Component.literal(estate.getId().toString()).withStyle(ChatFormatting.WHITE))
+//                .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
 
         String indent = prefix + VERTICAL;
 
@@ -413,7 +458,6 @@ public class EstateDisplayFormatter {
                 .append(Component.literal("Owner: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(ownerName).withStyle(ChatFormatting.WHITE)));
 
-        Set<Parcel> parcels = estate.findParcels();
         lines.add(Component.literal(indent)
                 .append(Component.literal("Parcels: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(String.valueOf(parcels.size())).withStyle(ChatFormatting.WHITE)));
@@ -459,20 +503,28 @@ public class EstateDisplayFormatter {
         Optional<ICoords> location = getMinXZ(
                 parcels.stream().map(Parcel::getMinCoords).collect(Collectors.toSet()));
         if (location.isPresent()) {
-            lines.add(Component.literal(indent)
+//            lines.add(Component.literal(indent)
+//                    .append(Component.literal("Location: ").withStyle(ChatFormatting.GRAY))
+//                    .append(Component.literal(formatLocation(location.get()))
+//                            .withStyle(ChatFormatting.GREEN)
+//                            .withStyle(tpStyle(location.get()))));
+
+            lines.add(Component.literal(indent + LangUtil.INDENT2)
                     .append(Component.literal("Location: ").withStyle(ChatFormatting.GRAY))
                     .append(Component.literal(formatLocation(location.get()))
                             .withStyle(ChatFormatting.GREEN)
-                            .withStyle(tpStyle(location.get()))));
+                            .withStyle(tpStyle(location.get())))
+                    .append(parcelTeleportIcon(location.get())));
         }
 
         // player whitelist count + names
         Set<UUID> whitelist = estate.getPlayerWhitelist();
-        lines.add(Component.literal(indent)
+        lines.add(Component.literal(indent + LangUtil.INDENT2)
                 .append(Component.translatable(LangUtil.chat("estate.player.whitelist")).withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(String.format("(" + whitelist.size() + " friends)")).withStyle(ChatFormatting.YELLOW)));
+                .append(Component.literal("(" + whitelist.size() + " friends)").withStyle(ChatFormatting.YELLOW))
+                .append(playerWhitelistAddIcon(estate.getName())));  // ← add this
         if (!whitelist.isEmpty()) {
-            lines.addAll(WhitelistFormatter.formatEstateListPlayerWhitelist(level, whitelist, indent + LangUtil.INDENT2));
+            lines.addAll(WhitelistFormatter.formatEstateListPlayerWhitelist(level, whitelist, indent + LangUtil.INDENT2, estate.getName()));
         }
 
         // tenant estates (nations only)

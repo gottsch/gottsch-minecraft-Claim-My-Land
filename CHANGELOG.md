@@ -13,9 +13,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 >
 > **Back up your world before installing v2.** Copy your entire world folder to a safe location before upgrading. Once you have loaded the world in v2, downgrading back to v1 is not supported.
 
----
+> **💡 Recommended:** Since this mod is heavily command-based, we recommend using [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
 
-## [2.2.0] - 2026-03-xx
+---
+## [2.3.0] - 2026-03-22
+
+### 🎉 Highlights
+
+#### JourneyMap — Parcel Hover Tooltip
+- Hovering the cursor over a claimed parcel on the JourneyMap fullscreen map now displays
+  a tooltip showing estate name, parcel type, owner, parcel name (if different from estate
+  name), nation name (Zone and Citizen parcels only), and parcel dimensions in blocks.
+
+#### JourneyMap — Buffer Zone Overlay
+- Each parcel polygon on the JourneyMap now shows a second outer ring representing its
+  buffer zone boundary, matching the in-world buffer bracket visual.
+- Buffer ring color matches conflict state: white when clear, red when conflicting.
+
+#### JourneyMap — Conflict Color
+- Parcels with an active conflict state now render in red on the JourneyMap overlay,
+  matching the in-world wireframe conflict color.
+
+#### JourneyMap — Foundation Stone Conflict Overlays
+- When a Foundation Stone preview conflicts with an existing parcel, the conflicting
+  parcel(s) are highlighted in orange on the JourneyMap, showing exactly what the
+  proposed claim is bumping into.
+
+#### In-World — Conflict Highlight Rendering
+- Conflicting parcels are also highlighted in orange in the world-space border renderer
+  when a Foundation Stone conflict is detected.
+- Highlights auto-clear when the player moves more than 32 blocks away from the Foundation
+  Stone or after a configurable timeout (default 60 seconds,
+  `Config.CLIENT.rendering.conflictHighlightTimeoutSeconds`).
+
+#### In-World — Quad-Tube Wireframe Borders
+- Parcel border wireframes are now rendered using quad-tube geometry instead of GL lines.
+- Provides true controllable border thickness independent of GPU driver `lineWidth` clamping.
+- Preview borders pulse in both alpha and tube width.
+
+#### Interactive Chat Buttons
+- Estate and parcel listings in chat now include clickable icon buttons for common actions.
+- Estate icons: `ℹ` details, `✎` rename, `✘` demolish/remove, `⇄` transfer ownership.
+- Parcel icons: `↗` teleport, `✘` demolish.
+- Player whitelist icons: `✚` add, `✘` remove per entry.
+- Clicking a non-destructive action (details, teleport) runs the command immediately.
+- Clicking a destructive or multi-step action (demolish, rename, transfer) pre-fills the
+  chat bar so the player must press Enter to confirm.
+
+#### On-Demand Backup Command
+- New ops command `/cml-ops backup` triggers an immediate parcel data backup outside the
+  normal auto-save interval.
+- Reports the filename of the backup written on success.
+- Reports a clear error if the backup system is disabled in config.
+
+### ⚙️ Changed
+
+- **JourneyMap preview overlay color** — Foundation Stone preview parcels now render in
+  the parcel type's own color at reduced opacity on the JourneyMap, making it easier to
+  distinguish preview overlays from committed parcels. Conflict previews remain red.
+- **Preview/minimap consistency** — Preview overlays now appear on both the minimap and
+  fullscreen map immediately when a Foundation Stone is placed, without needing to open
+  the fullscreen map first.
+- **Whitelist display** — Player whitelist entries in estate detail output are now shown
+  one per line (previously multi-per-row), enabling per-entry remove icons.
+
+### 🐛 Fixed
+
+- **Preview conflict false-positive** — Two players placing overlapping Foundation Stones
+  simultaneously no longer incorrectly show each other's preview as a conflict. Only
+  committed parcels trigger conflict detection; previews are excluded.
+
+### 🔧 Technical / Developer Notes
+
+- `RollingJsonSaver.save()` return type changed from `void` to `Optional<File>`.
+  Auto-save tick path discards the return value; on-demand backup command uses it to
+  report the saved filename.
+- `ClientParcel` record: added `nationName` field (non-null for Zone and Citizen parcels).
+- `SyncParcelPacket` and `CacheSyncPacket`: encode/decode `nationName`.
+- `ClientParcelRegistry`: added `findConflicting()`, `hoveredParcel` volatile bridge
+  field, and `get`/`set` accessors for the tooltip renderer.
+- `JourneyMapOverlayHandler`: subscribed to `MAP_MOUSE_MOVED`; writes hovered parcel to
+  `ClientParcelRegistry` bridge on each cursor move.
+- New `ServerConfigSyncPacket` (S→C, packet ID 5): syncs `parcelBufferRadius` and
+  `nationParcelBufferRadius` from server config to client on login, enabling correct
+  buffer zone sizing in `ParcelPolygonOverlayFactory` and `ParcelBorderRenderer`.
+- New `ClientServerConfig`: client-side holder for synced server config values.
+- New `DimensionHelper`: shared utility for converting dimension ID strings to
+  `ResourceKey<Level>`.
+- New `ParcelMapTooltipRenderer`: `ScreenEvent.Render.Post` subscriber that draws the
+  JM hover tooltip above the fullscreen map screen.
+- `ParcelBorderRenderer`: replaced `RenderType.lines()` wireframe with custom quad-tube
+  geometry via lazily-initialised `TUBE_RENDER_TYPE`; added orange conflict highlight
+  render pass driven by `CONFLICT_HIGHLIGHT_IDS`.
+- `ParcelPolygonOverlayFactory`: added `BUFFER_OVERLAYS`, `CONFLICT_OVERLAYS`,
+  `CONFLICT_BUFFER_OVERLAYS` maps; added `buildBufferOverlay()`, `showConflictOverlays()`,
+  `clearConflictOverlays()`; updated `buildOverlay()` for conflict color and preview color.
+- `Config.CLIENT.rendering`: added `conflictHighlightTimeoutSeconds` (default 60, range 10–300).
+
+## [2.2.0] - 2026-03-19
 ### 🎉 Highlights
 
 - **Multi-dimension support** — parcels can now be claimed in any dimension (Nether, End, modded dimensions), with per-dimension protection controlled via server config

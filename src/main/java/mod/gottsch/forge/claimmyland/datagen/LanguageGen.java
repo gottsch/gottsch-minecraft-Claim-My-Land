@@ -58,40 +58,6 @@ public class LanguageGen extends LanguageProvider {
         add(ModItems.ZONING_PLACEMENT_TOOL.get(), "Zoning Tool");
 
         add(ModBlocks.BORDER_STONE.get(), "Border Stone");
-//        add(ModBlocks.PLAYER_BORDER.get(), "Player Parcel Border");
-//        add(ModBlocks.CITIZEN_BORDER.get(), "Citizen Parcel Border");
-//        add(ModBlocks.NATION_BORDER.get(), "Nation Parcel Border");
-//        add(ModBlocks.ZONE_BORDER.get(), "Zone Parcel Border");
-//        add(ModBlocks.BUFFER.get(), "Parcel Buffer");
-//
-//        add(ModBlocks.PLAYER_HORIZONTAL_AREA.get(), "Player Parcel Area");
-//        add(ModBlocks.CITIZEN_HORIZONTAL_AREA.get(), "Citizen Parcel Area");
-//        add(ModBlocks.NATION_HORIZONTAL_AREA.get(), "Nation Parcel Area");
-//        add(ModBlocks.ZONE_HORIZONTAL_AREA.get(), "Zone Parcel Area");
-
-//        add(ProtectItItems.FOUNDATION_STONE_ITEM.get(), "F")
-//
-//                "message.protectit.block_region.successfully_protected":"Region %s -> %s is now owned and protected.",
-//                "message.protectit.block_region.protected":"A block(s) in that region are already owned and protected.",
-//                "message.protectit.block_region.not_protected":"That region is not protected.",
-//                "message.protectit.block_region.not_owner":"You are not the owner of that property.",
-//                "message.protectit.block_region.not_protected_or_owner":"That region is not owned or you are not the owner.",
-//                "message.protectit.invalid_coords_format": "Block pos B must be >= than block pos A.",
-//
-//                "message.protectit.option_unavailable": "That option is not available yet.",
-//                "message.protectit.non_givable_item": "That is not a valid item to give.",
-//
-//                "message.protectit.claim_successfully_removed": "The claim has been removed.",
-//                "message.protectit.unable_locate_player": "Unable to locate the player.",
-//                "message.protectit.property.list": "%s's Protected Properties",
-//                "message.protectit.property.list.empty": "[Empty]",
-//                "message.protectit.property.rename.success": "The property was successfully renamed to ",
-//                "message.protectit.property.name.unknown": "Player does not own a property named ",
-//                "message.protectit.whitelist.property.list": "Whitelist for property ",
-//                "message.protectit.whitelist.add.success": "The player was successfully added to ",
-//                "message.protectit.whitelist.remove.success": "The player was successfully removed from ",
-//                "message.protectit.whitelist.clear.success": "The whitelist was successfully cleared from ",
-//
 
         /*
          * Util.chats
@@ -309,6 +275,11 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.entity_spawn_tag.whitelist"), "Entity Spawn Tag Whitelist: ");
 
         add(LangUtil.chat("estate.tenants"), "Tenant Estates:");
+
+        add(LangUtil.chat("backup.success"),"Backup saved:");
+        add(LangUtil.chat( "backup.failure"), "Backup failed. Check server logs for details.");
+        add(LangUtil.chat("backup.disabled"), "Backup system is disabled. Enable it in claimmyland-server.toml.");
+
         /*
          *  Util.tooltips
          */

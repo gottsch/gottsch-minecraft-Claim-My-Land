@@ -20,19 +20,27 @@
 package mod.gottsch.forge.claimmyland.core.network;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.util.DimensionHelper;
 import mod.gottsch.forge.gottschcore.spatial.Box;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.network.NetworkEvent;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
+
+import static mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry.findConflicting;
 
 /**
  * Server → Client packet. Adds or updates a single parcel in the client's
@@ -162,7 +170,7 @@ public class SyncParcelPacket {
         String parcelName  = buf.readUtf();
         String estateName  = buf.readUtf();
         String nationName = buf.readUtf();
-        if (nationName.isEmpty()) nationName = null;
+        if (nationName.isBlank()) nationName = null;
         String ownerName   = buf.readUtf();
         UUID ownerId = buf.readUUID();
         ParcelType type    = ParcelType.fromString(buf.readUtf());
@@ -201,29 +209,53 @@ public class SyncParcelPacket {
             int conflictState = existing != null ? existing.conflictState() : packet.conflictState;
             int borderStoneY = existing != null && existing.borderStoneY() != 0
                     ? existing.borderStoneY() : packet.borderStoneY;
+            // placingPlayer is not carried by SyncParcelPacket — preserve from existing
+            // entry if present, otherwise null (will be set later by BorderVisibilityPacket)
             UUID placingPlayer = existing != null ? existing.placingPlayer() : null;
 
             ClientParcel clientParcel = new ClientParcel(
-                    packet.parcelId,
-                    packet.estateId,
-                    packet.parcelName,
-                    packet.estateName,
+                    packet.parcelId, packet.estateId,
+                    packet.parcelName, packet.estateName,
                     packet.nationName,
-                    packet.ownerName,
-                    packet.ownerId,
-                    packet.parcelType,
-                    packet.relinquished,
+                    packet.ownerName, packet.ownerId,
+                    packet.parcelType, packet.relinquished,
                     packet.minX, packet.minY, packet.minZ,
                     packet.maxX, packet.maxY, packet.maxZ,
                     packet.dimension,
                     borderVisible, conflictState, borderStoneY,
-                    packet.isPreview,
-                    placingPlayer
+                    packet.isPreview, placingPlayer
             );
+
             ClientParcelRegistry.register(clientParcel);
 
             if (ModList.get().isLoaded("journeymap")) {
+                // All parcels — committed and preview — go through notifyParcelAdded().
+                // buildOverlay() handles preview color (type hue, reduced opacity, thin stroke)
+                // vs committed color (full opacity, normal stroke) correctly.
                 ParcelPolygonOverlayFactory.notifyParcelAdded(clientParcel);
+            }
+
+            // When a preview parcel arrives (Foundation Stone placed via Deed),
+            // immediately run conflict detection and show highlights.
+            // FoundationStoneEvents.onRightClickBlock() handles refreshes on
+            // subsequent right-clicks of the stone.
+            if (packet.isPreview) {
+                List<ClientParcel> conflicting = ClientParcelRegistry.findConflicting(clientParcel);
+
+                ParcelBorderRenderer.setConflictHighlights(
+                        conflicting,
+                        new BlockPos(packet.minX, packet.minY, packet.minZ));
+
+                if (ModList.get().isLoaded("journeymap")) {
+                    ResourceKey<Level> dimKey = DimensionHelper.dimensionKey(packet.dimension);
+                    if (dimKey != null) {
+                        ParcelPolygonOverlayFactory.showConflictOverlays(conflicting, dimKey);
+                        // showPreviewOverlay() is intentionally NOT called here.
+                        // The type-colored preview overlay is already built by notifyParcelAdded()
+                        // above. showPreviewOverlay() shows the Foundation Stone bounds polygon
+                        // (green/red) and is only called from FoundationStoneEvents on right-click.
+                    }
+                }
             }
 
             ClaimMyLand.LOGGER.debug("SyncParcelPacket: registered parcel '{}' [{}]",
@@ -231,6 +263,42 @@ public class SyncParcelPacket {
         });
         ctx.get().setPacketHandled(true);
     }
+//        ctx.get().enqueueWork(() -> {
+//            ClientParcel existing = ClientParcelRegistry.findById(packet.parcelId).orElse(null);
+//            boolean borderVisible = existing != null ? existing.isBorderVisible() : packet.isBorderVisible;
+//            int conflictState = existing != null ? existing.conflictState() : packet.conflictState;
+//            int borderStoneY = existing != null && existing.borderStoneY() != 0
+//                    ? existing.borderStoneY() : packet.borderStoneY;
+//            UUID placingPlayer = existing != null ? existing.placingPlayer() : null;
+//
+//            ClientParcel clientParcel = new ClientParcel(
+//                    packet.parcelId,
+//                    packet.estateId,
+//                    packet.parcelName,
+//                    packet.estateName,
+//                    packet.nationName,
+//                    packet.ownerName,
+//                    packet.ownerId,
+//                    packet.parcelType,
+//                    packet.relinquished,
+//                    packet.minX, packet.minY, packet.minZ,
+//                    packet.maxX, packet.maxY, packet.maxZ,
+//                    packet.dimension,
+//                    borderVisible, conflictState, borderStoneY,
+//                    packet.isPreview,
+//                    placingPlayer
+//            );
+//            ClientParcelRegistry.register(clientParcel);
+//
+//            if (ModList.get().isLoaded("journeymap")) {
+//                ParcelPolygonOverlayFactory.notifyParcelAdded(clientParcel);
+//            }
+//
+//            ClaimMyLand.LOGGER.debug("SyncParcelPacket: registered parcel '{}' [{}]",
+//                    packet.parcelName, packet.parcelId);
+//        });
+//        ctx.get().setPacketHandled(true);
+//    }
 
     // -------------------------------------------------------------------------
     // accessor — used by SyncAllParcelsPacket to build ClientParcel directly
