@@ -49,6 +49,16 @@ class FormatterConstants {
     static final String SPACE       = "   ";
     static final String TITLE_BAR   = "═══════════════════════════════";
 
+    // -------------------------------------------------------------------------
+    // Interactive icon characters
+    // -------------------------------------------------------------------------
+
+    static final String ICON_INFO     = "ℹ";   // U+2139 — estate details
+    static final String ICON_RENAME   = "✎";   // U+270E — rename
+    static final String ICON_DELETE   = "✘";   // U+2718 — delete / remove
+    static final String ICON_TRANSFER = "⇄";   // U+21C4 — transfer ownership
+    static final String ICON_TELEPORT = "↗";   // U+2197 — teleport to parcel
+
     // ===== SHARED STYLES =====
 
     static final Style BOLD_GOLD         = Style.EMPTY.withBold(true).withColor(ChatFormatting.GOLD);
@@ -58,6 +68,10 @@ class FormatterConstants {
     static final Style BOLD_BLUE         = Style.EMPTY.withBold(true).withColor(ChatFormatting.BLUE);
     static final Style BOLD_YELLOW       = Style.EMPTY.withBold(true).withColor(ChatFormatting.YELLOW);
     static final Style BOLD_RED          = Style.EMPTY.withBold(true).withColor(ChatFormatting.RED);
+
+
+    // private constructor — utility class, not instantiable.
+    private FormatterConstants() {}
 
     // ===== NEWLINE =====
 
@@ -182,6 +196,153 @@ class FormatterConstants {
         return Optional.of(Coords.of(minX, minY, minZ));
     }
 
-    // private constructor — utility class, not instantiable.
-    private FormatterConstants() {}
+    /**
+     * ℹ icon — runs estate details command immediately.
+     */
+    /**
+     * ℹ icon — runs estate details command immediately.
+     */
+    static Component estateInfoIcon(String estateName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.AQUA)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                        "/cml estate details " + estateName))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("View estate details")));
+        return Component.literal(" " + ICON_INFO).withStyle(style);
+    }
+
+    /**
+     * ℹ icon — ops variant that includes owner name.
+     */
+    static Component estateInfoIconOps(String ownerName, String estateName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.AQUA)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
+                        "/cml estate details " + ownerName + " " + estateName))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("View estate details")));
+        return Component.literal(" " + ICON_INFO).withStyle(style);
+    }
+
+    /**
+     * ✎ icon — suggests rename command with trailing space for player to type new name.
+     */
+    static Component estateRenameIcon(String estateName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.YELLOW)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/cml estate rename " + estateName + " "))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Rename this estate")));
+        return Component.literal(" " + ICON_RENAME).withStyle(style);
+    }
+
+    /**
+     * ✘ icon — suggests demolish command (returns a deed) for player/citizen/nation estates.
+     * Use estaetDemolishIcon() for all non-zone estate types.
+     */
+    static Component estateDemolishIcon(String estateName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.RED)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/cml estate demolish " + estateName))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Demolish this estate (returns deed)")));
+        return Component.literal(" " + ICON_DELETE).withStyle(style);
+    }
+
+    /**
+     * ✘ icon — suggests remove command for zone estates only.
+     * Requires the nation name as the first argument since remove takes
+     * both nationName and zoneName.
+     *
+     * @param nationName the nation this zone belongs to
+     * @param zoneName   the zone estate name to remove
+     */
+    static Component estateRemoveIcon(String nationName, String zoneName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.RED)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/cml estate remove " + nationName + " " + zoneName))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Remove this zone estate")));
+        return Component.literal(" " + ICON_DELETE).withStyle(style);
+    }
+
+    /**
+     * ⇄ icon — suggests transfer command with trailing space for player to type new owner.
+     */
+    static Component estateTransferIcon(String estateName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.GREEN)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/cml estate transfer " + estateName + " "))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Transfer estate ownership")));
+        return Component.literal(" " + ICON_TRANSFER).withStyle(style);
+    }
+
+    /**
+     * ✘ icon — suggests parcel demolish command.
+     * Takes both estate name and parcel name since the command requires both.
+     *
+     * @param estateName the estate the parcel belongs to
+     * @param parcelName the parcel name to demolish
+     */
+    static Component parcelDemolishIcon(String estateName, String parcelName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.RED)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/cml parcel demolish " + estateName + " " + parcelName))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Demolish this parcel (returns deed)")));
+        return Component.literal(" " + ICON_DELETE).withStyle(style);
+    }
+
+    /**
+     * ↗ icon — suggests teleport command for a parcel location.
+     */
+    static Component parcelTeleportIcon(ICoords coords) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.GREEN)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/tp @s " + coords.getX() + " ~ " + coords.getZ()))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Teleport to this parcel")));
+        return Component.literal(" " + ICON_TELEPORT).withStyle(style);
+    }
+
+    /**
+     * ✚ icon — suggests player whitelist add command on the section header.
+     * Puts the cursor ready for the player name to be typed.
+     *
+     * @param estateName the estate name (used in the command)
+     */
+    static Component playerWhitelistAddIcon(String estateName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.GREEN)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/cml estate whitelist add player " + estateName + " "))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Add player to whitelist")));
+        return Component.literal(" \u271A").withStyle(style);
+    }
+
+    /**
+     * ✘ icon — suggests player whitelist remove command.
+     *
+     * @param estateName the estate name (used in the command)
+     * @param playerName the player name to remove
+     */
+    static Component playerWhitelistRemoveIcon(String estateName, String playerName) {
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.RED)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
+                        "/cml estate whitelist remove player " + estateName + " " + playerName))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Remove " + playerName + " from whitelist")));
+        return Component.literal(" " + ICON_DELETE).withStyle(style);
+    }
+
 }

@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.setup;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.client.hud.ParcelHud;
 import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
+import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelMapTooltipRenderer;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
@@ -43,6 +44,7 @@ public class ClientSetup {
         event.enqueueWork(() -> {
             MinecraftForge.EVENT_BUS.register(ParcelHud.class);  // static subscriber — Class, not new instance
             MinecraftForge.EVENT_BUS.register(ParcelBorderRenderer.class);
+            MinecraftForge.EVENT_BUS.register(ParcelMapTooltipRenderer.class);
         });
     }
 }

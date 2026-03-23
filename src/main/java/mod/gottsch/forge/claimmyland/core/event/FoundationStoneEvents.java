@@ -3,9 +3,11 @@ package mod.gottsch.forge.claimmyland.core.event;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.FoundationStone;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.util.DimensionHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -18,78 +20,65 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.List;
+
 /**
- * Client-side event handler for the JourneyMap Foundation Stone preview overlay.
+ * Client-side event handler that refreshes conflict highlights when the player
+ * right-clicks an already-placed Foundation Stone.
  *
- * When the player right-clicks a Foundation Stone block, reads the proposed parcel
- * bounds from the block entity (which are synced to the client via getUpdateTag()),
- * runs a client-side intersection check against ClientParcelRegistry, and delegates
- * to ParcelPolygonOverlayFactory to show or refresh the preview overlay.
+ * <p>Initial conflict detection on stone placement (via Deed) is handled by
+ * {@code SyncParcelPacket.handle()} when the preview parcel arrives.
+ * This handler covers the case where the player right-clicks the stone after
+ * placement to get an updated conflict check (e.g. after a competing player
+ * commits their claim).</p>
  *
- * Preview overlay cleanup is handled by notifyParcelRemoved() in
- * ParcelPolygonOverlayFactory — the Foundation Stone's removal always results in a
- * RemoveParcelPacket (for the preview parcel), which flows through that path.
- *
- * @author Mark Gottschling on Mar 11, 2026
+ * @author Mark Gottschling on March 20, 2026
  */
 @OnlyIn(Dist.CLIENT)
-@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = ClaimMyLand.MOD_ID, value = Dist.CLIENT)
 public class FoundationStoneEvents {
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
-        if (!ModList.get().isLoaded("journeymap")) return;
         if (event.getEntity() instanceof FakePlayer) return;
 
         Level level = event.getLevel();
         if (!level.isClientSide()) return;
 
         BlockPos pos = event.getPos();
-
-        // Only act when the targeted block is a Foundation Stone
         if (!(level.getBlockState(pos).getBlock() instanceof FoundationStone)) return;
 
         BlockEntity be = level.getBlockEntity(pos);
         if (!(be instanceof FoundationStoneBlockEntity fsbe)) return;
-
-        // Block entity must have a parcel ID — set at placement time, synced via getUpdateTag()
         if (fsbe.getParcelId() == null) return;
+        if (fsbe.getAbsoluteBox() == null) return;
 
-        int minX = fsbe.getAbsoluteBox().getMinCoords().getX();
-        int minY = fsbe.getAbsoluteBox().getMinCoords().getY();
-        int minZ = fsbe.getAbsoluteBox().getMinCoords().getZ();
-        int maxX = fsbe.getAbsoluteBox().getMaxCoords().getX();
-        int maxY = fsbe.getAbsoluteBox().getMaxCoords().getY();
-        int maxZ = fsbe.getAbsoluteBox().getMaxCoords().getZ();
+        // Find the preview ClientParcel for this stone in the client registry.
+        // If not found (stone placed but not yet synced), nothing to refresh.
+        ClientParcel preview = ClientParcelRegistry.findById(fsbe.getParcelId()).orElse(null);
+        if (preview == null) return;
 
-        boolean intersects = clientSideIntersects(minX, minY, minZ, maxX, maxY, maxZ);
-        ResourceKey<Level> dimensionKey = level.dimension();
+        List<ClientParcel> conflicting = ClientParcelRegistry.findConflicting(preview);
+        boolean intersects = !conflicting.isEmpty();
 
-        ParcelPolygonOverlayFactory.showPreviewOverlay(
-                fsbe.getParcelId(),
-                minX, minY, minZ,
-                maxX, maxY, maxZ,
-                intersects,
-                dimensionKey);
-    }
+        ClaimMyLand.LOGGER.debug("FoundationStoneEvents: right-click refresh — conflicting={}",
+                conflicting.size());
 
-    /**
-     * Checks whether the proposed parcel bounds overlap any parcel in ClientParcelRegistry.
-     *
-     * Intentionally dimension-blind to stay consistent with ParcelRegistry.intersectsParcel()
-     * behaviour — native dimension support is deferred to the v2.3 BST refactor.
-     *
-     * Uses simple AABB overlap: two boxes overlap iff neither is fully outside the other
-     * on any axis.
-     */
-    private static boolean clientSideIntersects(int minX, int minY, int minZ,
-                                                int maxX, int maxY, int maxZ) {
-        for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
-            if (parcel.maxX() < minX || parcel.minX() > maxX) continue;
-            if (parcel.maxY() < minY || parcel.minY() > maxY) continue;
-            if (parcel.maxZ() < minZ || parcel.minZ() > maxZ) continue;
-            return true;
+        // --- In-world orange highlights (Feature 3b) ---
+        ParcelBorderRenderer.setConflictHighlights(conflicting, pos);
+
+        // --- JourneyMap preview + conflict overlays (Feature 3a) ---
+        if (ModList.get().isLoaded("journeymap")) {
+            ResourceKey<Level> dimensionKey = DimensionHelper.dimensionKey(preview.dimension());
+            if (dimensionKey != null) {
+                ParcelPolygonOverlayFactory.showPreviewOverlay(
+                        preview.parcelId(),
+                        preview.minX(), preview.minY(), preview.minZ(),
+                        preview.maxX(), preview.maxY(), preview.maxZ(),
+                        intersects,
+                        dimensionKey);
+                ParcelPolygonOverlayFactory.showConflictOverlays(conflicting, dimensionKey);
+            }
         }
-        return false;
     }
 }
