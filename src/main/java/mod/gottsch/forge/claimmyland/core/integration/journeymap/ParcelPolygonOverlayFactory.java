@@ -11,11 +11,10 @@ import mod.gottsch.forge.claimmyland.core.config.ClientServerConfig;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.util.DimensionHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -170,28 +169,42 @@ public class ParcelPolygonOverlayFactory {
 
         // --- Color resolution ---
         Color[] colors;
+        boolean isPreviewStroke;
         if (parcel.isPreview()) {
-            // Preview parcels (Foundation Stone placements not yet committed) use
-            // green (clear) or red (conflict) regardless of ownership.
-            colors = parcel.conflictState() > 0
-                    ? new Color[]{ PREVIEW_CONFLICT_FILL, PREVIEW_CONFLICT_STROKE }
-                    : new Color[]{ PREVIEW_CLEAR_FILL,    PREVIEW_CLEAR_STROKE    };
+            isPreviewStroke = true;
+            if (parcel.conflictState() > 0) {
+                // Conflict — red regardless of type
+                colors = new Color[]{ PREVIEW_CONFLICT_FILL, PREVIEW_CONFLICT_STROKE };
+            } else {
+                // Clear — use parcel type color at reduced opacity to show unconfirmed state
+                Color[] typeColors = activeColorsForType(parcel.parcelType());
+                int fillArgb   = (typeColors[0].getRGB() & 0x00FFFFFF) | 0x1A000000;  // ~10% alpha fill
+                int strokeArgb = (typeColors[1].getRGB() & 0x00FFFFFF) | 0x66000000;  // ~40% alpha stroke
+                colors = new Color[]{ new Color(fillArgb, true), new Color(strokeArgb, true) };
+            }
         } else if (parcel.conflictState() > 0) {
+            isPreviewStroke = false;
             // Conflict overrides ownership color — always red, matching in-world renderer.
             colors = new Color[]{ CONFLICT_FILL, CONFLICT_STROKE };
         } else {
+            isPreviewStroke = false;
             boolean isOwner = localPlayerId != null && localPlayerId.equals(parcel.ownerId());
             colors = isOwner
                     ? activeColorsForType(parcel.parcelType())
                     : mutedColorsForType(parcel.parcelType());
         }
 
+        // Preview uses strokeWidth=1f (thinner) to visually distinguish from committed.
+        // Committed nation parcels use 4f; others use 2f.
+        float strokeWidth = isPreviewStroke ? 1f
+                : (parcel.parcelType() == ParcelType.NATION ? 4f : 2f);
+
         ShapeProperties shapeProps = new ShapeProperties()
                 .setFillColor(colors[0].getRGB())
                 .setFillOpacity(colors[0].getAlpha() / 255f)
                 .setStrokeColor(colors[1].getRGB())
                 .setStrokeOpacity(colors[1].getAlpha() / 255f)
-                .setStrokeWidth(parcel.parcelType() == ParcelType.NATION ? 4f : 2f);
+                .setStrokeWidth(strokeWidth);
 
         TextProperties fullscreenTextProps = new TextProperties()
                 .setColor(colors[1].getRGB())
@@ -258,8 +271,9 @@ public class ParcelPolygonOverlayFactory {
         return new PolygonOverlay(ClaimMyLand.MOD_ID, displayId, dimKey, shapeProps, polygon);
     }
 
-
-     /** Removes any existing overlay for the parcel ID first, then builds and shows fresh overlays. */
+    /**
+     * Removes any existing overlay for the parcel ID first, then builds and shows fresh overlays.
+     */
     public static void notifyParcelAdded(ClientParcel parcel) {
         notifyParcelRemoved(parcel.parcelId());
         PolygonOverlay[] overlays = buildOverlay(parcel, localPlayerId());
@@ -484,12 +498,6 @@ public class ParcelPolygonOverlayFactory {
     }
 
     private static ResourceKey<Level> dimensionKey(String dimension) {
-        if (dimension == null || dimension.isBlank()) return Level.OVERWORLD;
-        return switch (dimension) {
-            case "minecraft:overworld"  -> Level.OVERWORLD;
-            case "minecraft:the_nether" -> Level.NETHER;
-            case "minecraft:the_end"    -> Level.END;
-            default -> ResourceKey.create(Registries.DIMENSION, new ResourceLocation(dimension));
-        };
+        return DimensionHelper.dimensionKey(dimension);
     }
 }

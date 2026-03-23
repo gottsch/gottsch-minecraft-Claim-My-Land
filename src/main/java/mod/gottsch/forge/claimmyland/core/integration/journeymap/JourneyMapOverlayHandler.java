@@ -5,7 +5,11 @@ import journeymap.client.api.IClientPlugin;
 import journeymap.client.api.display.PolygonOverlay;
 import journeymap.client.api.event.ClientEvent;
 import journeymap.client.api.event.DisplayUpdateEvent;
+import journeymap.client.api.event.FullscreenMapEvent;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
+import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
+import net.minecraft.core.BlockPos;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.logging.log4j.LogManager;
@@ -72,7 +76,8 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
             api.subscribe(getModId(), EnumSet.of(
                     ClientEvent.Type.MAPPING_STARTED,
                     ClientEvent.Type.MAPPING_STOPPED,
-                    ClientEvent.Type.DISPLAY_UPDATE
+                    ClientEvent.Type.DISPLAY_UPDATE,
+                    ClientEvent.Type.MAP_MOUSE_MOVED
             ));
             LOGGER.debug("[{}] JourneyMap plugin initialized.", ClaimMyLand.MOD_ID);
         } catch (Exception e) {
@@ -105,6 +110,10 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
             case MAPPING_STOPPED:
                 // World unloaded or player logged out — clean up to avoid stale polygons.
                 removeAllOverlays();
+                break;
+
+            case MAP_MOUSE_MOVED:
+                onMapMouseMoved((FullscreenMapEvent.MouseMoveEvent) event);
                 break;
 
             default:
@@ -184,5 +193,21 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
     static void register() {
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(ParcelPolygonOverlayFactory.class);
         LOGGER.debug("[{}] ParcelPolygonOverlayFactory registered on Forge event bus.", ClaimMyLand.MOD_ID);
+    }
+
+    /**
+     * Fired by JourneyMap each time the cursor moves over the fullscreen map.
+     * Looks up the parcel at the hovered block position and writes it to
+     * ClientParcelRegistry so ScreenEvent.Render.Post can draw the tooltip.
+     */
+    private static void onMapMouseMoved(FullscreenMapEvent.MouseMoveEvent event) {
+        BlockPos pos = event.getLocation();
+        String dimension = event.getLevel().location().toString();
+
+        ClientParcel parcel = ClientParcelRegistry
+                .findAt(pos.getX(), pos.getY(), pos.getZ(), dimension)
+                .orElse(null);
+
+        ClientParcelRegistry.setHoveredParcel(parcel);
     }
 }

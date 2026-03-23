@@ -7,6 +7,7 @@ import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.util.DimensionHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -19,13 +20,17 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Client-side event handler that triggers the JourneyMap Foundation Stone
- * preview overlay on right-click, and highlights any conflicting parcels
- * both on the JourneyMap and in-world via ParcelBorderRenderer.
+ * Client-side event handler that refreshes conflict highlights when the player
+ * right-clicks an already-placed Foundation Stone.
+ *
+ * <p>Initial conflict detection on stone placement (via Deed) is handled by
+ * {@code SyncParcelPacket.handle()} when the preview parcel arrives.
+ * This handler covers the case where the player right-clicks the stone after
+ * placement to get an updated conflict check (e.g. after a competing player
+ * commits their claim).</p>
  *
  * @author Mark Gottschling on March 20, 2026
  */
@@ -48,59 +53,32 @@ public class FoundationStoneEvents {
         if (fsbe.getParcelId() == null) return;
         if (fsbe.getAbsoluteBox() == null) return;
 
-        int minX = fsbe.getAbsoluteBox().getMinCoords().getX();
-        int minY = fsbe.getAbsoluteBox().getMinCoords().getY();
-        int minZ = fsbe.getAbsoluteBox().getMinCoords().getZ();
-        int maxX = fsbe.getAbsoluteBox().getMaxCoords().getX();
-        int maxY = fsbe.getAbsoluteBox().getMaxCoords().getY();
-        int maxZ = fsbe.getAbsoluteBox().getMaxCoords().getZ();
+        // Find the preview ClientParcel for this stone in the client registry.
+        // If not found (stone placed but not yet synced), nothing to refresh.
+        ClientParcel preview = ClientParcelRegistry.findById(fsbe.getParcelId()).orElse(null);
+        if (preview == null) return;
 
-        List<ClientParcel> conflicting = findConflicting(minX, minY, minZ, maxX, maxY, maxZ);
+        List<ClientParcel> conflicting = ClientParcelRegistry.findConflicting(preview);
         boolean intersects = !conflicting.isEmpty();
 
+        ClaimMyLand.LOGGER.debug("FoundationStoneEvents: right-click refresh — conflicting={}",
+                conflicting.size());
+
         // --- In-world orange highlights (Feature 3b) ---
-        // Pass the player's current position so the renderer can apply
-        // the distance-based clear check.
-        ParcelBorderRenderer.setConflictHighlights(conflicting, event.getEntity().blockPosition());
+        ParcelBorderRenderer.setConflictHighlights(conflicting, pos);
 
         // --- JourneyMap preview + conflict overlays (Feature 3a) ---
         if (ModList.get().isLoaded("journeymap")) {
-            ResourceKey<Level> dimensionKey = level.dimension();
-            ParcelPolygonOverlayFactory.showPreviewOverlay(
-                    fsbe.getParcelId(),
-                    minX, minY, minZ,
-                    maxX, maxY, maxZ,
-                    intersects,
-                    dimensionKey);
-            ParcelPolygonOverlayFactory.showConflictOverlays(conflicting, dimensionKey);
+            ResourceKey<Level> dimensionKey = DimensionHelper.dimensionKey(preview.dimension());
+            if (dimensionKey != null) {
+                ParcelPolygonOverlayFactory.showPreviewOverlay(
+                        preview.parcelId(),
+                        preview.minX(), preview.minY(), preview.minZ(),
+                        preview.maxX(), preview.maxY(), preview.maxZ(),
+                        intersects,
+                        dimensionKey);
+                ParcelPolygonOverlayFactory.showConflictOverlays(conflicting, dimensionKey);
+            }
         }
-    }
-
-    /**
-     * Returns all committed (non-preview) parcels in the client registry whose
-     * bounds overlap the proposed parcel bounds.
-     *
-     * <p>Preview parcels are intentionally excluded — two players are allowed to
-     * propose overlapping claims simultaneously; only the first to commit wins.
-     * Conflict against previews would be a false-positive because neither parcel
-     * exists yet in the server-side BST.</p>
-     *
-     * <p>Known limitation: after a competing player commits their claim, the
-     * surviving preview will not show the conflict until the next right-click on
-     * this foundation stone. The committed parcel is broadcast via SyncParcelPacket
-     * (isPreview=false) immediately on commit, so the very next trigger will detect
-     * it correctly.</p>
-     */
-    private static List<ClientParcel> findConflicting(int minX, int minY, int minZ,
-                                                      int maxX, int maxY, int maxZ) {
-        List<ClientParcel> result = new ArrayList<>();
-        for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
-            if (parcel.isPreview()) continue;
-            if (parcel.maxX() < minX || parcel.minX() > maxX) continue;
-            if (parcel.maxY() < minY || parcel.minY() > maxY) continue;
-            if (parcel.maxZ() < minZ || parcel.minZ() > maxZ) continue;
-            result.add(parcel);
-        }
-        return result;
     }
 }

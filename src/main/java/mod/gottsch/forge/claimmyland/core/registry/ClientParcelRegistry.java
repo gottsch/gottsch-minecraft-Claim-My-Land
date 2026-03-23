@@ -50,6 +50,9 @@ public class ClientParcelRegistry {
     // writes (network/main thread) are infrequent.
     private static final CopyOnWriteArrayList<ClientParcel> PARCELS = new CopyOnWriteArrayList<>();
 
+    // Bridge field written by JM MAP_MOUSE_MOVED, read by ScreenEvent.Render.Post
+    private static volatile ClientParcel hoveredParcel = null;
+
     // Singleton — no instances
     private ClientParcelRegistry() {}
 
@@ -159,6 +162,25 @@ public class ClientParcelRegistry {
     }
 
     /**
+     * Returns all committed (non-preview) parcels whose bounds overlap
+     * the given preview parcel's bounds.
+     *
+     * Used by SyncParcelPacket.handle() and FoundationStoneEvents to
+     * identify parcels that conflict with a Foundation Stone placement.
+     */
+    public static List<ClientParcel> findConflicting(ClientParcel preview) {
+        List<ClientParcel> result = new ArrayList<>();
+        for (ClientParcel parcel : getAll()) {
+            if (parcel.isPreview()) continue;
+            if (parcel.maxX() < preview.minX() || parcel.minX() > preview.maxX()) continue;
+            if (parcel.maxY() < preview.minY() || parcel.minY() > preview.maxY()) continue;
+            if (parcel.maxZ() < preview.minZ() || parcel.minZ() > preview.maxZ()) continue;
+            result.add(parcel);
+        }
+        return result;
+    }
+
+    /**
      * Returns an unmodifiable snapshot of all registered parcels.
      * Safe to iterate from any thread.
      */
@@ -169,5 +191,13 @@ public class ClientParcelRegistry {
     /** Returns the number of registered parcels. */
     public static int size() {
         return PARCELS.size();
+    }
+
+    public static void setHoveredParcel(ClientParcel parcel) {
+        hoveredParcel = parcel;
+    }
+
+    public static ClientParcel getHoveredParcel() {
+        return hoveredParcel;
     }
 }

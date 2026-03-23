@@ -112,11 +112,18 @@ public class ParcelDisplayFormatter {
         ChatFormatting color = getParcelColor(parcel);
 
         // parcel header line: branch + name [ID: ...]
+//        lines.add(Component.literal(prefix + branch)
+//                .append(Component.literal(parcel.getName()).withStyle(color, ChatFormatting.BOLD))
+//                .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
+//                .append(Component.literal(parcel.getId().toString()).withStyle(ChatFormatting.WHITE))
+//                .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
         lines.add(Component.literal(prefix + branch)
                 .append(Component.literal(parcel.getName()).withStyle(color, ChatFormatting.BOLD))
                 .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(parcel.getId().toString()).withStyle(ChatFormatting.WHITE))
-                .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
+                .append(Component.literal("]").withStyle(ChatFormatting.GRAY))
+                .append(parcelDemolishIcon(parcel.getEstate().getName(), parcel.getName()))
+                .append(parcelTeleportIcon(parcel.getMinCoords())));
 
         // indent for detail lines
         String indent = prefix + (isLast ? SPACE : VERTICAL);
@@ -155,11 +162,18 @@ public class ParcelDisplayFormatter {
         lines.add(Component.literal(indent)
                 .append(Component.literal("Dimension: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(parcel.getDimension()).withStyle(ChatFormatting.WHITE)));
+//        lines.add(Component.literal(indent)
+//                .append(Component.literal("Min Pos: ").withStyle(ChatFormatting.GRAY))
+//                .append(Component.literal(formatLocation(parcel.getMinCoords()))
+//                        .withStyle(ChatFormatting.GREEN)
+//                        .withStyle(tpStyle(parcel.getMinCoords()))));
         lines.add(Component.literal(indent)
                 .append(Component.literal("Min Pos: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(formatLocation(parcel.getMinCoords()))
                         .withStyle(ChatFormatting.GREEN)
-                        .withStyle(tpStyle(parcel.getMinCoords()))));
+                        .withStyle(tpStyle(parcel.getMinCoords())))
+                .append(parcelTeleportIcon(parcel.getMinCoords())));
+
         lines.add(Component.literal(indent)
                 .append(Component.literal("Max Pos: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(formatLocation(parcel.getMaxCoords()))

@@ -1,15 +1,20 @@
 package mod.gottsch.forge.claimmyland.client.renderer;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderStateShard;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -39,7 +44,60 @@ import java.util.*;
 @OnlyIn(Dist.CLIENT)
 public class ParcelBorderRenderer {
 
-    // --- Conflict highlight constants ---
+    // -------------------------------------------------------------------------
+    // Quad-tube render type — lazy initialization
+    //
+    // RenderType.create() must run on the render thread after the GL context is
+    // ready. A static final field initializer fires at class-load time which can
+    // precede GL initialization and cause a freeze on world load.
+    // Lazy init via a null-check inside tubeRenderType() is the correct pattern.
+    // -------------------------------------------------------------------------
+
+    private static RenderType TUBE_RENDER_TYPE = null;
+
+    private static RenderType tubeRenderType() {
+        if (TUBE_RENDER_TYPE == null) {
+            TUBE_RENDER_TYPE = RenderType.create(
+                    "claimmyland_tube",
+                    DefaultVertexFormat.POSITION_COLOR,
+                    VertexFormat.Mode.QUADS,
+                    256,
+                    false,
+                    true,
+                    RenderType.CompositeState.builder()
+                            .setShaderState(new RenderStateShard.ShaderStateShard(
+                                    GameRenderer::getPositionColorShader))
+                            .setTransparencyState(new RenderStateShard.TransparencyStateShard(
+                                    "translucent_transparency",
+                                    () -> {
+                                        RenderSystem.enableBlend();
+                                        RenderSystem.blendFuncSeparate(
+                                                GlStateManager.SourceFactor.SRC_ALPHA,
+                                                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                                                GlStateManager.SourceFactor.ONE,
+                                                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+                                    },
+                                    () -> {
+                                        RenderSystem.disableBlend();
+                                        RenderSystem.defaultBlendFunc();
+                                    }))
+                            .setDepthTestState(new RenderStateShard.DepthTestStateShard("\u2264", 515))
+                            .setWriteMaskState(new RenderStateShard.WriteMaskStateShard(true, true))
+                            .setCullState(new RenderStateShard.CullStateShard(false))
+                            .createCompositeState(false)
+            );
+        }
+        return TUBE_RENDER_TYPE;
+    }
+
+    /** Half-width of the tube cross-section in world units for committed parcels. */
+    private static final float TUBE_HALF_WIDTH = 0.015f;  // ~0.03 block wide total
+
+    /** Preview pulse: half-width oscillates between these bounds. */
+    private static final float TUBE_HALF_WIDTH_MIN = 0.006f;
+    private static final float TUBE_HALF_WIDTH_MAX = 0.025f;
+
+
 
     /** Distance in blocks beyond which conflict highlights are cleared. */
     private static final int CONFLICT_CLEAR_DISTANCE = 32;
@@ -141,7 +199,6 @@ public class ParcelBorderRenderer {
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
 
         RenderSystem.enableDepthTest();
-        RenderSystem.lineWidth(2.0f);
 
         // --- Normal parcel borders ---
         for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
@@ -154,24 +211,28 @@ public class ParcelBorderRenderer {
             float g = ((color >> 8)  & 0xFF) / 255f;
             float b = (color & 0xFF) / 255f;
 
-            VertexConsumer lineConsumer = bufferSource.getBuffer(RenderType.lines());
+            VertexConsumer lineConsumer = bufferSource.getBuffer(tubeRenderType());
             renderBorderWireframe(poseStack, camera, lineConsumer, parcel, r, g, b);
 
-            TextureAtlasSprite bufSprite = parcel.isConflict() ? bufferSpriteConflict : bufferSprite;
-            if (bufSprite != null) {
-                VertexConsumer quadConsumer = bufferSource.getBuffer(
-                        RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
-                renderBufferBrackets(poseStack, camera, quadConsumer, parcel, bufSprite);
-            }
+            // Skip buffer brackets in the normal pass if this parcel is being
+            // rendered by the conflict highlight pass — it will draw them in orange.
+            if (!CONFLICT_HIGHLIGHT_IDS.contains(parcel.parcelId())) {
+                TextureAtlasSprite bufSprite = parcel.isConflict() ? bufferSpriteConflict : bufferSprite;
+                if (bufSprite != null) {
+                    VertexConsumer quadConsumer = bufferSource.getBuffer(
+                            RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+                    renderBufferBrackets(poseStack, camera, quadConsumer, parcel, bufSprite);
+                }
 
-            TextureAtlasSprite areaSprite = AREA_SPRITES.get(parcel.parcelType());
-            if (areaSprite != null) {
-                VertexConsumer quadConsumer = bufferSource.getBuffer(
-                        RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
-                if (parcel.isConflict()) {
-                    renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, bufferSpriteConflict, 1f, 1f, 1f);
-                } else {
-                    renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, areaSprite, r, g, b);
+                TextureAtlasSprite areaSprite = AREA_SPRITES.get(parcel.parcelType());
+                if (areaSprite != null) {
+                    VertexConsumer quadConsumer = bufferSource.getBuffer(
+                            RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+                    if (parcel.isConflict()) {
+                        renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, bufferSpriteConflict, 1f, 1f, 1f);
+                    } else {
+                        renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, areaSprite, r, g, b);
+                    }
                 }
             }
         }
@@ -184,20 +245,23 @@ public class ParcelBorderRenderer {
                 if (!CONFLICT_HIGHLIGHT_IDS.contains(parcel.parcelId())) continue;
                 if (!isWithinRenderRadius(parcel, player)) continue;
 
-                VertexConsumer lineConsumer = bufferSource.getBuffer(RenderType.lines());
+                VertexConsumer lineConsumer = bufferSource.getBuffer(tubeRenderType());
                 renderBorderWireframe(poseStack, camera, lineConsumer, parcel,
                         CONFLICT_R, CONFLICT_G, CONFLICT_B);
 
-                if (bufferSpriteConflict != null) {
+                // Use the neutral (white) sprite so the orange vertex color tint
+                // shows cleanly — bufferSpriteConflict has a red texture that would
+                // override the orange tint.
+                if (bufferSprite != null) {
                     VertexConsumer quadConsumer = bufferSource.getBuffer(
                             RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
                     renderBufferBracketsColored(poseStack, camera, quadConsumer, parcel,
-                            bufferSpriteConflict, CONFLICT_R, CONFLICT_G, CONFLICT_B);
+                            bufferSprite, CONFLICT_R, CONFLICT_G, CONFLICT_B);
                 }
             }
         }
 
-        bufferSource.endBatch(RenderType.lines());
+        bufferSource.endBatch(tubeRenderType());
         bufferSource.endBatch(RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
     }
 
@@ -217,13 +281,14 @@ public class ParcelBorderRenderer {
         }
 
         float a;
-        float lineWidth = 2.0f;
+        float halfWidth;
         if (parcel.isPreview()) {
             float pulseT = (float) ((Math.sin(System.currentTimeMillis() / 200.0) + 1.0) / 2.0);
             a = 0.05f + 0.75f * pulseT;
-            lineWidth = 0.5f + 1.5f * pulseT;
+            halfWidth = TUBE_HALF_WIDTH_MIN + (TUBE_HALF_WIDTH_MAX - TUBE_HALF_WIDTH_MIN) * pulseT;
         } else {
             a = 0.8f;
+            halfWidth = TUBE_HALF_WIDTH;
         }
 
         double camX = camera.getPosition().x;
@@ -242,27 +307,24 @@ public class ParcelBorderRenderer {
                 : parcel.maxY() + 1 - camY;
 
         Matrix4f matrix = poseStack.last().pose();
-        PoseStack.Pose pose = poseStack.last();
 
-        RenderSystem.lineWidth(lineWidth);
+        // Bottom face — 4 edges running along X or Z at y0
+        renderTubeEdgeX(consumer, matrix, x0, x1, y0, z0, halfWidth, r, g, b, a);
+        renderTubeEdgeX(consumer, matrix, x0, x1, y0, z1, halfWidth, r, g, b, a);
+        renderTubeEdgeZ(consumer, matrix, z0, z1, y0, x0, halfWidth, r, g, b, a);
+        renderTubeEdgeZ(consumer, matrix, z0, z1, y0, x1, halfWidth, r, g, b, a);
 
-        // Bottom face
-        line(consumer, matrix, pose, x0, y0, z0, x1, y0, z0, r, g, b, a);
-        line(consumer, matrix, pose, x1, y0, z0, x1, y0, z1, r, g, b, a);
-        line(consumer, matrix, pose, x1, y0, z1, x0, y0, z1, r, g, b, a);
-        line(consumer, matrix, pose, x0, y0, z1, x0, y0, z0, r, g, b, a);
-        // Top face
-        line(consumer, matrix, pose, x0, y1, z0, x1, y1, z0, r, g, b, a);
-        line(consumer, matrix, pose, x1, y1, z0, x1, y1, z1, r, g, b, a);
-        line(consumer, matrix, pose, x1, y1, z1, x0, y1, z1, r, g, b, a);
-        line(consumer, matrix, pose, x0, y1, z1, x0, y1, z0, r, g, b, a);
-        // Verticals
-        line(consumer, matrix, pose, x0, y0, z0, x0, y1, z0, r, g, b, a);
-        line(consumer, matrix, pose, x1, y0, z0, x1, y1, z0, r, g, b, a);
-        line(consumer, matrix, pose, x1, y0, z1, x1, y1, z1, r, g, b, a);
-        line(consumer, matrix, pose, x0, y0, z1, x0, y1, z1, r, g, b, a);
+        // Top face — 4 edges running along X or Z at y1
+        renderTubeEdgeX(consumer, matrix, x0, x1, y1, z0, halfWidth, r, g, b, a);
+        renderTubeEdgeX(consumer, matrix, x0, x1, y1, z1, halfWidth, r, g, b, a);
+        renderTubeEdgeZ(consumer, matrix, z0, z1, y1, x0, halfWidth, r, g, b, a);
+        renderTubeEdgeZ(consumer, matrix, z0, z1, y1, x1, halfWidth, r, g, b, a);
 
-        RenderSystem.lineWidth(2.0f);
+        // Vertical edges — 4 corners running along Y
+        renderTubeEdgeY(consumer, matrix, y0, y1, x0, z0, halfWidth, r, g, b, a);
+        renderTubeEdgeY(consumer, matrix, y0, y1, x1, z0, halfWidth, r, g, b, a);
+        renderTubeEdgeY(consumer, matrix, y0, y1, x1, z1, halfWidth, r, g, b, a);
+        renderTubeEdgeY(consumer, matrix, y0, y1, x0, z1, halfWidth, r, g, b, a);
     }
 
     // -------------------------------------------------------------------------
@@ -462,21 +524,113 @@ public class ParcelBorderRenderer {
     }
 
     // -------------------------------------------------------------------------
-    // Primitive helpers
+    // Quad-tube edge helpers
+    //
+    // Each helper renders a single axis-aligned edge as a square-cross-section
+    // tube — four QUADS (top, bottom, left, right face). The tube is centered
+    // on the edge line with half-width extending perpendicular to the edge axis.
+    //
+    // Vertices use POSITION_COLOR format (x, y, z, r, g, b, a) — no UV/normal.
     // -------------------------------------------------------------------------
 
-    private static void line(VertexConsumer consumer, Matrix4f matrix, PoseStack.Pose pose,
-                             double x0, double y0, double z0,
-                             double x1, double y1, double z1,
-                             float r, float g, float b, float a) {
-        float dx = (float) (x1 - x0);
-        float dy = (float) (y1 - y0);
-        float dz = (float) (z1 - z0);
-        float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        consumer.vertex(matrix, (float) x0, (float) y0, (float) z0)
-                .color(r, g, b, a).normal(pose.normal(), dx / len, dy / len, dz / len).endVertex();
-        consumer.vertex(matrix, (float) x1, (float) y1, (float) z1)
-                .color(r, g, b, a).normal(pose.normal(), dx / len, dy / len, dz / len).endVertex();
+    /**
+     * Tube edge running along the X axis.
+     *
+     * @param x0        start X (camera-relative)
+     * @param x1        end X (camera-relative)
+     * @param y         fixed Y (camera-relative) — center of the edge
+     * @param z         fixed Z (camera-relative) — center of the edge
+     * @param hw        half-width of the tube cross-section
+     */
+    private static void renderTubeEdgeX(VertexConsumer consumer, Matrix4f matrix,
+                                        double x0, double x1, double y, double z,
+                                        float hw, float r, float g, float b, float a) {
+        float fx0 = (float) x0, fx1 = (float) x1;
+        float fy  = (float) y,  fz  = (float) z;
+        // Top face (y + hw)
+        tubeQuad(consumer, matrix, fx0, fy + hw, fz - hw,  fx1, fy + hw, fz - hw,
+                fx1, fy + hw, fz + hw,  fx0, fy + hw, fz + hw,  r, g, b, a);
+        // Bottom face (y - hw)
+        tubeQuad(consumer, matrix, fx0, fy - hw, fz + hw,  fx1, fy - hw, fz + hw,
+                fx1, fy - hw, fz - hw,  fx0, fy - hw, fz - hw,  r, g, b, a);
+        // Front face (z + hw)
+        tubeQuad(consumer, matrix, fx0, fy - hw, fz + hw,  fx1, fy - hw, fz + hw,
+                fx1, fy + hw, fz + hw,  fx0, fy + hw, fz + hw,  r, g, b, a);
+        // Back face (z - hw)
+        tubeQuad(consumer, matrix, fx0, fy + hw, fz - hw,  fx1, fy + hw, fz - hw,
+                fx1, fy - hw, fz - hw,  fx0, fy - hw, fz - hw,  r, g, b, a);
+    }
+
+    /**
+     * Tube edge running along the Z axis.
+     *
+     * @param z0        start Z (camera-relative)
+     * @param z1        end Z (camera-relative)
+     * @param y         fixed Y (camera-relative) — center of the edge
+     * @param x         fixed X (camera-relative) — center of the edge
+     * @param hw        half-width of the tube cross-section
+     */
+    private static void renderTubeEdgeZ(VertexConsumer consumer, Matrix4f matrix,
+                                        double z0, double z1, double y, double x,
+                                        float hw, float r, float g, float b, float a) {
+        float fz0 = (float) z0, fz1 = (float) z1;
+        float fy  = (float) y,  fx  = (float) x;
+        // Top face
+        tubeQuad(consumer, matrix, fx - hw, fy + hw, fz0,  fx + hw, fy + hw, fz0,
+                fx + hw, fy + hw, fz1,  fx - hw, fy + hw, fz1,  r, g, b, a);
+        // Bottom face
+        tubeQuad(consumer, matrix, fx + hw, fy - hw, fz0,  fx - hw, fy - hw, fz0,
+                fx - hw, fy - hw, fz1,  fx + hw, fy - hw, fz1,  r, g, b, a);
+        // Right face (x + hw)
+        tubeQuad(consumer, matrix, fx + hw, fy - hw, fz0,  fx + hw, fy + hw, fz0,
+                fx + hw, fy + hw, fz1,  fx + hw, fy - hw, fz1,  r, g, b, a);
+        // Left face (x - hw)
+        tubeQuad(consumer, matrix, fx - hw, fy + hw, fz0,  fx - hw, fy - hw, fz0,
+                fx - hw, fy - hw, fz1,  fx - hw, fy + hw, fz1,  r, g, b, a);
+    }
+
+    /**
+     * Tube edge running along the Y axis (vertical corner edges).
+     *
+     * @param y0        start Y (camera-relative)
+     * @param y1        end Y (camera-relative)
+     * @param x         fixed X (camera-relative) — center of the edge
+     * @param z         fixed Z (camera-relative) — center of the edge
+     * @param hw        half-width of the tube cross-section
+     */
+    private static void renderTubeEdgeY(VertexConsumer consumer, Matrix4f matrix,
+                                        double y0, double y1, double x, double z,
+                                        float hw, float r, float g, float b, float a) {
+        float fy0 = (float) y0, fy1 = (float) y1;
+        float fx  = (float) x,  fz  = (float) z;
+        // Front face (z + hw)
+        tubeQuad(consumer, matrix, fx - hw, fy0, fz + hw,  fx + hw, fy0, fz + hw,
+                fx + hw, fy1, fz + hw,  fx - hw, fy1, fz + hw,  r, g, b, a);
+        // Back face (z - hw)
+        tubeQuad(consumer, matrix, fx + hw, fy0, fz - hw,  fx - hw, fy0, fz - hw,
+                fx - hw, fy1, fz - hw,  fx + hw, fy1, fz - hw,  r, g, b, a);
+        // Right face (x + hw)
+        tubeQuad(consumer, matrix, fx + hw, fy0, fz + hw,  fx + hw, fy0, fz - hw,
+                fx + hw, fy1, fz - hw,  fx + hw, fy1, fz + hw,  r, g, b, a);
+        // Left face (x - hw)
+        tubeQuad(consumer, matrix, fx - hw, fy0, fz - hw,  fx - hw, fy0, fz + hw,
+                fx - hw, fy1, fz + hw,  fx - hw, fy1, fz - hw,  r, g, b, a);
+    }
+
+    /**
+     * Emits a single quad into a POSITION_COLOR vertex consumer.
+     * Vertices are provided in counter-clockwise order (front-face by OpenGL convention).
+     */
+    private static void tubeQuad(VertexConsumer consumer, Matrix4f matrix,
+                                 float x0, float y0, float z0,
+                                 float x1, float y1, float z1,
+                                 float x2, float y2, float z2,
+                                 float x3, float y3, float z3,
+                                 float r, float g, float b, float a) {
+        consumer.vertex(matrix, x0, y0, z0).color(r, g, b, a).endVertex();
+        consumer.vertex(matrix, x1, y1, z1).color(r, g, b, a).endVertex();
+        consumer.vertex(matrix, x2, y2, z2).color(r, g, b, a).endVertex();
+        consumer.vertex(matrix, x3, y3, z3).color(r, g, b, a).endVertex();
     }
 
     private static void quad(VertexConsumer consumer, Matrix4f matrix,

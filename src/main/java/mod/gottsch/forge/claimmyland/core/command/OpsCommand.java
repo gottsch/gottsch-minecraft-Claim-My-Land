@@ -45,6 +45,9 @@ public class OpsCommand {
                 .register(Commands.literal(CML_OPS).requires(source -> {
                                     return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get()); // only ops can use command
                                 })
+                                ///// BACKUP /////
+                                .then(new BackupSubCommand().buildOps())
+
                                 ///// DEED TOP-LEVEL OPTION /////
                                 ///// NEW DEED /////
                                 .then(new GenerateDeedSubCommand().buildOps())

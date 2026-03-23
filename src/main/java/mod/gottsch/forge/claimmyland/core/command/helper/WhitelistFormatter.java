@@ -57,12 +57,13 @@ public class WhitelistFormatter {
     public static List<Component> formatStandAlonePlayerWhitelist(ServerLevel level,
                                                                   Set<UUID> players,
                                                                   String title,
-                                                                  UUID estateId) {
+                                                                  UUID estateId,
+                                                                  String estateName) {
         List<Component> lines = new ArrayList<>();
 
         // header
         lines.add(Component.literal(TITLE_BAR).withStyle(BOLD_YELLOW));
-        lines.add(Component.literal(LangUtil.INDENT4 + title).withStyle(BOLD_YELLOW));
+        lines.add(Component.literal(LangUtil.INDENT4 + title).withStyle(BOLD_YELLOW) .append(playerWhitelistAddIcon(estateName)));
         lines.add(Component.literal(TITLE_BAR).withStyle(BOLD_YELLOW));
         lines.add(newline());
 
@@ -76,7 +77,7 @@ public class WhitelistFormatter {
                 .append(Component.literal(String.valueOf(players.size())).withStyle(ChatFormatting.WHITE)));
         lines.add(newline());
 
-        lines.addAll(formatPlayerList(level, players, "", estateId));
+        lines.addAll(formatPlayerList(level, players, "", estateId, estateName));
         lines.add(newline());
         return lines;
     }
@@ -134,13 +135,14 @@ public class WhitelistFormatter {
         List<Component> lines = new ArrayList<>();
 
         Set<UUID> players = estate.getPlayerWhitelist();
-        lines.add(Component.literal("▼ FRIENDS WHITELIST").withStyle(BOLD_AQUA));
-
+        lines.add(Component.literal("")
+                .append(Component.literal("▼ FRIENDS WHITELIST").withStyle(BOLD_AQUA))
+                .append(playerWhitelistAddIcon(estate.getName())));
         if (!players.isEmpty()) {
             lines.add(Component.literal(LangUtil.INDENT2 + "Total: ").withStyle(ChatFormatting.GRAY)
                     .append(Component.literal(String.valueOf(players.size())).withStyle(ChatFormatting.WHITE))
                     .append(Component.literal(" friends").withStyle(ChatFormatting.GRAY)));
-            lines.addAll(formatEstateDetailsPlayerWhitelist(level, players, LangUtil.INDENT2));
+            lines.addAll(formatEstateDetailsPlayerWhitelist(level, players, LangUtil.INDENT2, estate.getName()));
         }
         lines.add(newline());
 
@@ -160,31 +162,35 @@ public class WhitelistFormatter {
      * @return formatted component lines
      */
     static List<Component> formatEstateListPlayerWhitelist(ServerLevel level,
-                                                           Set<UUID> whitelist,
-                                                           String indent) {
-        List<Component> lines = new ArrayList<>();
-
-        List<String> playerNames = whitelist.stream()
-                .map(uuid -> PlayerRegistry.getPlayerName(level, uuid))
-                .flatMap(Optional::stream)
-                .toList();
-
-        List<String> sortedPlayers = new ArrayList<>(playerNames);
-        sortedPlayers.sort(String.CASE_INSENSITIVE_ORDER);
-
-        final int maxPerRow = 5;
-
-        for (int i = 0; i < sortedPlayers.size(); i += maxPerRow) {
-            MutableComponent component = Component.literal(indent);
-            for (int j = 0; j < maxPerRow && (i + j) < sortedPlayers.size(); j++) {
-                if (j > 0) component.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
-                component.append(Component.literal(sortedPlayers.get(i + j)).withStyle(ChatFormatting.WHITE));
-            }
-            lines.add(component);
-        }
-        lines.add(newline());
-        return lines;
+                                                           Set<UUID> whitelist, String indent, String estateName) {
+        return formatPlayerList(level, whitelist, indent, null, estateName);
     }
+//    static List<Component> formatEstateListPlayerWhitelist(ServerLevel level,
+//                                                           Set<UUID> whitelist,
+//                                                           String indent) {
+//        List<Component> lines = new ArrayList<>();
+//
+//        List<String> playerNames = whitelist.stream()
+//                .map(uuid -> PlayerRegistry.getPlayerName(level, uuid))
+//                .flatMap(Optional::stream)
+//                .toList();
+//
+//        List<String> sortedPlayers = new ArrayList<>(playerNames);
+//        sortedPlayers.sort(String.CASE_INSENSITIVE_ORDER);
+//
+//        final int maxPerRow = 5;
+//
+//        for (int i = 0; i < sortedPlayers.size(); i += maxPerRow) {
+//            MutableComponent component = Component.literal(indent);
+//            for (int j = 0; j < maxPerRow && (i + j) < sortedPlayers.size(); j++) {
+//                if (j > 0) component.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
+//                component.append(Component.literal(sortedPlayers.get(i + j)).withStyle(ChatFormatting.WHITE));
+//            }
+//            lines.add(component);
+//        }
+//        lines.add(newline());
+//        return lines;
+//    }
 
     /**
      * formats the player whitelist as it appears inline inside the estate <em>details</em>
@@ -196,32 +202,36 @@ public class WhitelistFormatter {
      * @return formatted component lines
      */
     static List<Component> formatEstateDetailsPlayerWhitelist(ServerLevel level,
-                                                              Set<UUID> players,
-                                                              String indent) {
-        List<Component> lines = new ArrayList<>();
-
-        List<String> playerNames = players.stream()
-                .map(uuid -> PlayerRegistry.getPlayerName(level, uuid))
-                .flatMap(Optional::stream)
-                .toList();
-
-        List<String> sortedPlayers = new ArrayList<>(playerNames);
-        sortedPlayers.sort(String.CASE_INSENSITIVE_ORDER);
-
-        // three players per line with tree-branch prefix
-        for (int i = 0; i < sortedPlayers.size(); i += 3) {
-            MutableComponent component = Component.literal(indent);
-            boolean isLastGroup = i + 3 >= sortedPlayers.size();
-            component.append(Component.literal(isLastGroup ? LAST_BRANCH : BRANCH));
-            for (int j = 0; j < 3 && (i + j) < sortedPlayers.size(); j++) {
-                if (j > 0) component.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
-                component.append(Component.literal(sortedPlayers.get(i + j)).withStyle(ChatFormatting.WHITE));
-            }
-            lines.add(component);
-        }
-        lines.add(newline());
-        return lines;
+                                                              Set<UUID> players, String indent, String estateName) {
+        return formatPlayerList(level, players, indent, null, estateName);
     }
+//    static List<Component> formatEstateDetailsPlayerWhitelist(ServerLevel level,
+//                                                              Set<UUID> players,
+//                                                              String indent) {
+//        List<Component> lines = new ArrayList<>();
+//
+//        List<String> playerNames = players.stream()
+//                .map(uuid -> PlayerRegistry.getPlayerName(level, uuid))
+//                .flatMap(Optional::stream)
+//                .toList();
+//
+//        List<String> sortedPlayers = new ArrayList<>(playerNames);
+//        sortedPlayers.sort(String.CASE_INSENSITIVE_ORDER);
+//
+//        // three players per line with tree-branch prefix
+//        for (int i = 0; i < sortedPlayers.size(); i += 3) {
+//            MutableComponent component = Component.literal(indent);
+//            boolean isLastGroup = i + 3 >= sortedPlayers.size();
+//            component.append(Component.literal(isLastGroup ? LAST_BRANCH : BRANCH));
+//            for (int j = 0; j < 3 && (i + j) < sortedPlayers.size(); j++) {
+//                if (j > 0) component.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
+//                component.append(Component.literal(sortedPlayers.get(i + j)).withStyle(ChatFormatting.WHITE));
+//            }
+//            lines.add(component);
+//        }
+//        lines.add(newline());
+//        return lines;
+//    }
 
     // ===== PACKAGE-PRIVATE: GENERIC LIST =====
 
@@ -256,26 +266,23 @@ public class WhitelistFormatter {
      * Used only by {@link #formatStandAlonePlayerWhitelist}.
      */
     private static List<Component> formatPlayerList(ServerLevel level,
-                                                    Set<UUID> players,
-                                                    String indent,
-                                                    UUID estateId) {
-        List<Component> lines = new ArrayList<>();
+                                                    Set<UUID> players, String indent, UUID estateId, String estateName) {
 
-        List<String> playerNames = players.stream()
+        List<String> sortedPlayers = players.stream()
                 .map(uuid -> PlayerRegistry.getPlayerName(level, uuid)
                         .orElse("Unknown Player [" + uuid + "]"))
+                .sorted(String.CASE_INSENSITIVE_ORDER)
                 .toList();
 
-        List<String> sortedPlayers = new ArrayList<>(playerNames);
-        sortedPlayers.sort(String.CASE_INSENSITIVE_ORDER);
-
+        List<Component> lines = new ArrayList<>();
         for (int i = 0; i < sortedPlayers.size(); i++) {
             boolean isLast = i == sortedPlayers.size() - 1;
-            String branch = isLast ? LAST_BRANCH : BRANCH;
-            lines.add(Component.literal(indent + branch)
-                    .append(sortedPlayers.get(i)).withStyle(ChatFormatting.WHITE));
+            String playerName = sortedPlayers.get(i);
+            MutableComponent line = Component.literal(indent + (isLast ? LAST_BRANCH : BRANCH))
+                    .append(Component.literal(playerName).withStyle(ChatFormatting.WHITE))
+                    .append(playerWhitelistRemoveIcon(estateName, playerName));
+            lines.add(line);
         }
-        lines.add(newline());
         return lines;
     }
 
