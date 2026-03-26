@@ -161,12 +161,45 @@ public class Config extends AbstractConfig {
 	 */
 	public static class Gui {
 		public BooleanValue enableProtectionChatMessages;
-		
+		public ForgeConfigSpec.BooleanValue enableParcelEntryTitle;
+		public ForgeConfigSpec.IntValue parcelEntryCooldownSeconds;
+		public ForgeConfigSpec.IntValue parcelEntryFadeInTicks;
+		public ForgeConfigSpec.IntValue parcelEntryStayTicks;
+		public ForgeConfigSpec.IntValue parcelEntryFadeOutTicks;
+
 		public Gui(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, " Client GUI properties for Protect It  mod.", CATEGORY_DIV).push("GUI");
 			enableProtectionChatMessages = builder
 					.comment(" Enables protection messages in chat. If enabled, when protection is triggered, a message will display in the chat.")
 					.define("enableProtectionChatMessages:", false);
+
+			enableParcelEntryTitle = builder
+					.comment("If true, a title overlay is shown when entering a Nation, Citizen,",
+							"or Player parcel. The server config enableParcelEntryTitle must also",
+							"be true for this to have any effect.",
+							"Default: true.")
+					.define("enableParcelEntryTitle", true);
+
+			parcelEntryCooldownSeconds = builder
+					.comment("Seconds before the parcel entry title re-fires for the same parcel.",
+							"Default: 30.")
+					.defineInRange("parcelEntryCooldownSeconds", 30, 5, 300);
+
+			parcelEntryFadeInTicks = builder
+					.comment("Fade-in duration in ticks for the parcel entry title.",
+							"Default: 10.")
+					.defineInRange("parcelEntryFadeInTicks", 10, 0, 40);
+
+			parcelEntryStayTicks = builder
+					.comment("How long the parcel entry title stays on screen, in ticks.",
+							"Default: 60.")
+					.defineInRange("parcelEntryStayTicks", 60, 10, 200);
+
+			parcelEntryFadeOutTicks = builder
+					.comment("Fade-out duration in ticks for the parcel entry title.",
+							"Default: 20.")
+					.defineInRange("parcelEntryFadeOutTicks", 20, 0, 40);
+
 			builder.pop();
 		}		
 	}
@@ -183,7 +216,8 @@ public class Config extends AbstractConfig {
 		public IntValue parcelBufferRadius;
 		public IntValue nationParcelBufferRadius;
 		public BooleanValue allowMojangNameCalls;
-		
+		public BooleanValue enableParcelEntryTitle;
+
 		General(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, " General properties for Protect It  mod.", CATEGORY_DIV).push(GENERAL_CATEGORY);
 			
@@ -216,6 +250,14 @@ public class Config extends AbstractConfig {
 					.comment(" Allows external HTTP calls to Mojang's web API (ex. https://api.mojang.com/users/profiles/minecraft/)",
 							" This is used to find offline player's UUID by name, or visa versa.")
 					.define("allowMojangNameCalls", true);
+
+			enableParcelEntryTitle = builder
+					.comment("If true, clients receive a title overlay when crossing into a",
+							"Nation, Citizen, or Player parcel. Server master switch —",
+							"disabling this prevents all clients from seeing titles regardless",
+							"of their individual client settings.",
+							"Default: true.")
+					.define("enableParcelEntryTitle", true);
 
 			builder.pop();
 		}

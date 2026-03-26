@@ -115,12 +115,13 @@ public class PlayerEvents {
     public static void onPlayerHurt(LivingHurtEvent event) {
         if (event.getEntity() instanceof Player) {
             Player player = (ServerPlayer) event.getEntity();
+            String dimension = player.level().dimension().location().toString();
 
             // mob on player hurt
             if (event.getSource().getEntity() instanceof Mob) {
                 // prevent mob from hurting player
                 // NOTE for now ALL parcels are protected against hurt events
-                if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()))) {
+                if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()), dimension)) {
                     event.setCanceled(true);
 //					ProtectIt.LOGGER.debug("denied mob attack -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(player.blockPosition()).toShortString());
                 }
@@ -129,7 +130,7 @@ public class PlayerEvents {
             else if (event.getSource().getEntity() instanceof Player) {
                 // prevent player from hurting player
                 // NOTE for now ALL parcels are protected against hurt events
-                if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()))) {
+                if (ParcelRegistry.intersectsParcel(Coords.of(player.blockPosition()), dimension)) {
                     event.setCanceled(true);
 //					ProtectIt.LOGGER.debug("denied player attack -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(player.blockPosition()).toShortString());
                 }
@@ -180,7 +181,7 @@ public class PlayerEvents {
             }
         }
 
-        if (ParcelRegistry.intersectsParcel(Coords.of(event.getEntity().blockPosition()))
+        if (ParcelRegistry.intersectsParcel(Coords.of(event.getEntity().blockPosition()), dimension)
          && !(event.getSpawnType().equals(MobSpawnType.SPAWN_EGG)
 //                || event.getSpawnType().equals(MobSpawnType.BUCKET))
                 || isInWhitelist)) {

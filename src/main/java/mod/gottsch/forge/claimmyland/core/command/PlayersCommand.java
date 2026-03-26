@@ -102,10 +102,12 @@ public class PlayersCommand {
 										.then(new EntitySpawnWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY))
 										/// // ENTITY SPAWN TAG /////
 										.then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY_TAG))
-										///// FRIENDS WHITELIST ADD /////
+										///// FRIENDS WHITELIST /////
 										.then(new FriendsWhitelistSubCommand().build())
 
 								) // end of whitelist
+								/// // BLACK LIST /////
+								.then(new NationBlacklistSubCommand().build())
 
 						) // end of estate
 

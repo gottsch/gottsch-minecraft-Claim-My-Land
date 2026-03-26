@@ -42,7 +42,7 @@ public class JourneyMapIntegration {
      * {@code true}.</p>
      */
     public static void init() {
-        LOGGER.info("[{}] JourneyMap detected — enabling parcel map overlay.", ClaimMyLand.MOD_ID);
+//        LOGGER.info("[{}] JourneyMap detected — enabling parcel map overlay.", ClaimMyLand.MOD_ID);
         JourneyMapOverlayHandler.register();
     }
 }

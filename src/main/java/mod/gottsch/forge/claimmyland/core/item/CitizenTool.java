@@ -123,6 +123,18 @@ public class CitizenTool extends BlockItem {
     }
 
     private InteractionResult tryCreateCitizenParcel(UseOnContext context, Parcel parentParcel, Box box, ICoords coords1, ICoords coords2) {
+        // Blacklist check — resolve enclosing nation
+        Parcel nationParcel = parentParcel.isNation()
+                ? parentParcel
+                : ParcelRegistry.findByParcelId(
+                ((NationalizedParcel) parentParcel).getNationEstate().getId()
+        ).orElse(null);
+
+        if (ParcelRegistry.isBlacklistedFromNation(nationParcel, context.getPlayer().getUUID())) {
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.claim.access_denied");
+            return InteractionResult.SUCCESS;
+        }
+
         Optional<Parcel> created = ParcelTypeRegistry.create(ParcelType.CITIZEN,
                 parentParcel.isNation()
                         ? parentParcel.getEstate()

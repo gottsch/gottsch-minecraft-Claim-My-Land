@@ -191,7 +191,7 @@ public class JoinSubCommand implements SubCommand {
 
         // safe to sample just one - containment is enforced at claim time
         Parcel sample = parcels.iterator().next();
-        List<Parcel> overlapping = ParcelRegistry.find(sample.getMinCoords());
+        List<Parcel> overlapping = ParcelRegistry.find(sample.getMinCoords(), level.dimension().location().toString());
 
         String dimension = level.dimension().location().toString();
         return ParcelRegistry.findMostSignificant(overlapping, dimension, ParcelType.NATION, ParcelType.ZONE)
