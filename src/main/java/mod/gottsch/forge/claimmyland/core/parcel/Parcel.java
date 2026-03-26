@@ -191,11 +191,12 @@ public interface Parcel {
      * @return
      */
     default public ClaimResult handleClaim(Level level, Box parcelBox) {
+        String dimension = ((ServerLevel) level).dimension().location().toString();
 
         // TODO all this can be replace with hasBoxToBufferedBoxIntersections
         // find overlaps of the parcel with buffered registry parcels.
         // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox);
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, dimension);
         if (!overlaps.isEmpty()) {
             for (Parcel overlapParcel : overlaps) {
                 // if parcel in hand equals parcel in world then fail
@@ -235,7 +236,9 @@ public interface Parcel {
 
 
     default public ClaimResult handleClaim(Level level, Box parcelBox, ServerPlayer claimingPlayer) {
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox);
+        String dimension = ((ServerLevel) level).dimension().location().toString();
+
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, dimension);
         if (!overlaps.isEmpty()) {
             for (Parcel overlapParcel : overlaps) {
                 if (getId().equals(overlapParcel.getId())) {

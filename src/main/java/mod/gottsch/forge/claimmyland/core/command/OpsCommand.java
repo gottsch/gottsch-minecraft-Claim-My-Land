@@ -116,6 +116,8 @@ public class OpsCommand {
                                                 .then(new EntitySpawnWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY))
                                                 .then(new FriendsWhitelistSubCommand().build())
                                         )
+                                        /// // NATION BLACKLIST /////
+                                        .then(new NationBlacklistSubCommand().buildOps())
                                         ///// CLEAR /////
                                         // performs same action as parcel > clear
                                         .then(new ClearSubCommand().buildOps())

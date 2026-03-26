@@ -241,6 +241,8 @@ public class ModEvents {
         }
 
         ClaimMyLand.LOGGER.debug("player is attempting to place block");
+        ClaimMyLand.LOGGER.debug("onBlockPlace — entity={}, block={}, pos={}",
+                event.getEntity(), event.getPlacedBlock().getBlock(), event.getPos());
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
@@ -261,12 +263,6 @@ public class ModEvents {
 
         // prevent protected blocks from placing
         if (event.getEntity() instanceof Player player) {
-//            ClaimMyLand.LOGGER.debug("player is holding -> {}", ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
-//            ClaimMyLand.LOGGER.info("event.pos -> {}", event.getPos());
-//            ClaimMyLand.LOGGER.info("event.placedBlock -> {}", event.getPlacedBlock().getBlock());
-//            ClaimMyLand.LOGGER.info("event.placedAgainst -> {}", event.getPlacedAgainst().getBlock());
-//            ClaimMyLand.LOGGER.info("event.snapshot.pos -> {}", event.getBlockSnapshot().getPos());
-//            if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND))) {
             if (!ParcelRegistry.hasAccess(
                     (ServerPlayer) event.getEntity(),
                     Coords.of(event.getPos()),
@@ -287,9 +283,9 @@ public class ModEvents {
             }
         } else {
             // non-player entity placement (includes natural fire spread)
-            if (ParcelRegistry.isFireSpreadPrevented(Coords.of(event.getPos()), event.getState())) {
+            if (ParcelRegistry.isFireSpreadPrevented(Coords.of(event.getPos()), event.getState(), dimension)) {
                 event.setCanceled(true);
-            } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
+            } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()), dimension)) {
                 event.setCanceled(true);
             }
         }
@@ -349,7 +345,7 @@ public class ModEvents {
 //                    sendProtectedMessage(event.getLevel(), (Player) event.getEntity());
                 }
             }
-        } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
+        } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()), dimension)) {
             event.setCanceled(true);
         }
     }
@@ -452,7 +448,7 @@ public class ModEvents {
 //                    }
 //                }
             }
-        } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
+        } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()), dimension)) {
             event.setCanceled(true);
         }
     }
@@ -526,7 +522,7 @@ public class ModEvents {
 
         // prevent protected blocks from breaking by mob action
         if (Config.SERVER.protection.enableLivingDestroyBlockEvent.get()
-                && ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
+                && ParcelRegistry.intersectsParcel(Coords.of(event.getPos()), dimension)) {
             // check dimension
             if (!isInProtectedDimension(event.getEntity().level())) {
                 return;
@@ -561,7 +557,7 @@ public class ModEvents {
         }
 
         // check if piston itself is inside protected area - if so, exit ie. allow movement
-        if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()))) {
+        if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()), dimension)) {
             return;
         }
 
@@ -593,8 +589,8 @@ public class ModEvents {
 
                 if (event.getLevel().getBlockState(event.getPos().offset(xOffset, 0, zOffset)).isSolid()) {
                     // prevent protected blocks from breaking
-                    if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos().offset(xOffset, 0, zOffset))) ||
-                            ParcelRegistry.intersectsParcel(Coords.of(event.getPos().offset(xOffset + xPush, 0, zOffset + zPush)))) {
+                    if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos().offset(xOffset, 0, zOffset)), dimension) ||
+                            ParcelRegistry.intersectsParcel(Coords.of(event.getPos().offset(xOffset + xPush, 0, zOffset + zPush)), dimension)) {
                         event.setCanceled(true);
                         return;
                     }
@@ -618,7 +614,7 @@ public class ModEvents {
             return Config.SERVER.protection.enableExplosionDetonateEvent.get()
 //                    && event.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD
                     && !isInProtectedDimension(event.getLevel())
-                    && ParcelRegistry.intersectsParcel(Coords.of(block.getX(), block.getY(), block.getZ()));
+                    && ParcelRegistry.intersectsParcel(Coords.of(block.getX(), block.getY(), block.getZ()), dimension);
         });
     }
 

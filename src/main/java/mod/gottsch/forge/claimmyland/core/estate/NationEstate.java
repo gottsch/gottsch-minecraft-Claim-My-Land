@@ -38,4 +38,18 @@ public interface NationEstate extends Estate {
     void setAccessType(NationAccessType type);
 
     Set<UUID> getPlayerBlacklist();
+
+    /**
+     * Returns true if the given player UUID is on this nation's blacklist.
+     * The nation owner is never considered blacklisted regardless of list contents.
+     *
+     * @param playerId the UUID to test
+     * @return true if blacklisted and not the owner
+     */
+    default boolean isBlacklisted(UUID playerId) {
+        if (playerId == null) return false;
+        // Owner is always exempt
+        if (playerId.equals(getOwnerId())) return false;
+        return getPlayerBlacklist().contains(playerId);
+    }
 }

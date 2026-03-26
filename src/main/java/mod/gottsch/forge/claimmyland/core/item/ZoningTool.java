@@ -131,6 +131,13 @@ public class ZoningTool extends BlockItem {
     private InteractionResult tryCreateZoneParcel(UseOnContext context, BlockPlaceContext placeContext,
                                                   Parcel nationParcel, Box box,
                                                   ICoords coords1, ICoords coords2) {
+
+        // blacklist check
+        if (ParcelRegistry.isBlacklistedFromNation(nationParcel, context.getPlayer().getUUID())) {
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.claim.access_denied");
+            return InteractionResult.SUCCESS;
+        }
+
         Optional<Parcel> created = ParcelTypeRegistry.create(ParcelType.ZONE, (NationParcel) nationParcel);
         if (created.isEmpty()) {
             PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");

@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.network;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.client.hud.ParcelEntryTitleRenderer;
 import mod.gottsch.forge.claimmyland.core.cache.ClientParcelCache;
 import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
@@ -219,6 +220,7 @@ public class CacheSyncPacket {
         ctx.get().enqueueWork(() -> {
             if (packet.parcelId == null) {
                 ClientParcelCache.setWilderness();
+                ParcelEntryTitleRenderer.onParcelChanged(null);
                 ClaimMyLand.LOGGER.debug("CacheSyncPacket: client cache set to wilderness");
             } else {
                 // Update the single-entry position cache
@@ -282,6 +284,10 @@ public class CacheSyncPacket {
                 if (ModList.get().isLoaded("journeymap")) {
                     ParcelPolygonOverlayFactory.notifyParcelAdded(clientParcel);
                 }
+
+                // Server master switch checked server-side before sending;
+                // client opt-out checked inside ParcelEntryTitleRenderer.
+                ParcelEntryTitleRenderer.onParcelChanged(clientParcel);
             }
         });
         ctx.get().setPacketHandled(true);

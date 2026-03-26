@@ -27,6 +27,7 @@ import mod.gottsch.forge.claimmyland.core.cache.ParcelRegionCache;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
+import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.*;
 import mod.gottsch.forge.claimmyland.core.tags.ModTags;
@@ -185,25 +186,19 @@ public class ParcelRegistry {
     }
 
     /**
-     * inflates the parcel and adds to the buffer tree, which is a duplicate of the main tree,
-     * but uses the inflated coords. the buffer tree is used when determining if 2 parcels
-     * meet the buffer criteria.
+     * inserts the inflated buffer box into the buffer BST with the parcel's dimension.
      * NOTE even if buffer size == 0, the parcel must be added to teh buffer tree.
-     * @param parcel
      */
     public static synchronized void registerBuffer(Parcel parcel) {
-        Box inflatedBox;
-        // inflate if buffer size is > 0
-        if (parcel.getBufferSize() > 0) {
-            inflatedBox = inflateParcelBox(parcel);
-        } else {
-            inflatedBox = parcel.getBox();
-        }
+        Box inflatedBox = parcel.getBufferSize() > 0
+                ? inflateParcelBox(parcel)
+                : parcel.getBox();
 
-        BUFFER_TREE.insert(new CoordsInterval<>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId()));
-        // add buffered parcel to byCoords map
+        String dim = effectiveDimension(parcel.getDimension());
+        BUFFER_TREE.insert(new CoordsInterval<>(
+                inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(),
+                parcel.getOwnerId(), dim));
         BUFFER_PARCELS_BY_COORDS.put(inflatedBox.getMinCoords(), parcel);
-
     }
 
     /**
@@ -452,10 +447,14 @@ public class ParcelRegistry {
 //        }
 //    }
 
-    public static  synchronized void registerTree(Parcel parcel) {
-        IInterval<UUID> interval = TREE.insert(
-                new CoordsInterval<>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())
-        );
+    /**
+     * inserts the parcel into the primary BST with its dimension.
+     */
+    public static synchronized void registerTree(Parcel parcel) {
+        String dim = effectiveDimension(parcel.getDimension());
+        TREE.insert(new CoordsInterval<>(
+                parcel.getMinCoords(), parcel.getMaxCoords(),
+                parcel.getOwnerId(), dim));
     }
 
     public static synchronized void registerCoords(Parcel parcel) {
@@ -514,9 +513,10 @@ public class ParcelRegistry {
     public static synchronized void unregisterBuffer(Parcel parcel) {
         Box inflatedBox = inflateParcelBox(parcel);
         BUFFER_PARCELS_BY_COORDS.remove(inflatedBox.getMinCoords());
-        // TODO test if this only deletes the one, or everything in this area.
-        // remove from buffer tree
-        BUFFER_TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(), parcel.getOwnerId())));
+        String dim = effectiveDimension(parcel.getDimension());
+        BUFFER_TREE.delete(new CoordsInterval<>(
+                inflatedBox.getMinCoords(), inflatedBox.getMaxCoords(),
+                parcel.getOwnerId(), dim));
     }
 
     public static synchronized void unregisterCoords(Parcel parcel) {
@@ -530,7 +530,10 @@ public class ParcelRegistry {
     }
 
     public static synchronized void unregisterTree(Parcel parcel) {
-        TREE.delete(new CoordsInterval<>(new CoordsInterval<UUID>(parcel.getMinCoords(), parcel.getMaxCoords(), parcel.getOwnerId())));
+        String dim = effectiveDimension(parcel.getDimension());
+        TREE.delete(new CoordsInterval<>(
+                parcel.getMinCoords(), parcel.getMaxCoords(),
+                parcel.getOwnerId(), dim));
     }
 
 //    public static synchronized void unregisterNation(Parcel parcel) {
@@ -691,47 +694,90 @@ public class ParcelRegistry {
      * @param coords
      * @return
      */
-    public static List<Parcel> find(ICoords coords) {
-        return find(coords, coords);
+    public static List<Parcel> find(ICoords coords, String dimension) {
+        return find(coords, coords, dimension);
     }
 
-    public static List<Parcel> find(Box box) {
-        return find(box.getMinCoords(), box.getMaxCoords());
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static List<Parcel> find(Box box, String dimension) {
+        return find(box.getMinCoords(), box.getMaxCoords(), dimension);
     }
 
-    public static List<Parcel> find(ICoords coords1, ICoords coords2) {
-        return find(coords1, coords2, false);
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static List<Parcel> find(ICoords coords1, ICoords coords2, String dimension) {
+        return find(coords1, coords2, false, true, dimension);
     }
 
-    public static List<Parcel> find(ICoords coords1, ICoords coords2, boolean findFast) {
-        return find(coords1, coords2, findFast, true);
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static List<Parcel> find(ICoords coords1, ICoords coords2,
+                                    boolean findFast, boolean includeBorder,
+                                    String dimension) {
+        return getAsParcels(findRaw(coords1, coords2, findFast, includeBorder, dimension));
     }
 
-    public static List<Parcel> find(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, findFast, includeBorder);
-        return getAsParcels(intervals);
+//    public static List<Parcel> find(ICoords coords) {
+//        return find(coords, coords);
+//    }
+//
+//    public static List<Parcel> find(Box box) {
+//        return find(box.getMinCoords(), box.getMaxCoords());
+//    }
+//
+//    public static List<Parcel> find(ICoords coords1, ICoords coords2) {
+//        return find(coords1, coords2, false);
+//    }
+//
+//    public static List<Parcel> find(ICoords coords1, ICoords coords2, boolean findFast) {
+//        return find(coords1, coords2, findFast, true);
+//    }
+//
+//    public static List<Parcel> find(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, findFast, includeBorder);
+//        return getAsParcels(intervals);
+//    }
+
+    public static List<Parcel> findBuffer(ICoords coords, String dimension) {
+        return findBuffer(coords, coords, dimension);
     }
 
-    public static List<Parcel> findBuffer(ICoords coords) {
-        return findBuffer(coords, coords);
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static List<Parcel> findBuffer(Box box, String dimension) {
+        return findBuffer(box.getMinCoords(), box.getMaxCoords(), dimension);
     }
 
-    public static List<Parcel> findBuffer(Box box) {
-        return findBuffer(box.getMinCoords(), box.getMaxCoords());
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2, String dimension) {
+        return findBuffer(coords1, coords2, false, true, dimension);
     }
 
-    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2) {
-        return findBuffer(coords1, coords2, false);
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2,
+                                          boolean findFast, boolean includeBorder,
+                                          String dimension) {
+        return getBufferParcels(
+                findBufferRaw(coords1, coords2, findFast, includeBorder, dimension));
     }
 
-    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2, boolean findFast) {
-        return findBuffer(coords1, coords2, findFast, true);
-    }
-
-    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        List<IInterval<UUID>> intervals = findBufferRaw(coords1, coords2, findFast, includeBorder);
-        return getBufferParcels(intervals);
-    }
+//    public static List<Parcel> findBuffer(ICoords coords) {
+//        return findBuffer(coords, coords);
+//    }
+//
+//    public static List<Parcel> findBuffer(Box box) {
+//        return findBuffer(box.getMinCoords(), box.getMaxCoords());
+//    }
+//
+//    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2) {
+//        return findBuffer(coords1, coords2, false);
+//    }
+//
+//    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2, boolean findFast) {
+//        return findBuffer(coords1, coords2, findFast, true);
+//    }
+//
+//    public static List<Parcel> findBuffer(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
+//        List<IInterval<UUID>> intervals = findBufferRaw(coords1, coords2, findFast, includeBorder);
+//        return getBufferParcels(intervals);
+//    }
 
     /**
      * returns a parcel list from the given interval list
@@ -767,21 +813,49 @@ public class ParcelRegistry {
         return parcels;
     }
 
-    public static List<Box> findBoxes(ICoords coords) {
-        return findBoxes(coords, coords);
+    public static List<Box> findBoxes(ICoords coords, String dimension) {
+        return findBoxes(coords, coords, dimension);
     }
 
-    public static List<Box> findBoxes(Box box) {
-        return findBoxes(box.getMinCoords(), box.getMaxCoords());
+    public static List<Box> findBoxes(Box box, String dimension) {
+        return findBoxes(box.getMinCoords(), box.getMaxCoords(), dimension);
     }
 
-    public static List<Box> findBoxes(ICoords coords1, ICoords coords2) {
-        return findBoxes(coords1, coords2, false);
+    public static List<Box> findBoxes(ICoords coords1, ICoords coords2, String dimension) {
+        return findBoxes(coords1, coords2, false, true, dimension);
     }
 
-    public static List<Box> findBoxes(ICoords coords1, ICoords coords2, boolean findFast) {
-        return findBoxes(coords1, coords2, findFast, true);
+    public static List<Box> findBoxes(ICoords coords1, ICoords coords2,
+                                      boolean findFast, boolean includeBorder,
+                                      String dimension) {
+        List<IInterval<UUID>> intervals =
+                findRaw(coords1, coords2, findFast, includeBorder, dimension);
+        List<Box> boxes = new ArrayList<>();
+        intervals.forEach(i -> {
+            Parcel p = PARCELS_BY_COORDS.get(((CoordsInterval<UUID>) i).getCoords1());
+            if (p != null) {
+                boxes.add(new Box(
+                        ((CoordsInterval<UUID>) i).getCoords1(),
+                        ((CoordsInterval<UUID>) i).getCoords2()));
+            }
+        });
+        return boxes;
     }
+//    public static List<Box> findBoxes(ICoords coords) {
+//        return findBoxes(coords, coords);
+//    }
+//
+//    public static List<Box> findBoxes(Box box) {
+//        return findBoxes(box.getMinCoords(), box.getMaxCoords());
+//    }
+//
+//    public static List<Box> findBoxes(ICoords coords1, ICoords coords2) {
+//        return findBoxes(coords1, coords2, false);
+//    }
+//
+//    public static List<Box> findBoxes(ICoords coords1, ICoords coords2, boolean findFast) {
+//        return findBoxes(coords1, coords2, findFast, true);
+//    }
 
     /**
      * returns a box list within the given coords
@@ -816,33 +890,77 @@ public class ParcelRegistry {
      * @param includeBorder
      * @return
      */
-    private static List<IInterval<UUID>> findRaw(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        return TREE.getOverlapping(TREE.getRoot(), new CoordsInterval<UUID>(coords1, coords2), findFast, includeBorder);
-    }
-
-    private static List<IInterval<UUID>> findBufferRaw(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        return BUFFER_TREE.getOverlapping(BUFFER_TREE.getRoot(), new CoordsInterval<UUID>(coords1, coords2), findFast, includeBorder);
-    }
-
-    public static boolean intersectsParcel(ICoords coords) {
-        return intersectsParcel(coords, coords);
-    }
-
-    public static boolean intersectsParcel(ICoords coords1, ICoords coords2) {
-        return intersectsParcel(coords1, coords2, true);
+    private static List<IInterval<UUID>> findRaw(ICoords coords1, ICoords coords2,
+                                                 boolean findFast, boolean includeBorder,
+                                                 String dimension) {
+        CoordsInterval<UUID> test = new CoordsInterval<>(coords1, coords2);
+        test.setDimension(effectiveDimension(dimension));
+        return TREE.getOverlapping(TREE.getRoot(), test, findFast, includeBorder);
     }
 
     /**
-     * Used to determine if the provided area intersects with a parcel
-     * @param coords1
-     * @param coords2
-     * @param includeBorders
-     * @return
+     * Dimension-blind variant kept for internal call sites that lack a dimension.
+     * @deprecated Prefer {@link #findRaw(ICoords, ICoords, boolean, boolean, String)}.
      */
-    public static boolean intersectsParcel(ICoords coords1, ICoords coords2, boolean includeBorders) {
-        List<Box> parcels = findBoxes(coords1, coords2, true, includeBorders);
-        return !parcels.isEmpty();
+    @Deprecated(since = "2.4")
+    private static List<IInterval<UUID>> findRaw(ICoords coords1, ICoords coords2,
+                                                 boolean findFast, boolean includeBorder) {
+        return findRaw(coords1, coords2, findFast, includeBorder,
+                CoordsInterval.DEFAULT_DIMENSION);
     }
+
+    private static List<IInterval<UUID>> findBufferRaw(ICoords coords1, ICoords coords2,
+                                                       boolean findFast, boolean includeBorder,
+                                                       String dimension) {
+        CoordsInterval<UUID> test = new CoordsInterval<>(coords1, coords2);
+        test.setDimension(effectiveDimension(dimension));
+        return BUFFER_TREE.getOverlapping(BUFFER_TREE.getRoot(), test, findFast, includeBorder);
+    }
+
+    /**
+     * @deprecated Prefer {@link #findBufferRaw(ICoords, ICoords, boolean, boolean, String)}.
+     */
+    @Deprecated(since = "2.4")
+    private static List<IInterval<UUID>> findBufferRaw(ICoords coords1, ICoords coords2,
+                                                       boolean findFast, boolean includeBorder) {
+        return findBufferRaw(coords1, coords2, findFast, includeBorder,
+                CoordsInterval.DEFAULT_DIMENSION);
+    }
+
+    public static boolean intersectsParcel(ICoords coords, String dimension) {
+        return intersectsParcel(coords, coords, true, dimension);
+    }
+
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static boolean intersectsParcel(ICoords coords1, ICoords coords2, String dimension) {
+        return intersectsParcel(coords1, coords2, true, dimension);
+    }
+
+    /** @author Mark Gottschling on March 23, 2026 */
+    public static boolean intersectsParcel(ICoords coords1, ICoords coords2,
+                                           boolean includeBorders, String dimension) {
+        return !findBoxes(coords1, coords2, true, includeBorders, dimension).isEmpty();
+    }
+
+//    public static boolean intersectsParcel(ICoords coords) {
+//        return intersectsParcel(coords, coords);
+//    }
+//
+//    public static boolean intersectsParcel(ICoords coords1, ICoords coords2) {
+//        return intersectsParcel(coords1, coords2, true);
+//    }
+//
+//    /**
+//     * Used to determine if the provided area intersects with a parcel
+//     * @param coords1
+//     * @param coords2
+//     * @param includeBorders
+//     * @return
+//     */
+//    public static boolean intersectsParcel(ICoords coords1, ICoords coords2, boolean includeBorders) {
+//        List<Box> parcels = findBoxes(coords1, coords2, true, includeBorders);
+//        return !parcels.isEmpty();
+//    }
 
     /**
      * determines if a player has access/permission to execute event at coords ex break block, place block etc
@@ -885,97 +1003,6 @@ public class ParcelRegistry {
                         : parcel.grantsAccess(player.getUUID()))
                 .orElse(true);
     }
-
-//    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
-//        // this is the fastest lookup
-//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
-//        if (!intervals.isEmpty()) {
-//            Parcel parcel;
-//            // convert to parcels
-//            List<Parcel> parcels = getAsParcels(intervals);
-//
-//            if (parcels.isEmpty()) {
-//                return true;
-//            }
-//            if (intervals.size() > 1) {
-//                // find the least significant parcel
-//                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
-//                if (parcelOptional.isPresent()) {
-//                    parcel = parcelOptional.get();
-//                } else {
-//                    // TODO add chat warning
-//                    // TODO add log warning
-//                    // TODO maybe do something like labelling as abandoned and has a timer before it is removed from registry.
-//                    // this is a case where the interval still exists but the parcel has been removed
-//                    TREE.delete(intervals.get(0));
-//                    return true;
-//                }
-//            } else {
-//                parcel = parcels.get(0);
-//            }
-//
-//            // check player's access
-//            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
-//        }
-//        return true;
-//    }
-
-    /*
-     *
-     */
-//    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
-//        // this is the fastest lookup
-//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true );
-//        if (!intervals.isEmpty()) {
-//            Parcel parcel;
-//            // convert to parcels
-//            List<Parcel> parcels = getAsParcels(intervals);
-//
-//            if (parcels.isEmpty()) {
-//                return true;
-//            }
-//            if (intervals.size() > 1) {
-//                // find the least significant parcel
-//                Optional<Parcel> parcelOptional = findLeastSignificant(parcels);
-//                if (parcelOptional.isPresent()) {
-//                    parcel = parcelOptional.get();
-//                } else {
-//                    // this is a case where the interval still exists but the parcel has been removed
-//                    TREE.delete(intervals.get(0));
-//                    return true;
-//                }
-//            } else {
-//                parcel = parcels.get(0);
-//            }
-//
-//            // if you have an item in your hand, do whitelist short-circuit tests
-//            if (itemStack != null && !itemStack.isEmpty()) {
-//                ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", itemStack.getDisplayName().getString(), parcel);
-//                // test the item against the whitelisted item tags for the parcel
-//                for (String tagName : parcel.getItemTagWhitelist()) {
-//                    ResourceLocation location = new ResourceLocation(tagName);
-//                    ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location.toString());
-//                    // get the tag from the resource key
-//                    if (TagHelper.doesItemBelongToTag(itemStack.getItem(), location)) {
-//                        return true;
-//                    }
-//                }
-//
-//                ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getItemWhitelist());
-//                for (String itemName : parcel.getItemWhitelist()) {
-//                    ResourceLocation location = new ResourceLocation(itemName);
-//                    ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
-//                    if (ModUtil.getName(itemStack.getItem()).equals(location)) {
-//                        return true;
-//                    }
-//                }
-//            }
-//
-//            // check player's access
-//            return (itemStack !=null && !itemStack.isEmpty()) ? parcel.grantsAccess(entityId, itemStack) : parcel.grantsAccess(entityId);
-//        }
-//        return true;
-//    }
 
     public static boolean hasInteractAccess(ServerPlayer player, ICoords coords, String dimension, ItemStack itemStack) {
         return resolveParcelCached(player, coords, dimension)
@@ -1090,82 +1117,86 @@ public class ParcelRegistry {
     }
 
     /**
-     * UUID-only variant. Checks cache, falls through to BST, updates server cache.
-     * Does NOT send a network packet — use the ServerPlayer overload from event
-     * handlers where the player object is available.
+     * Returns true if the given player is blacklisted from claiming land within
+     * the nation that encloses the given coordinates.
+     * <p>
+     * If no enclosing nation exists at the coordinates, returns false — there is
+     * nothing to blacklist against.
+     * </p>
+     *
+     * @param coords    the coordinates to check (typically the Foundation Stone position)
+     * @param playerId  the claiming player's UUID
+     * @param dimension the dimension string
      */
-    public static Optional<Parcel> resolveParcelCached(UUID playerId, ICoords coords, String dimension) {
-        Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
+    public static boolean isBlacklistedFromNation(ICoords coords, UUID playerId,
+                                                  String dimension) {
+        return find(coords, dimension).stream()
+                .filter(Parcel::isNation)
+                .findFirst()
+                .map(nation -> nation.getEstate() instanceof NationEstate ne
+                        && ne.isBlacklisted(playerId))
+                .orElse(false);
+    }
+
+    /**
+     * Overload for call sites that already have the enclosing nation parcel resolved.
+     * Avoids a redundant registry lookup.
+     *
+     * @param nationParcel  the enclosing nation parcel
+     * @param playerId      the claiming player's UUID
+     */
+    public static boolean isBlacklistedFromNation(Parcel nationParcel, UUID playerId) {
+        if (nationParcel == null || !nationParcel.isNation()) return false;
+        return nationParcel.getEstate() instanceof NationEstate ne
+                && ne.isBlacklisted(playerId);
+    }
+
+    /**
+     * UUID-keyed variant — passes dimension through to {@link #resolveParcelAt}.
+     *
+     * @author Mark Gottschling on March 23, 2026
+     */
+    public static Optional<Parcel> resolveParcelCached(UUID playerId, ICoords coords,
+                                                       String dimension) {
+        Optional<ParcelRegionCache.CacheEntry> cached =
+                REGION_CACHE.getIfContains(playerId, coords, dimension);
         if (cached.isPresent()) {
             Parcel cachedParcel = cached.get().getParcel();
-            // only trust the cache if it is a leaf parcel type — parent types (nation/zone)
-            // may contain the coords but a child citizen/player parcel is the authoritative
-            // access check target at that position
             if (cachedParcel.getType().isLeaf()) {
                 return Optional.of(cachedParcel);
             }
-            // non-leaf cache hit — query BST for most specific parcel at target coords
-            // but do NOT update the cache — it correctly reflects the player's standing position
-            return resolveParcelAt(coords, coords);
+            return resolveParcelAt(coords, coords, dimension);
         }
 
-        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
-
+        Optional<Parcel> resolved = resolveParcelAt(coords, coords, dimension);
         if (resolved.isPresent()) {
             REGION_CACHE.update(playerId, resolved.get());
         } else {
             REGION_CACHE.invalidatePlayer(playerId);
         }
-
         return resolved;
     }
-//    public static Optional<Parcel> resolveParcelCached(UUID playerId, ICoords coords, String dimension) {
-//        Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
-//        if (cached.isPresent()) {
-//            return Optional.of(cached.get().getParcel());
-//        }
-//
-//        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
-//
-//        if (resolved.isPresent()) {
-//            REGION_CACHE.update(playerId, resolved.get());
-//        } else {
-//            REGION_CACHE.invalidatePlayer(playerId);
-//        }
-//
-//        return resolved;
-//    }
-
 
     /**
-     * ServerPlayer variant. Checks cache, falls through to BST, updates server
-     * cache, and syncs the result to the client via CacheSyncPacket.
-     * Use this from ModEvents where ServerPlayer is available.
+     * ServerPlayer-keyed variant — passes dimension through to {@link #resolveParcelAt}
+     * and syncs cache/wilderness packets.
+     *
+     * @author Mark Gottschling on March 23, 2026
      */
-    public static Optional<Parcel> resolveParcelCached(ServerPlayer player, ICoords coords, String dimension) {
+    public static Optional<Parcel> resolveParcelCached(ServerPlayer player, ICoords coords,
+                                                       String dimension) {
         UUID playerId = player.getUUID();
-
-//        ClaimMyLand.LOGGER.info("resolveParcelCached() coords -> {}", coords);
-        Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.getIfContains(playerId, coords, dimension);
+        Optional<ParcelRegionCache.CacheEntry> cached =
+                REGION_CACHE.getIfContains(playerId, coords, dimension);
         if (cached.isPresent()) {
             Parcel cachedParcel = cached.get().getParcel();
-//            ClaimMyLand.LOGGER.info("resolveParcelCached() cached parcel -> {}", cachedParcel);
-            // only trust the cache if it is a leaf parcel type — parent types (nation/zone)
-            // may contain the coords but a child citizen/player parcel is the authoritative
-            // access check target at that position
             if (cachedParcel.getType().isLeaf()) {
-//                ClaimMyLand.LOGGER.info("resolveParcelCached() isLeaf -> {}", cachedParcel.getType().isLeaf());
                 return Optional.of(cachedParcel);
             }
-            // non-leaf cache hit — query BST for most specific parcel at target coords
-            // but do NOT update the cache — it correctly reflects the player's standing position
-//            ClaimMyLand.LOGGER.info("resolveParcelCached() NOT cached, resolving at {}", coords);
-            return resolveParcelAt(coords, coords);
+            return resolveParcelAt(coords, coords, dimension);
         }
 
-        // cache miss — query BST
-        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
-
+        Optional<Parcel> resolved = resolveParcelAt(coords, coords, dimension);
         if (resolved.isPresent()) {
             REGION_CACHE.update(playerId, resolved.get());
             CMLNetwork.syncCacheToPlayer(player, resolved.get());
@@ -1173,29 +1204,8 @@ public class ParcelRegistry {
             REGION_CACHE.invalidatePlayer(playerId);
             CMLNetwork.syncWildernessToPlayer(player);
         }
-
         return resolved;
     }
-    //        if (cached.isPresent()) {
-//            // Cache hit — no BST, no packet needed (client already has this entry)
-//            return Optional.of(cached.get().getParcel());
-//        }
-//
-//        // Cache miss — query BST
-//        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
-//
-//        if (resolved.isPresent()) {
-//            REGION_CACHE.update(playerId, resolved.get());
-//            // notify client so it can do instant protection checks
-//            CMLNetwork.syncCacheToPlayer(player, resolved.get());
-//        } else {
-//            REGION_CACHE.invalidatePlayer(playerId);
-//            // tell client they are in wilderness
-//            CMLNetwork.syncWildernessToPlayer(player);
-//        }
-//
-//        return resolved;
-//    }
 
     /**
      * Tick-path variant used exclusively by the HUD sync in ModEvents.onPlayerTick().
@@ -1207,16 +1217,11 @@ public class ParcelRegistry {
      * Sends CacheSyncPacket only when the resolved parcel changes, using the
      * parcel ID stored in REGION_CACHE as the change-detector.
      */
-    public static void syncParcelToClient(ServerPlayer player, ICoords coords, String dimension) {
+    public static void syncParcelToClient(ServerPlayer player, ICoords coords,
+                                          String dimension) {
         UUID playerId = player.getUUID();
         Optional<ParcelRegionCache.CacheEntry> cached = REGION_CACHE.get(playerId);
 
-        // Early-exit only for true leaf parcel types — types that cannot contain
-        // child parcels. CITIZEN and PLAYER are both leaves:
-        //   PLAYER  — standalone parcel, cannot exist inside NATION or ZONE
-        //   CITIZEN — innermost parcel in the NATION → ZONE → CITIZEN hierarchy
-        // NATION and ZONE can both contain children, so the BST must run every tick
-        // while inside either of them to detect when the player enters a child parcel.
         if (cached.isPresent() && cached.get().contains(coords, dimension)) {
             ParcelType cachedType = cached.get().getParcel().getType();
             if (cachedType == ParcelType.CITIZEN || cachedType == ParcelType.PLAYER) {
@@ -1224,10 +1229,7 @@ public class ParcelRegistry {
             }
         }
 
-        // Cache miss, player outside cached bounds, or cached parcel is NATION/ZONE —
-        // query BST to find the innermost parcel at this position.
-        Optional<Parcel> resolved = resolveParcelAt(coords, coords);
-
+        Optional<Parcel> resolved = resolveParcelAt(coords, coords, dimension);
         UUID newId    = resolved.map(Parcel::getId).orElse(null);
         UUID cachedId = cached.map(e -> e.getParcel().getId()).orElse(null);
 
@@ -1243,24 +1245,20 @@ public class ParcelRegistry {
     }
 
     /**
-     * Returns the parcel with the least area of all parcels at the given coords,
-     * filtered to the specified dimension.
-     * @author Mark Gottschling on Mar 09, 2026
+     * Returns the parcel with the smallest area at the given coords in the given
+     * dimension. Uses the BST directly rather than post-filtering.
      */
     public static Optional<Parcel> findLeastSignificant(ICoords coords, String dimension) {
-        List<Parcel> parcels = ParcelRegistry.find(coords).stream()
-                .filter(p -> dimension.equals(p.getDimension()))
-                .toList();
-        return findLeastSignificant(parcels);
+        return findLeastSignificant(find(coords, dimension));
     }
 
     /**
-     * returns the parcel with the least area of all parcels at the given coords
-     * @param coords
-     * @return
+     * Dimension-blind variant used only by internal callers that have no dimension.
+     * @deprecated Prefer {@link #findLeastSignificant(ICoords, String)}.
      */
+    @Deprecated(since = "2.4")
     private static Optional<Parcel> findLeastSignificant(ICoords coords) {
-        return findLeastSignificant(ParcelRegistry.find(coords));
+        return findLeastSignificant(coords, CoordsInterval.DEFAULT_DIMENSION);
     }
 
     private static Optional<Parcel> findLeastSignificant(List<Parcel> parcels) {
@@ -1287,8 +1285,9 @@ public class ParcelRegistry {
      * returns the most significant (largest area) parcel at coords,
      * optionally filtered by type. used to find the containing nation/zone parcel.
      */
-    public static Optional<Parcel> findMostSignificant(ICoords coords) {
-        return findMostSignificant(ParcelRegistry.find(coords));
+    public static Optional<Parcel> findMostSignificant(ICoords coords, String dimension,
+                                                       ParcelType... types) {
+        return findMostSignificant(find(coords, dimension), types);
     }
 
     public static Optional<Parcel> findMostSignificant(List<Parcel> parcels, String dimension, ParcelType... types) {
@@ -1347,16 +1346,21 @@ public class ParcelRegistry {
      * returns true if fire spread should be cancelled at the given coords.
      * checks the server-wide config first, then the estate-level property.
      */
-    public static boolean isFireSpreadPrevented(ICoords coords, BlockState state) {
-        if (!Config.SERVER.protection.preventFireSpread.get()) {
-            return false;
-        }
-        if (!state.is(ModTags.Blocks.FIRE_BLOCKS)) {
-            return false;
-        }
-        return findLeastSignificant(coords)
+    public static boolean isFireSpreadPrevented(ICoords coords, BlockState state,
+                                                String dimension) {
+        if (!Config.SERVER.protection.preventFireSpread.get()) return false;
+        if (!state.is(ModTags.Blocks.FIRE_BLOCKS)) return false;
+        return findLeastSignificant(coords, dimension)
                 .map(parcel -> parcel.getEstate().isPreventFireSpread())
                 .orElse(false);
+    }
+
+    /**
+     * @deprecated Prefer {@link #isFireSpreadPrevented(ICoords, BlockState, String)}.
+     */
+    @Deprecated(since = "2.4")
+    public static boolean isFireSpreadPrevented(ICoords coords, BlockState state) {
+        return isFireSpreadPrevented(coords, state, CoordsInterval.DEFAULT_DIMENSION);
     }
 
 //    /*
@@ -1431,22 +1435,14 @@ public class ParcelRegistry {
         });
     }
 
-    //    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
-//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true);
-//        if (intervals.isEmpty()) return Optional.empty();
-//        List<Parcel> parcels = getAsParcels(intervals);
-//        if (parcels.isEmpty()) {
-//            TREE.delete(intervals.get(0)); // stale interval cleanup
-//            return Optional.empty();
-//        }
-//        return intervals.size() > 1 ? findLeastSignificant(parcels) : Optional.of(parcels.get(0));
-//    }
-    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
-        // NOTE: resolveParcelAt() is called from hasAccess() / hasInteractAccess(),
-        // which do not currently receive a player UUID. The cache lookup by player
-        // is wired at the event-handler level (ModEvents) in a later step, where
-        // the UUID is available. This method remains the fallback BST path.
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true);
+    /**
+     * Resolves the least-significant parcel at the given coordinates within the
+     * specified dimension.
+     */
+    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2,
+                                                    String dimension) {
+        List<IInterval<UUID>> intervals =
+                findRaw(coords1, coords2, false, true, dimension);
         if (intervals.isEmpty()) return Optional.empty();
         List<Parcel> parcels = getAsParcels(intervals);
         if (parcels.isEmpty()) {
@@ -1457,29 +1453,48 @@ public class ParcelRegistry {
     }
 
     /**
-     * Determines the conflict state for a proposed parcel box and its owner.
-     * Returns 1 if:
-     *   - the proposed border overlaps any existing parcel border (any owner), OR
-     *   - the proposed border overlaps another owner's buffer zone.
-     * Returns 0 if no conflict exists.
+     * Dimension-blind fallback for internal callers that haven't been migrated.
+     * @deprecated Prefer {@link #resolveParcelAt(ICoords, ICoords, String)}.
      */
-    public static int resolveConflictState(Box proposedBox, UUID ownerId, UUID excludeParcelId, ParcelType placingType) {
-        // rule 1: border-vs-border — any overlap is a conflict, excluding self and allowed ancestors
-        List<Parcel> borderOverlaps = find(proposedBox).stream()
-                .peek(p -> ClaimMyLand.LOGGER.debug("resolveConflictState: excludeParcelId={}, overlap parcel id={}, match={}",
-                        excludeParcelId, p.getId(), p.getId().equals(excludeParcelId)))
+    @Deprecated(since = "2.4")
+    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
+        return resolveParcelAt(coords1, coords2, CoordsInterval.DEFAULT_DIMENSION);
+    }
 
+//    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
+//        // NOTE: resolveParcelAt() is called from hasAccess() / hasInteractAccess(),
+//        // which do not currently receive a player UUID. The cache lookup by player
+//        // is wired at the event-handler level (ModEvents) in a later step, where
+//        // the UUID is available. This method remains the fallback BST path.
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, false, true);
+//        if (intervals.isEmpty()) return Optional.empty();
+//        List<Parcel> parcels = getAsParcels(intervals);
+//        if (parcels.isEmpty()) {
+//            TREE.delete(intervals.get(0)); // stale interval cleanup
+//            return Optional.empty();
+//        }
+//        return intervals.size() > 1 ? findLeastSignificant(parcels) : Optional.of(parcels.get(0));
+//    }
+
+    /**
+     * Determines the visual conflict state for a proposed parcel placement.
+     * Now dimension-aware: only parcels in the same dimension are considered.
+     */
+    public static int resolveConflictState(Box proposedBox, UUID ownerId,
+                                           UUID excludeParcelId, ParcelType placingType,
+                                           String dimension) {
+        List<Parcel> borderOverlaps = find(proposedBox, dimension).stream()
+                .peek(p -> ClaimMyLand.LOGGER.debug(
+                        "resolveConflictState: excludeParcelId={}, overlap parcel id={}, match={}",
+                        excludeParcelId, p.getId(), p.getId().equals(excludeParcelId)))
                 .filter(p -> !p.getId().equals(excludeParcelId))
                 .filter(p -> !isAllowedAncestor(p.getType(), placingType))
                 .filter(p -> !isAllowedDescendant(p.getType(), placingType))
                 .filter(p -> !isSameOwnerSibling(p, ownerId, placingType, proposedBox))
                 .toList();
-        if (!borderOverlaps.isEmpty()) {
-            return 1;
-        }
+        if (!borderOverlaps.isEmpty()) return 1;
 
-        // rule 2: border-vs-buffer — conflict only if different owner, excluding self and allowed ancestors
-        List<Parcel> bufferOverlaps = findBuffer(proposedBox).stream()
+        List<Parcel> bufferOverlaps = findBuffer(proposedBox, dimension).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))
                 .filter(p -> !isAllowedAncestor(p.getType(), placingType))
                 .filter(p -> !isAllowedDescendant(p.getType(), placingType))
@@ -1488,6 +1503,43 @@ public class ParcelRegistry {
                 .anyMatch(p -> !ownerId.equals(p.getOwnerId()));
         return foreignBufferConflict ? 1 : 0;
     }
+
+    /**
+     * Dimension-blind overload kept for call sites that haven't been migrated.
+     * @deprecated Prefer {@link #resolveConflictState(Box, UUID, UUID, ParcelType, String)}.
+     */
+    @Deprecated(since = "2.4")
+    public static int resolveConflictState(Box proposedBox, UUID ownerId,
+                                           UUID excludeParcelId, ParcelType placingType) {
+        return resolveConflictState(proposedBox, ownerId, excludeParcelId, placingType,
+                CoordsInterval.DEFAULT_DIMENSION);
+    }
+
+//    public static int resolveConflictState(Box proposedBox, UUID ownerId, UUID excludeParcelId, ParcelType placingType) {
+//        // rule 1: border-vs-border — any overlap is a conflict, excluding self and allowed ancestors
+//        List<Parcel> borderOverlaps = find(proposedBox).stream()
+//                .peek(p -> ClaimMyLand.LOGGER.debug("resolveConflictState: excludeParcelId={}, overlap parcel id={}, match={}",
+//                        excludeParcelId, p.getId(), p.getId().equals(excludeParcelId)))
+//
+//                .filter(p -> !p.getId().equals(excludeParcelId))
+//                .filter(p -> !isAllowedAncestor(p.getType(), placingType))
+//                .filter(p -> !isAllowedDescendant(p.getType(), placingType))
+//                .filter(p -> !isSameOwnerSibling(p, ownerId, placingType, proposedBox))
+//                .toList();
+//        if (!borderOverlaps.isEmpty()) {
+//            return 1;
+//        }
+//
+//        // rule 2: border-vs-buffer — conflict only if different owner, excluding self and allowed ancestors
+//        List<Parcel> bufferOverlaps = findBuffer(proposedBox).stream()
+//                .filter(p -> !p.getId().equals(excludeParcelId))
+//                .filter(p -> !isAllowedAncestor(p.getType(), placingType))
+//                .filter(p -> !isAllowedDescendant(p.getType(), placingType))
+//                .toList();
+//        boolean foreignBufferConflict = bufferOverlaps.stream()
+//                .anyMatch(p -> !ownerId.equals(p.getOwnerId()));
+//        return foreignBufferConflict ? 1 : 0;
+//    }
 
     /**
      * Returns true if the enclosing parcel type is a permitted ancestor of the placing
@@ -1522,6 +1574,19 @@ public class ParcelRegistry {
         if (p.getType() != placingType) return false;
         // same owner parcels may overlap in buffer zones but actual borders must not touch
         return !ModUtil.touching(proposedBox, p.getBox());
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helper — normalise null dimension to DEFAULT_DIMENSION
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns {@code dim} if non-null, otherwise {@link CoordsInterval#DEFAULT_DIMENSION}.
+     * Mirrors {@link CoordsInterval#effectiveDimension(String)} for use inside
+     * ParcelRegistry before constructing intervals.
+     */
+    private static String effectiveDimension(String dim) {
+        return CoordsInterval.effectiveDimension(dim);
     }
 
     // expose a detached parcel list

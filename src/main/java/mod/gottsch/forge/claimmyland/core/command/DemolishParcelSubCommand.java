@@ -174,7 +174,8 @@ public class DemolishParcelSubCommand implements SubCommand {
         // if a Nation parcel then remove all Zone tenant estates and conver all Citizen tenant estates to Player
         if (parcel.getType() == ParcelType.NATION) {
             // find all parcel within the boundary of the parcel
-            List<Parcel> tenantParcels = ParcelRegistry.find(parcel.getBox()).stream().filter(p -> p instanceof NationalizedParcel).toList();
+            List<Parcel> tenantParcels = ParcelRegistry.find(parcel.getBox(), source.getLevel().dimension().location().toString()).stream()
+                    .filter(p -> p instanceof NationalizedParcel).toList();
             // estate list of tenant parcels
             Set<Estate> removeEstates = new HashSet<>();
             tenantParcels.stream()

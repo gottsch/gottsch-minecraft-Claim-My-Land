@@ -149,6 +149,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
     public Box getAbsoluteBox() {
         if (getParcelId() != null) {
+            String dimension = level.dimension().location().toString();
             Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
             if (parcel.isPresent()) {
                 return parcel.get().getBox();
@@ -177,7 +178,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @author Mark Gottschling on Mar 11, 2026
      */
     public void placeParcelBorder(ServerPlayer placingPlayer) {
-        ClaimMyLand.LOGGER.info("parcel id -> {}", getParcelId());
+//        ClaimMyLand.LOGGER.info("parcel id -> {}", getParcelId());
         if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;
 
         Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
@@ -194,11 +195,11 @@ public class BorderStoneBlockEntity extends BlockEntity {
                 : parcel.get().getEstate().getOwnerId())
                 : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
 
-        ClaimMyLand.LOGGER.info("ownerId -> {}", String.valueOf(ownerId));
+//        ClaimMyLand.LOGGER.info("ownerId -> {}", String.valueOf(ownerId));
 
+        String dimension = level.dimension().location().toString();
         int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? getParcelId() : null,
-                parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())));
-
+                parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())), dimension);
 
         ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
                 getParcelId(), parcel.isPresent(), conflictState, getBlockPos().getY(),
@@ -206,19 +207,18 @@ public class BorderStoneBlockEntity extends BlockEntity {
 
         if (parcel.isPresent()) {
             if (placingPlayer != null) {
-                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrakcingPlayersAndSelf...");
+//                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrakcingPlayersAndSelf...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayersAndSelf(
                         serverLevel, placingPlayer, parcel.get(), true, conflictState, getBlockPos().getY());
             } else {
-                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrackingPlayers...");
+//                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrackingPlayers...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayers(
                         serverLevel, parcel.get(), true, conflictState, getBlockPos().getY());
             }
             ActiveBorderStoneRegistry.add(this);
         } else if (placingPlayer != null) {
-            ClaimMyLand.LOGGER.info("syncPreviewParcelToTrackingPlayersAndSelf...");
+//            ClaimMyLand.LOGGER.info("syncPreviewParcelToTrackingPlayersAndSelf...");
             // phase 1 preview — parcel not yet registered; register on client first
-            String dimension = level.dimension().location().toString();
             CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
                     serverLevel, placingPlayer,
                     getParcelId(), getParcelId(),   // estateId = parcelId (throwaway for preview)

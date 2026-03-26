@@ -111,6 +111,15 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.whitelist.remove.failure"), "Unable to remove friend from the whitelist.");
         add(LangUtil.chat("estate.whitelist.list"), "Friends Whitelist for estate ");
 
+        // blacklist command responses
+        add(LangUtil.chat("estate.blacklist.add.success"), "Friend was added to the blacklist.");
+        add(LangUtil.chat("estate.blacklist.add.failure"), "Unable to add friend to the blacklist.");
+        add(LangUtil.chat("estate.blacklist.add.same_name.failure"), "Cannot add owner as a friend.");
+        add(LangUtil.chat("estate.blacklist.remove.success"), "Friend was removed from the blacklist.");
+        add(LangUtil.chat("estate.blacklist.remove.failure"), "Unable to remove friend from the blacklist.");
+        add(LangUtil.chat("estate.blacklist.list"), "Blacklist for nation estate ");
+        add(LangUtil.chat("estate.blacklist.unable_to_locate"), "A nation with that name does not exist.");
+
         add(LangUtil.chat("estate.block_tag.add.success"), "A block tag was added to the block tag whitelist.");
         add(LangUtil.chat("estate.block_tag.add.failure"), "Unable to add block tag to the block tag whitelist.");
         add(LangUtil.chat("estate.block_tag.remove.success"), "A block tag was removed from the block tag whitelist.");
@@ -237,6 +246,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("deed.too_small"), "One of the Deed's dimensions is too small.");
         add(LangUtil.chat("deed.outside_world_boundaries"), "The parcel would extend beyond the world boundaries.");
         add(LangUtil.chat("deed.invalid_type"), "Invalid deed type. The accepted values are: PLAYER, CITIZEN, or NATION.");
+        add(LangUtil.chat("deed.claim.access_denied"), "You do not have permission to claim land here.");
 
         // foundation stones
         add(LangUtil.chat("foundation_stone.unable_to_location"), "Unable to locate foundation stone block entity.");
@@ -250,7 +260,6 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or it is claimed.");
         add(LangUtil.chat("zone_placement.not_owner"), "You are not the owner of this nation.");
         add(LangUtil.chat("zone_placement.not_same_nation"), "That block is not within the same nation parcel as the start block.");
-
 
         // info
         add(LangUtil.chat("parcel.claimed_by"), "The block at %s is claimed by %s:");
@@ -267,6 +276,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.claimed_by.relinquished"), "None (relinquished)");
 
         add(LangUtil.chat("estate.player.whitelist"), "Player Whitelist: ");
+        add(LangUtil.chat("estate.player.blacklist"), "Blacklisted Players: ");
         add(LangUtil.chat("estate.block.whitelist"), "Block Whitelist: ");
         add(LangUtil.chat("estate.block_tag.whitelist"), "Block Tag Whitelist: ");
         add(LangUtil.chat("estate.item.whitelist"), "Item Whitelist: ");
@@ -275,6 +285,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.entity_spawn_tag.whitelist"), "Entity Spawn Tag Whitelist: ");
 
         add(LangUtil.chat("estate.tenants"), "Tenant Estates:");
+
 
         add(LangUtil.chat("backup.success"),"Backup saved:");
         add(LangUtil.chat( "backup.failure"), "Backup failed. Check server logs for details.");

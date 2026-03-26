@@ -144,7 +144,7 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
             return ClaimResult.FAILURE;
         }
 
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox).stream()
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, level.dimension().location().toString()).stream()
                 .filter(p -> !p.getId().equals(parentParcel.getId()))
                 .filter(p -> !p.isNation())
                 .toList();

@@ -13,9 +13,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 >
 > **Back up your world before installing v2.** Copy your entire world folder to a safe location before upgrading. Once you have loaded the world in v2, downgrading back to v1 is not supported.
 
-> **💡 Recommended:** Since this mod is heavily command-based, we recommend using [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
+> **💡 Recommended:** Since this mod is heavily command-based, we recommend using 🔗 [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
 
 ---
+
+## [2.4.0] - 2026-03-26
+
+* 🔗 Requires [GottschCore](https://www.curseforge.com/minecraft/mc-mods/gottschcore) v2.6 or later.*
+
+### 🎉 Highlights
+
+- **Multi-dimension support** — parcels are now fully dimension-aware. Protection works correctly in the Nether, End, and modded dimensions.
+- **Parcel entry title** — a title overlay announces the estate name when crossing into a Nation, Citizen, or Player parcel, with a configurable cooldown to prevent spam.
+- **Claim celebration** — committing a claim triggers a perimeter particle wave visible only to the claiming player.
+- **Foundation Stone particles** — placing a Foundation Stone emits a dust displacement effect radiating outward from the stone.
+- **Nation player blacklist** — nation owners can now block specific players from claiming land within their nation, with a generic denial message that protects the owner's privacy.
+
+---
+
+### ➕ Added
+
+#### Multi-Dimension Support (BST Dimension Refactor)
+- Parcels are now fully dimension-aware in the internal spatial index (BST). Previously all parcel lookups were dimension-blind and relied on post-filtering, which could cause cross-dimension false-positives.
+- The Foundation Stone, Border Stone, and all protection events now correctly resolve parcels per-dimension, enabling reliable parcel protection in the Nether, End, and modded dimensions.
+- GottschCore `CoordsInterval` updated: `dimension` is now a first-class field and the primary sort key in the BST.
+- Fixed a pre-existing bug in `CoordsIntervalTreeNBTSerializer` where the RIGHT child was incorrectly wired to the LEFT slot during deserialization.
+
+#### Parcel Entry Title Display
+- When crossing into a Nation, Citizen, or Player parcel, a title overlay is now displayed using Minecraft's vanilla title system.
+- Nation parcels show the estate name as a large bold title with type and owner as a subtitle.
+- Citizen and Player parcels show a smaller subtitle only, visually distinguishing them from Nation announcements.
+- Zone parcel boundaries and wilderness transitions are silent.
+- A per-parcel cooldown (default 30 seconds) prevents repeated title spam when crossing the same border multiple times.
+- Server master switch: `enableParcelEntryTitle` in `claimmyland-server.toml` (default: `true`).
+- Client opt-out: `enableParcelEntryTitle` in `claimmyland-client.toml` (default: `true`).
+- Timing is configurable: fade-in, stay, and fade-out ticks all adjustable in client config.
+- Cooldown clears on dimension change and logout so familiar parcels re-announce after a context switch.
+
+#### Foundation Stone Placement Particles
+- Placing a Foundation Stone now emits a dust displacement particle effect.
+- Phase 1: 24 `POOF` particles radiate outward at ground level from the stone's position.
+- Phase 2: 10 `SMOKE` particles rise from the stone's centre, simulating displaced air.
+
+#### Claim Celebration Effects
+- Successfully committing a claim now triggers a perimeter particle wave visible only to the claiming player (intentionally private — avoids revealing position on PvP servers).
+- For small parcels (perimeter ≤ 128 blocks): particles emit along the full XZ perimeter.
+- For large parcels (perimeter > 128 blocks): particles emit for up to 12 blocks outward from the Foundation Stone along each of the four edges.
+- Each perimeter position emits `HAPPY_VILLAGER` (rising) and `POOF` (radiating outward) particles.
+
+#### Nation Player Blacklist
+- Nation owners can now blacklist specific players from claiming land within their nation, even if those players possess a valid Deed.
+- Blacklisted players receive a generic denial message that does not reveal they are blacklisted or identify the nation, preserving the nation owner's privacy.
+- The nation owner is always exempt from their own blacklist.
+- Blacklist blocks all claim paths: Deed use on a Foundation Stone, CitizenTool parcel creation, and ZoningTool zone creation.
+- New commands:
+  - `/cml estate blacklist add <estateName> <playerName>` — add a player to the blacklist
+  - `/cml estate blacklist remove <estateName> <playerName>` — remove a player from the blacklist
+  - `/cml estate blacklist list <estateName>` — view the blacklist (output sent privately to the command sender only)
+- Blacklist is displayed in estate details (`/cml estate details`) for nation owners.
+- Blacklist count and add/remove icons shown in the estate list view for nation estates.
+
+#### Server Config Sync
+- A new `ServerConfigSyncPacket` now syncs selected server config values to clients on login and dimension change.
+- Currently synced values: `parcelBufferRadius`, `nationParcelBufferRadius`, `enableParcelEntryTitle`.
+- Ensures client-side features (JourneyMap buffer overlay, parcel entry title) always reflect the current server configuration.
+
+### ⚙️ Changed
+
+- `EstateDisplayFormatter`: Nation estate entries now show a Blacklisted Players section in the detailed view, and a blacklist count with add icon in the list view.
+- `FormatterConstants`: Fixed `/cml-ops` icon builders — they were incorrectly using `/cml` commands instead of `/cml-ops` commands.
+- `FormatterConstants`: Fixed `playerWhitelistAddIcon()` and `playerWhitelistRemoveIcon()` — command paths were incorrect (`whitelist add player` → `whitelist friends add/remove`).
+- `FormatterConstants`: Added ops variants for all estate icon builders (`estateRenameIconOps`, `estateDemolishIconOps`, `estateRemoveIconOps`, `estateTransferIconOps`, `playerWhitelistAddIconOps`, `playerWhitelistRemoveIconOps`).
+- `FormatterConstants`: Added blacklist icon builders (`playerBlacklistAddIcon`, `playerBlacklistRemoveIcon`, and their ops variants).
+- `FormatterConstants`: Teleport icon changed from `↗` (small, hard to read) to `➤` (solid arrowhead, more visible at Minecraft chat font size).
+- `WhitelistFormatter`: Added `formatEstateListPlayerBlacklist()` to display blacklisted players with correct remove icons and ops/non-ops command variants.
+- `ParcelRegistry`: All `find()`, `findBuffer()`, `findBoxes()`, `intersectsParcel()`, `resolveConflictState()`, `findLeastSignificant()`, `findMostSignificant()`, `isFireSpreadPrevented()`, `resolveParcelCached()`, and `syncParcelToClient()` methods now have dimension-aware overloads. Old dimension-blind signatures are retained but deprecated.
+
+### 🐛 Fixed
+
+- Fixed `CoordsIntervalTreeNBTSerializer` RIGHT child deserialization bug — the RIGHT child was being wired to the LEFT slot, corrupting the in-memory BST structure after a world load.
+- Fixed `/cml-ops` estate action icons firing `/cml` commands instead of `/cml-ops` commands.
+- Fixed Friends Whitelist add/remove icon commands using wrong command path.
+- Fixed cross-dimension parcel false-positives — parcels in the Nether/End could incorrectly match queries in the Overworld due to the dimension-blind BST.
+
+### 🔧 TTechnical Notes
+
+- `BlockEvent.EntityPlaceEvent` is server-side only in Forge 1.20.1 — Foundation Stone placement particles are triggered via `SyncParcelPacket.handle()` instead (on new preview arrival).
+- Fluid spread prevention was investigated but no reliable cancellable Forge 1.20.1 event exists for fluid flow — deferred to v2.5.
+- Fire and lava-ignited fire prevention was confirmed already working via the existing `BlockEvent.EntityPlaceEvent` + `isFireSpreadPrevented()` path and `ModTags.Blocks.FIRE_BLOCKS`.
+
+---
+
+* 🔗 Requires [GottschCore](https://www.curseforge.com/minecraft/mc-mods/gottschcore) v2.6 or later.*
+
+---
+
 ## [2.3.0] - 2026-03-22
 
 ### 🎉 Highlights

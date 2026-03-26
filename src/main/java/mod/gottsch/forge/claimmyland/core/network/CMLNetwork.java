@@ -20,6 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.network;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.client.packet.handler.ClientCelebrationHandler;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
@@ -33,15 +34,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * central network channel for Claim My Land.
@@ -117,6 +118,32 @@ public class CMLNetwork {
                 BorderVisibilityPacket::encode,
                 BorderVisibilityPacket::decode,
                 BorderVisibilityPacket::handle,
+                java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        );
+
+        CHANNEL.registerMessage(
+                id++,
+                ServerConfigSyncPacket.class,
+                ServerConfigSyncPacket::encode,
+                ServerConfigSyncPacket::decode,
+                ServerConfigSyncPacket::handle,
+                java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        );
+
+        CHANNEL.registerMessage(
+                id++,
+                ClaimCelebrationPacket.class,
+                ClaimCelebrationPacket::encode,
+                ClaimCelebrationPacket::decode,
+                // instruct the client-side only processing of packet
+                (packet, ctx) -> {
+                    ctx.get().enqueueWork(() ->
+                            DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+                                    ClientCelebrationHandler.handle(packet)
+                            )
+                    );
+                    ctx.get().setPacketHandled(true);
+                },
                 java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT)
         );
 
@@ -263,11 +290,20 @@ public class CMLNetwork {
      * @author Mark Gottschling on Mar 11, 2026
      */
     public static void syncAllParcelsToPlayer(ServerPlayer player) {
+        // Sync server config values to client first so they are in place
+        // before any parcel data is processed client-side
+        CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                ServerConfigSyncPacket.fromServerConfig()
+        );
+
         List<SyncParcelPacket> packets = ParcelRegistry.getParcels().stream()
                 .map(parcel -> new SyncParcelPacket(parcel,
                         resolveOwnerName(player.serverLevel(), parcel.getEstate().getOwnerId())))
                 .toList();
+
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAllParcelsPacket(packets));
+
         ClaimMyLand.LOGGER.debug("CMLNetwork: synced {} parcel(s) to player {}",
                 packets.size(), player.getScoreboardName());
 
@@ -490,4 +526,28 @@ public class CMLNetwork {
             syncAllParcelsToPlayer(player);
         }
     }
+
+    /**
+     * Sends a {@link ClaimCelebrationPacket} to the claiming player only.
+     * The celebration is intentionally private — it avoids revealing the claiming
+     * player's position to others on PvP servers.
+     *
+     * @param player       the player who just committed the claim
+     * @param parcel       the newly registered parcel
+     * @param stonePos     BlockPos of the Foundation Stone that was used
+     */
+    public static void sendClaimCelebration(ServerPlayer player, Parcel parcel, BlockPos stonePos) {
+        CHANNEL.send(
+                PacketDistributor.PLAYER.with(() -> player),
+                new ClaimCelebrationPacket(
+                        parcel.getMinCoords().getX(),
+                        parcel.getMinCoords().getZ(),
+                        parcel.getMaxCoords().getX(),
+                        parcel.getMaxCoords().getZ(),
+                        stonePos.getX(),
+                        stonePos.getY(),
+                        stonePos.getZ())
+        );
+    }
+
 }

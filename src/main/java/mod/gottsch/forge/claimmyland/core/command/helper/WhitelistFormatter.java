@@ -27,6 +27,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
 
+import javax.annotation.Nullable;
 import java.util.*;
 
 import static mod.gottsch.forge.claimmyland.core.command.helper.FormatterConstants.*;
@@ -161,36 +162,55 @@ public class WhitelistFormatter {
      * @param indent   indentation prefix
      * @return formatted component lines
      */
-    static List<Component> formatEstateListPlayerWhitelist(ServerLevel level,
-                                                           Set<UUID> whitelist, String indent, String estateName) {
-        return formatPlayerList(level, whitelist, indent, null, estateName);
-    }
 //    static List<Component> formatEstateListPlayerWhitelist(ServerLevel level,
-//                                                           Set<UUID> whitelist,
-//                                                           String indent) {
-//        List<Component> lines = new ArrayList<>();
-//
-//        List<String> playerNames = whitelist.stream()
-//                .map(uuid -> PlayerRegistry.getPlayerName(level, uuid))
-//                .flatMap(Optional::stream)
-//                .toList();
-//
-//        List<String> sortedPlayers = new ArrayList<>(playerNames);
-//        sortedPlayers.sort(String.CASE_INSENSITIVE_ORDER);
-//
-//        final int maxPerRow = 5;
-//
-//        for (int i = 0; i < sortedPlayers.size(); i += maxPerRow) {
-//            MutableComponent component = Component.literal(indent);
-//            for (int j = 0; j < maxPerRow && (i + j) < sortedPlayers.size(); j++) {
-//                if (j > 0) component.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
-//                component.append(Component.literal(sortedPlayers.get(i + j)).withStyle(ChatFormatting.WHITE));
-//            }
-//            lines.add(component);
-//        }
-//        lines.add(newline());
-//        return lines;
+//                                                           Set<UUID> whitelist, String indent, String estateName) {
+//        return formatPlayerList(level, whitelist, indent, null, estateName);
 //    }
+
+    public static List<Component> formatEstateListPlayerWhitelist(ServerLevel level,
+                                                                  Set<UUID> blacklist,
+                                                                  String indent,
+                                                                  String estateName,
+                                                                  @Nullable String ownerName) {
+        return formatPlayerList(level, blacklist, indent, estateName, ownerName, true);
+    }
+
+    public static List<Component> formatEstateListPlayerBlacklist(ServerLevel level,
+                                                                  Set<UUID> blacklist,
+                                                                  String indent,
+                                                                  String estateName,
+                                                                  @Nullable String ownerName) {
+        return formatPlayerList(level, blacklist, indent, estateName, ownerName, false);
+    }
+
+    // Update the existing private formatPlayerList() to handle blacklist remove icons
+    // by adding a boolean isWhitelist parameter, or add a separate private helper.
+    // Simplest approach — add a new private helper formatBlacklistEntry():
+
+    private static List<Component> formatPlayerList(ServerLevel level,
+                                                    Set<UUID> playerIds,
+                                                    String indent,
+                                                    String estateName,
+                                                    @Nullable String ownerName,
+                                                    boolean isWhitelist) {
+        List<Component> lines = new ArrayList<>();
+        for (UUID id : playerIds) {
+            String name = PlayerRegistry.getPlayerName(level, id).orElse(id.toString().substring(0, 8));
+            MutableComponent line = Component.literal(indent + LangUtil.INDENT2 + name)
+                    .withStyle(ChatFormatting.WHITE);
+            if (isWhitelist) {
+                line.append(ownerName != null
+                        ? playerWhitelistRemoveIconOps(ownerName, estateName, name)
+                        : playerWhitelistRemoveIcon(estateName, name));
+            } else {
+                line.append(ownerName != null
+                        ? playerBlacklistRemoveIconOps(ownerName, estateName, name)
+                        : playerBlacklistRemoveIcon(estateName, name));
+            }
+            lines.add(line);
+        }
+        return lines;
+    }
 
     /**
      * formats the player whitelist as it appears inline inside the estate <em>details</em>

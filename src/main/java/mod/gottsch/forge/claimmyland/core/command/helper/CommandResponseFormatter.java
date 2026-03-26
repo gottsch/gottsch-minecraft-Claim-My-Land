@@ -451,10 +451,10 @@ public class CommandResponseFormatter {
     private static List<Component> buildFull(
             ChatFormatting color, String icon, String titleKey, String bodyKey, Object[] bodyArgs) {
 
-        ClaimMyLand.LOGGER.info("buildFull bodyArgs.length=" + bodyArgs.length);
-        for (int i = 0; i < bodyArgs.length; i++) {
-            ClaimMyLand.LOGGER.info("  bodyArgs[" + i + "] = " + bodyArgs[i]);
-        }
+//        ClaimMyLand.LOGGER.info("buildFull bodyArgs.length=" + bodyArgs.length);
+//        for (int i = 0; i < bodyArgs.length; i++) {
+//            ClaimMyLand.LOGGER.info("  bodyArgs[" + i + "] = " + bodyArgs[i]);
+//        }
         List<Component> lines = new ArrayList<>();
         // header line uses the generic icon label (ERROR / SUCCESS / WARNING)
         lines.add(Component.literal(icon + " " + icon2Label(icon))

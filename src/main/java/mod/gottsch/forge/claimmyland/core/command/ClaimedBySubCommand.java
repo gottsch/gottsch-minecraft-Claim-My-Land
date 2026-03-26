@@ -72,7 +72,8 @@ public class ClaimedBySubCommand implements SubCommand {
                     ? Coords.of(source.getPosition())
                     : Coords.of(pos);
 
-            List<Parcel> parcels = new ArrayList<>(ParcelRegistry.find(posCoords).stream()
+            List<Parcel> parcels = new ArrayList<>(ParcelRegistry.find(posCoords,
+                            source.getLevel().dimension().location().toString()).stream()
                     .filter(p -> p.getType() != ParcelType.ZONE).toList());
 
             if (parcels.isEmpty()) {

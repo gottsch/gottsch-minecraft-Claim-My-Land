@@ -24,6 +24,7 @@ import mod.gottsch.forge.claimmyland.core.block.FoundationStone;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.forge.claimmyland.core.parcel.ClaimResult;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
@@ -42,6 +43,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -243,6 +245,16 @@ public abstract class Deed extends Item {
                 String dimension = context.getLevel().dimension().location().toString();
                 Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(targetCoords, dimension);
 
+                // Blacklist check — deny if player is blacklisted from the enclosing nation
+                if (ParcelRegistry.isBlacklistedFromNation(
+                        Coords.of(context.getClickedPos()),
+                        context.getPlayer().getUUID(),
+                        dimension)) {
+                    PlayerMessageHelper.sendFailure(context.getPlayer(),
+                            "deed.claim.access_denied");
+                    return InteractionResult.FAIL;
+                }
+
                 Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
 
@@ -265,20 +277,21 @@ public abstract class Deed extends Item {
                         context.getItemInHand().shrink(1);
                     }
 
-                    // remove the border
-//                    ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder();
-//                    ((FoundationStoneBlockEntity) blockEntity).removeHorizontalArea();
                     // remove the foundation stone
                     blockEntity.getLevel().setBlock(context.getClickedPos(), Blocks.AIR.defaultBlockState(), 3);
 
-                    // TODO add particle effects or place construction tap around border or border display block
+                    // Celebrate the claim — perimeter particle wave on the claiming player's client only
+                    if (context.getPlayer() instanceof ServerPlayer serverPlayer
+                            && context.getLevel() instanceof ServerLevel) {
+                        CMLNetwork.sendClaimCelebration(serverPlayer, parcel, context.getClickedPos());
+                    }
 
-                    // send success message
                     PlayerMessageHelper.sendSuccess(context.getPlayer(),
                             "deed.claim.success",
                             "deed.claim.success.detail",
                             parcel.getMinCoords().toShortString(),
                             ModUtil.getSize(parcel.getBox()).toShortString());
+
 
                     if (claimResult == ClaimResult.SUCCESS_WITH_WARNINGS) {
                         PlayerMessageHelper.sendWarning(context.getPlayer(),
