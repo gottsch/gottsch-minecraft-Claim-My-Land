@@ -21,7 +21,10 @@ package mod.gottsch.forge.claimmyland.core.item;
 
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.gottschcore.spatial.Box;
+import mod.gottsch.forge.gottschcore.spatial.Coords;
+import mod.gottsch.forge.gottschcore.world.WorldInfo;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.ObjectUtils;
@@ -29,7 +32,6 @@ import org.apache.commons.lang3.ObjectUtils;
 import java.util.UUID;
 
 /**
- * TODO currently there aren't any usages of this class outside this class.
  * @author Mark Gottschling on Sep 14, 2024
  *
  */
@@ -58,13 +60,6 @@ public class DeedFactory {
         }
 
         CompoundTag tag = deed.getOrCreateTag();
-        // add the ids
-        // TODO this is probably going away in favor of deed id for the access checks
-//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
-        // TODO no longer need - have Deed.parcelType
-        // add the type
-//        tag.putString(Deed.PARCEL_TYPE, ParcelType.PLAYER.name());
         // add the size
         CompoundTag sizeTag = new CompoundTag();
         size.save(sizeTag);
@@ -93,11 +88,6 @@ public class DeedFactory {
         }
 
         CompoundTag tag = deed.getOrCreateTag();
-//        tag.putUUID(Deed.NATION_ID, UUID.randomUUID());
-        // TODO this should be refactored out
-//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
-//        tag.putString(Deed.PARCEL_TYPE, ParcelType.NATION.name());
         CompoundTag sizeTag = new CompoundTag();
         // modify size to max y limits
         size.setMinCoords(size.getMinCoords().withY(level.getMinBuildHeight()));
@@ -113,11 +103,6 @@ public class DeedFactory {
         CompoundTag tag = deed.getOrCreateTag();
         // add the ids
         tag.putUUID(NationDeed.NATION_ESTATE_ID, nationId);
-        // TODO this should be refactored out
-//        tag.putUUID(Deed.PARCEL_ID, UUID.randomUUID());
-//        tag.putUUID(Deed.DEED_ID, UUID.randomUUID());
-        // add the type
-//        tag.putString(Deed.PARCEL_TYPE, ParcelType.CITIZEN.name());
         // add the size
         CompoundTag sizeTag = new CompoundTag();
         size.save(sizeTag);
@@ -136,4 +121,38 @@ public class DeedFactory {
         };
     }
 
+    public static ItemStack createTieredDeed(RandomSource random, String tier) {
+        int roll = random.nextInt(100);
+        return switch (tier) {
+            case "uncommon" -> {
+                if (roll < 30)       yield createPlayerDeed(new Box(Coords.of(0, -10, 0), Coords.of(9, 9, 9)));
+                else if (roll < 80)  yield createPlayerDeed(new Box(Coords.of(0, -16, 0), Coords.of(15, 15, 15)));
+                else                 yield createPlayerDeed(new Box(Coords.of(0, -32, 0), Coords.of(31, 31, 31)));
+            }
+            case "rare" -> {
+                if (roll < 30)       yield createPlayerDeed(new Box(Coords.of(0, -16, 0), Coords.of(15, 15, 15)));
+                else if (roll < 90)  yield createPlayerDeed(new Box(Coords.of(0, -32, 0), Coords.of(31, 31, 31)));
+                else                 yield createNationDeedForLoot();
+            }
+            case "epic" -> {
+                if (roll < 60)       yield createPlayerDeed(new Box(Coords.of(0, -32, 0), Coords.of(31, 31, 31)));
+                else                 yield createNationDeedForLoot();
+            }
+            default -> { // "common"
+                if (roll < 60)       yield createPlayerDeed(new Box(Coords.of(0, -10, 0), Coords.of(9, 9, 9)));
+                else if (roll < 90)  yield createPlayerDeed(new Box(Coords.of(0, -16, 0), Coords.of(15, 15, 15)));
+                else                 yield createPlayerDeed(new Box(Coords.of(0, -32, 0), Coords.of(31, 31, 31)));
+            }
+        };
+    }
+
+    private static ItemStack createNationDeedForLoot() {
+        ItemStack deed = createItemStack(ParcelType.NATION);
+        CompoundTag tag = deed.getOrCreateTag();
+        Box size = new Box(Coords.of(0, -64, 0), Coords.of(99, 319, 99));
+        CompoundTag sizeTag = new CompoundTag();
+        size.save(sizeTag);
+        tag.put(Deed.SIZE, sizeTag);
+        return deed;
+    }
 }

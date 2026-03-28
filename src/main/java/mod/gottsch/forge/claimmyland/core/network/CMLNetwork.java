@@ -332,8 +332,9 @@ public class CMLNetwork {
                 boolean isPlacer = placingPlayerId != null && player.getUUID().equals(placingPlayerId);
                 if (!isOwner && !isPlacer) return;
 
+                String dimension = player.serverLevel().dimension().location().toString();
                 int conflictState = ParcelRegistry.resolveConflictState(
-                        stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(), parcel.getId(), parcel.getType());
+                        stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(), parcel.getId(), parcel.getType(), dimension);
 
                 CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                         new BorderVisibilityPacket(parcel.getId(), true, conflictState, stone.getBlockPos().getY(), placingPlayerId));
@@ -426,8 +427,9 @@ public class CMLNetwork {
         if (ownerId == null) return;
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
         if (owner == null) return;
+        String dimension = level.dimension().location().toString();
         int conflictState = ParcelRegistry.resolveConflictState(
-                parcel.getBox(), ownerId, parcel.getId(), parcel.getType());
+                parcel.getBox(), ownerId, parcel.getId(), parcel.getType(), dimension);
 
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> owner),
@@ -439,17 +441,18 @@ public class CMLNetwork {
         UUID ownerId = parcel.getEstate().getOwnerId();
         if (ownerId == null) return;
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
-        ClaimMyLand.LOGGER.debug("owner -> {}", owner);
+//        ClaimMyLand.LOGGER.debug("owner -> {}", owner);
         if (owner == null) return;
+        String dimension = level.dimension().location().toString();
         int conflictState = ParcelRegistry.resolveConflictState(
-                parcel.getBox(), ownerId, parcel.getId(), parcel.getType());
+                parcel.getBox(), ownerId, parcel.getId(), parcel.getType(), dimension);
 
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> owner),
                 new BorderVisibilityPacket(parcel.getId(), true, conflictState, borderStoneY, placingPlayerId));
 
         ServerPlayer placingPlayer = level.getServer().getPlayerList().getPlayer(placingPlayerId);
-        ClaimMyLand.LOGGER.debug("placingPlayer -> {}", placingPlayer);
+//        ClaimMyLand.LOGGER.debug("placingPlayer -> {}", placingPlayer);
         if (placingPlayer == null) return;
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> placingPlayer),

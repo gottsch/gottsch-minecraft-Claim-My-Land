@@ -1,0 +1,14 @@
+{
+  "conditions": [
+    {
+      "condition": "minecraft:any_of",
+      "terms": [
+        { "condition": "forge:loot_table_id", "loot_table_id": "minecraft:chests/stronghold_library" },
+        { "condition": "forge:loot_table_id", "loot_table_id": "minecraft:chests/woodland_mansion" }
+      ]
+    }
+  ],
+  "chance": 0.08,
+  "tier": "rare",
+  "type": "claimmyland:deed_loot_modifier"
+}

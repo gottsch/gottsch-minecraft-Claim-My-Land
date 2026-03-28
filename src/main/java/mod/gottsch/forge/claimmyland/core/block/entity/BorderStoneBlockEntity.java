@@ -147,19 +147,41 @@ public class BorderStoneBlockEntity extends BlockEntity {
         return parcel.getBox();
     }
 
-    public Box getAbsoluteBox() {
-        if (getParcelId() != null) {
-            String dimension = level.dimension().location().toString();
-            Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
-            if (parcel.isPresent()) {
-                return parcel.get().getBox();
-            }
-        }
-        // phase 1 preview — foundation stone IS the origin
-        ICoords myCoords = Coords.of(this.worldPosition);
-        return new Box(myCoords.add(getRelativeBox().getMinCoords()),
-                myCoords.add(getRelativeBox().getMaxCoords()));
+//    public Box getAbsoluteBox() {
+//        if (getParcelId() != null) {
+//            String dimension = level.dimension().location().toString();
+//            Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//            if (parcel.isPresent()) {
+//                return parcel.get().getBox();
+//            }
+//        }
+//        // phase 1 preview — foundation stone IS the origin
+//        ICoords myCoords = Coords.of(this.worldPosition);
+//        return new Box(myCoords.add(getRelativeBox().getMinCoords()),
+//                myCoords.add(getRelativeBox().getMaxCoords()));
+//    }
+public Box getAbsoluteBox() {
+    if (relativeBox == null || coords == null) return null;
+    if (Config.SERVER.general.foundationStoneCentered.get()) {
+        int halfX = relativeBox.getMaxCoords().getX() / 2;
+        int halfZ = relativeBox.getMaxCoords().getZ() / 2;
+        ICoords min = Coords.of(
+                coords.getX() - halfX,
+                coords.getY() + relativeBox.getMinCoords().getY(),
+                coords.getZ() - halfZ);
+        ICoords max = Coords.of(
+                coords.getX() + halfX,
+                coords.getY() + relativeBox.getMaxCoords().getY(),
+                coords.getZ() + halfZ);
+        return new Box(min, max);
     }
+    // legacy: stone is min corner
+    return new Box(
+            coords.withY(coords.getY() + relativeBox.getMinCoords().getY())
+                    .add(relativeBox.getMinCoords().withY(0)),
+            coords.withY(coords.getY() + relativeBox.getMaxCoords().getY())
+                    .add(relativeBox.getMaxCoords().withY(0)));
+}
 
     /**
      * gets an absolute box at a given coords using the parcel box
@@ -167,10 +189,10 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param coords
      * @return
      */
-    public Box getAbsoluteBox(ICoords coords) {
-        return new Box(coords.add(getRelativeBox().getMinCoords()),
-                coords.add(getRelativeBox().getMaxCoords()));
-    }
+//    public Box getAbsoluteBox(ICoords coords) {
+//        return new Box(coords.add(getRelativeBox().getMinCoords()),
+//                coords.add(getRelativeBox().getMaxCoords()));
+//    }
 
     /**
      * Sends border visibility to clients. All parcels use the visual renderer —
@@ -319,7 +341,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
                 if (absoluteBox != null && getOwnerId() != null) {
                     String dimension = serverLevel.dimension().location().toString();
                     int conflictState = ParcelRegistry.resolveConflictState(
-                            absoluteBox, getOwnerId(), null, ParcelType.fromString(getParcelType()));
+                            absoluteBox, getOwnerId(), null, ParcelType.fromString(getParcelType()), dimension);
                     CMLNetwork.syncPreviewParcelToOwner(
                             serverLevel,
                             getOwnerId(),

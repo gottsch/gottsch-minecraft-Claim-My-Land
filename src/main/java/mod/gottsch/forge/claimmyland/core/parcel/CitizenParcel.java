@@ -168,17 +168,17 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
     }
 
     @Override
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel) { //}, Box parcelBox) {
         ClaimResult result = ClaimResult.FAILURE;
 
         // claiming an existing and relinquished citizen parcel
-        if (isRelinquishedCitizenClaim(parentParcel, parcelBox)) {
-            return claimRelinquishedCitizenParcel(level, parentParcel, parcelBox);
+        if (isRelinquishedCitizenClaim(parentParcel, getBox())) {
+            return claimRelinquishedCitizenParcel(level, parentParcel, getBox());
         }
 
         // placing a parcel within a zone
         if (isValidParentParcel(parentParcel)) {
-            return claimWithinZone(level, parentParcel, parcelBox);
+            return claimWithinZone(level, parentParcel, getBox());
         }
         return ClaimResult.FAILURE;
     }

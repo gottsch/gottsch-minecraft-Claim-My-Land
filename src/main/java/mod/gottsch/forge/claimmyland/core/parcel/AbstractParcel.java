@@ -184,7 +184,7 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     @Override
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel) { //}, Box parcelBox) {
         return ClaimResult.FAILURE;
     }
 

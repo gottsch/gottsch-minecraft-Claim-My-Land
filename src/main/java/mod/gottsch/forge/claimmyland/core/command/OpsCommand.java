@@ -25,6 +25,7 @@ import mod.gottsch.forge.claimmyland.core.config.Config;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.world.entity.player.Player;
 
 /**
  *
@@ -42,9 +43,12 @@ public class OpsCommand {
      */
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext buildContext) {
         dispatcher
-                .register(Commands.literal(CML_OPS).requires(source -> {
-                                    return source.hasPermission(Config.SERVER.general.opsPermissionLevel.get()); // only ops can use command
-                                })
+                .register(Commands.literal(CML_OPS)
+                        .requires(source ->
+                                source.hasPermission(Config.SERVER.general.opsPermissionLevel.get())
+                                        || (source.getEntity() instanceof Player p
+                                        && Config.SERVER.general.opsList.get()
+                                        .contains(p.getUUID().toString())))
                                 ///// BACKUP /////
                                 .then(new BackupSubCommand().buildOps())
 

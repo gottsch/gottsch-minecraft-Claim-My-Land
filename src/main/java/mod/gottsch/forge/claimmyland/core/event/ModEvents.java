@@ -25,11 +25,14 @@ import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
+import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelChunkIndex;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
+import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import mod.gottsch.forge.gottschcore.world.WorldInfo;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -38,6 +41,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
@@ -45,6 +49,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.EntityTeleportEvent;
 import net.minecraftforge.event.entity.living.LivingDestroyBlockEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
@@ -53,9 +59,7 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -171,9 +175,10 @@ public class ModEvents {
                 // resync full parcel state (name, ownership, etc.) to this player
                 CMLNetwork.syncParcelToPlayer(serverLevel, player, parcel);
                 // resync border visibility
+                String dimension = serverLevel.dimension().location().toString();
                 int conflictState = ParcelRegistry.resolveConflictState(
                         stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(),
-                        parcel.getId(), parcel.getType());
+                        parcel.getId(), parcel.getType(), dimension);
                 CMLNetwork.syncBorderVisibilityToPlayer(player,
                         parcel.getId(), true, conflictState, stone.getBlockPos().getY());
             });
@@ -509,24 +514,16 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onLivingDestroyBlock(final LivingDestroyBlockEvent event) {
-        if (event.getEntity().level().isClientSide()) {
-            return;
-        }
+        if (event.getEntity().level().isClientSide()) return;
 
-        // chunk pre-filter
         BlockPos pos = event.getPos();
         String dimension = getDimensionString(event.getEntity().level());
-        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) {
-            return; // O(1) — this chunk has no parcels, skip BST entirely
-        }
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) return;
+        if (!Config.SERVER.protection.enableLivingDestroyBlockEvent.get()) return;
+        if (!isInProtectedDimension(event.getEntity().level())) return;
 
-        // prevent protected blocks from breaking by mob action
-        if (Config.SERVER.protection.enableLivingDestroyBlockEvent.get()
-                && ParcelRegistry.intersectsParcel(Coords.of(event.getPos()), dimension)) {
-            // check dimension
-            if (!isInProtectedDimension(event.getEntity().level())) {
-                return;
-            }
+        if (ParcelRegistry.intersectsParcel(Coords.of(pos), dimension)) {
+            event.setCanceled(true);
         }
     }
 
@@ -618,14 +615,88 @@ public class ModEvents {
         });
     }
 
+    @SubscribeEvent
+    public static void onFarmlandTrample(BlockEvent.FarmlandTrampleEvent event) {
+        if (event.getLevel().isClientSide()) return;
+        if (!Config.SERVER.protection.enableFarmlandTrampleEvent.get()) return;
+
+        BlockPos pos = event.getPos();
+        String dimension = getDimensionString(event.getLevel());
+        if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) return;
+        if (!isInProtectedDimension(event.getLevel())) return;
+        if (event.getEntity() instanceof Player player && hasOpsPermission(player)) return;
+
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            if (!ParcelRegistry.hasAccess(serverPlayer, Coords.of(pos), dimension)) {
+                event.setCanceled(true);
+            }
+        } else if (ParcelRegistry.intersectsParcel(Coords.of(pos), dimension)) {
+            // mob or non-player entity — deny if chunk is claimed
+            event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onChorusFruitTeleport(EntityTeleportEvent.ChorusFruit event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!Config.SERVER.protection.enableChorusFruitTeleport.get()) return;
+
+        String dimension = player.level().dimension().location().toString();
+        ICoords dest = Coords.of((int) event.getTargetX(), (int) event.getTargetY(), (int) event.getTargetZ());
+        if (!ParcelChunkIndex.isChunkClaimed((int) event.getTargetX(), (int) event.getTargetZ(), dimension)) return;
+        if (!isInProtectedDimension(player.level())) return;
+        if (hasOpsPermission(player)) return;
+
+        if (!ParcelRegistry.hasAccess(player, dest, dimension)) {
+            event.setCanceled(true);
+        }
+    }
 
 //    @SubscribeEvent
-//    public static void onPlayerUseItem(final LivingEntityUseItemEvent event) {
-////        if (event.getEntity().level().isClientSide()) {
-////            return;
-////        }
+//    public static void onFallingBlockLand(BlockEvent.EntityPlaceEvent event) {
+//        if (event.getLevel().isClientSide()) return;
+//        if (!(event.getEntity() instanceof FallingBlockEntity fallingBlock)) return;
 //
-//        // TODO finish
+//        BlockPos landingPos = event.getPos();
+//        String dimension = getDimensionString(event.getLevel());
+//        if (!ParcelChunkIndex.isChunkClaimed(landingPos.getX(), landingPos.getZ(), dimension)) return;
+//        if (!isInProtectedDimension(event.getLevel())) return;
+//        if (!ParcelRegistry.intersectsParcel(Coords.of(landingPos), dimension)) return;
+//
+//        // allow if the block originated inside the same parcel
+//        BlockPos startPos = fallingBlock.getStartPos();
+//        Optional<Parcel> landingParcel = ParcelRegistry.findLeastSignificant(Coords.of(landingPos), dimension);
+//        Optional<Parcel> originParcel = ParcelRegistry.findLeastSignificant(Coords.of(startPos), dimension);
+//        if (landingParcel.isPresent() && originParcel.isPresent()
+//                && landingParcel.get().getId().equals(originParcel.get().getId())) {
+//            return;
+//        }
+//
+//        event.setCanceled(true);
+//    }
+
+//    @SubscribeEvent
+//    public static void onEntityJoinWorld(EntityJoinLevelEvent event) {
+//        if (event.getLevel().isClientSide()) return;
+//        FallingBlockEntity fbe;
+//        // prevent falling blocks from landing inside protected parcels
+//        if (event.getEntity() instanceof FallingBlockEntity fallingBlock) {
+//            BlockPos landingPos = fallingBlock.blockPosition();
+//            String dimension = getDimensionString(event.getLevel());
+//            if (!ParcelChunkIndex.isChunkClaimed(landingPos.getX(), landingPos.getZ(), dimension)) return;
+//            if (!isInProtectedDimension(event.getLevel())) return;
+//            if (ParcelRegistry.intersectsParcel(Coords.of(landingPos), dimension)) {
+//                BlockPos startPos = fallingBlock.getStartPos();
+//                Optional<Parcel> landingParcel = ParcelRegistry.findLeastSignificant(Coords.of(landingPos), dimension);
+//                Optional<Parcel> originParcel = ParcelRegistry.findLeastSignificant(Coords.of(startPos), dimension);
+//                // allow if both positions are in the same parcel (owner dropping in own land)
+//                if (landingParcel.isPresent() && originParcel.isPresent()
+//                        && landingParcel.get().getId().equals(originParcel.get().getId())) {
+//                    return;
+//                }
+//                event.setCanceled(true);
+//            }
+//        }
 //    }
 
     /**
@@ -635,8 +706,8 @@ public class ModEvents {
      * @return
      */
     private static boolean hasOpsPermission(Player player) {
-        return player.hasPermissions(Config.SERVER.general.opsPermissionLevel.get());
-        // TODO are part of the ops/admin config list
+        if (player.hasPermissions(Config.SERVER.general.opsPermissionLevel.get())) return true;
+        return Config.SERVER.general.opsList.get().contains(player.getUUID().toString());
     }
 
 //    /**

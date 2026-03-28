@@ -123,22 +123,22 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
     }
 
     @Override
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel) { //}, Box parcelBox) {
         if (!parentParcel.isNation() || !getOwnerId().equals(parentParcel.getOwnerId())) {
             return ClaimResult.FAILURE;
         }
 
         // TODO parcelBox appears 1 block larger on x-axis (and possibly y-axis) — investigate
-        if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
+        if (!ModUtil.contains(parentParcel.getBox(), getBox())) {
             return ClaimResult.FAILURE;
         }
 
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, level.dimension().location().toString()).stream()
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(getBox(), level.dimension().location().toString()).stream()
                 .filter(p -> !p.getId().equals(parentParcel.getId()) && !p.isNation())
                 .filter(p -> !p.getOwnerId().equals(getOwnerId()))
                 .toList();
 
-        if (Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
+        if (Parcel.hasBoxToBufferedIntersections(getBox(), getOwnerId(), overlaps)) {
             return ClaimResult.INTERSECTS;
         }
 

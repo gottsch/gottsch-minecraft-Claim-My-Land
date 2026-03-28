@@ -57,7 +57,6 @@ import java.util.stream.Collectors;
  * @author Mark Gottschling on Sep 14, 2024
  *
  */
-@SuppressWarnings("removal")
 public class ParcelRegistry {
     private static final String PARCELS_KEY = "parcels";
 
@@ -65,11 +64,11 @@ public class ParcelRegistry {
      * interval binary spanning tree. main data structure for searchable areas in 3 dimensions.
      * note - this bst does not contain parcels but only area (min coords -> max coords) of the parcel and the id of the owner.
      */
-    private static final CoordsIntervalTree<UUID> TREE = new CoordsIntervalTree<UUID>();
+    private static final CoordsIntervalTree<UUID> TREE = new CoordsIntervalTree<>();
     /*
      * supporting data structure for buffered parcels ie areas with a "buffer" zone around them.
      */
-    private static final CoordsIntervalTree<UUID> BUFFER_TREE = new CoordsIntervalTree<UUID>();
+    private static final CoordsIntervalTree<UUID> BUFFER_TREE = new CoordsIntervalTree<>();
     /*
      * map of parcels by owner id. convenience map
      */
@@ -865,21 +864,21 @@ public class ParcelRegistry {
      * @param includeBorder
      * @return
      */
-    public static List<Box> findBoxes(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
-        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, findFast, includeBorder);
-        List<Box> boxes = new ArrayList<>();
-
-        // need to check against the PARCELS_BY_COORDS map to ensure it hasn't been deleted.
-        intervals.forEach(i -> {
-            // find the parcel from the map
-            Parcel p = PARCELS_BY_COORDS.get(((CoordsInterval<UUID>)i).getCoords1());
-            if (p != null) {
-                boxes.add(new Box(((CoordsInterval<UUID>)i).getCoords1(), ((CoordsInterval<UUID>)i).getCoords2()));
-            }
-        });
-
-        return boxes;
-    }
+//    public static List<Box> findBoxes(ICoords coords1, ICoords coords2, boolean findFast, boolean includeBorder) {
+//        List<IInterval<UUID>> intervals = findRaw(coords1, coords2, findFast, includeBorder);
+//        List<Box> boxes = new ArrayList<>();
+//
+//        // need to check against the PARCELS_BY_COORDS map to ensure it hasn't been deleted.
+//        intervals.forEach(i -> {
+//            // find the parcel from the map
+//            Parcel p = PARCELS_BY_COORDS.get(((CoordsInterval<UUID>)i).getCoords1());
+//            if (p != null) {
+//                boxes.add(new Box(((CoordsInterval<UUID>)i).getCoords1(), ((CoordsInterval<UUID>)i).getCoords2()));
+//            }
+//        });
+//
+//        return boxes;
+//    }
 
     /**
      * the findRaw() interrogates the interval tree directly.
@@ -902,12 +901,12 @@ public class ParcelRegistry {
      * Dimension-blind variant kept for internal call sites that lack a dimension.
      * @deprecated Prefer {@link #findRaw(ICoords, ICoords, boolean, boolean, String)}.
      */
-    @Deprecated(since = "2.4")
-    private static List<IInterval<UUID>> findRaw(ICoords coords1, ICoords coords2,
-                                                 boolean findFast, boolean includeBorder) {
-        return findRaw(coords1, coords2, findFast, includeBorder,
-                CoordsInterval.DEFAULT_DIMENSION);
-    }
+//    @Deprecated(since = "2.4")
+//    private static List<IInterval<UUID>> findRaw(ICoords coords1, ICoords coords2,
+//                                                 boolean findFast, boolean includeBorder) {
+//        return findRaw(coords1, coords2, findFast, includeBorder,
+//                CoordsInterval.DEFAULT_DIMENSION);
+//    }
 
     private static List<IInterval<UUID>> findBufferRaw(ICoords coords1, ICoords coords2,
                                                        boolean findFast, boolean includeBorder,
@@ -920,12 +919,12 @@ public class ParcelRegistry {
     /**
      * @deprecated Prefer {@link #findBufferRaw(ICoords, ICoords, boolean, boolean, String)}.
      */
-    @Deprecated(since = "2.4")
-    private static List<IInterval<UUID>> findBufferRaw(ICoords coords1, ICoords coords2,
-                                                       boolean findFast, boolean includeBorder) {
-        return findBufferRaw(coords1, coords2, findFast, includeBorder,
-                CoordsInterval.DEFAULT_DIMENSION);
-    }
+//    @Deprecated(since = "2.4")
+//    private static List<IInterval<UUID>> findBufferRaw(ICoords coords1, ICoords coords2,
+//                                                       boolean findFast, boolean includeBorder) {
+//        return findBufferRaw(coords1, coords2, findFast, includeBorder,
+//                CoordsInterval.DEFAULT_DIMENSION);
+//    }
 
     public static boolean intersectsParcel(ICoords coords, String dimension) {
         return intersectsParcel(coords, coords, true, dimension);
@@ -962,31 +961,31 @@ public class ParcelRegistry {
 //        return !parcels.isEmpty();
 //    }
 
-    /**
-     * determines if a player has access/permission to execute event at coords ex break block, place block etc
-     * @param coords
-     * @param entityId
-     * @return
-     */
-    public static boolean hasAccess(ICoords coords, UUID entityId) {
-        return hasAccess(coords, coords, entityId, ItemStack.EMPTY);
-    }
+//    /**
+//     * determines if a player has access/permission to execute event at coords ex break block, place block etc
+//     * @param coords
+//     * @param entityId
+//     * @return
+//     */
+//    public static boolean hasAccess(ICoords coords, UUID entityId) {
+//        return hasAccess(coords, coords, entityId, ItemStack.EMPTY);
+//    }
 
-    public static boolean hasAccess(ICoords coords, UUID entityId, ItemStack stack) {
-        return hasAccess(coords, coords, entityId, stack);
-    }
+//    public static boolean hasAccess(ICoords coords, UUID entityId, ItemStack stack) {
+//        return hasAccess(coords, coords, entityId, stack);
+//    }
+//
+//    public static boolean hasInteractAccess(ICoords coords, UUID entityId, BlockState state, ItemStack heldItem ) {
+//        return hasInteractAccess(coords, coords, entityId, state, heldItem);
+//    }
 
-    public static boolean hasInteractAccess(ICoords coords, UUID entityId, BlockState state, ItemStack heldItem ) {
-        return hasInteractAccess(coords, coords, entityId, state, heldItem);
-    }
-
-    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
-        return resolveParcelAt(coords1, coords2)
-                .map(parcel -> (itemStack != null && !itemStack.isEmpty())
-                        ? parcel.grantsAccess(entityId, itemStack)
-                        : parcel.grantsAccess(entityId))
-                .orElse(true);
-    }
+//    public static boolean hasAccess(ICoords coords1, ICoords coords2, UUID entityId, ItemStack itemStack) {
+//        return resolveParcelAt(coords1, coords2)
+//                .map(parcel -> (itemStack != null && !itemStack.isEmpty())
+//                        ? parcel.grantsAccess(entityId, itemStack)
+//                        : parcel.grantsAccess(entityId))
+//                .orElse(true);
+//    }
 
     public static boolean hasAccess(ServerPlayer player, ICoords coords, String dimension) {
         return resolveParcelCached(player, coords, dimension)
@@ -1022,53 +1021,53 @@ public class ParcelRegistry {
                 .orElse(true);
     }
 
-    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
-        return resolveParcelAt(coords1, coords2)
-                .map(parcel -> {
-                    ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
-
-                    for (String tagName : parcel.getEstate().getBlockTagWhitelist()) {
-                        ResourceLocation location = new ResourceLocation(tagName);
-                        ClaimMyLand.LOGGER.debug("creating tag for parcel block tag -> {}", location);
-                        if (TagHelper.doesBlockBelongToTag(state.getBlock(), location)) {
-                            return true;
-                        }
-                    }
-
-//                    ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getEstate().getBlockWhitelist());
-                    for (String blockName : parcel.getEstate().getBlockWhitelist()) {
-                        ResourceLocation location = new ResourceLocation(blockName);
-//                        ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
-                        if (ModUtil.getName(state.getBlock()).equals(location)) {
-                            return true;
-                        }
-                    }
-
-                    if (heldItem != null && !heldItem.isEmpty()) {
-//                        ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
-
-                        for (String tagName : parcel.getEstate().getItemTagWhitelist()) {
-                            ResourceLocation location = new ResourceLocation(tagName);
-//                            ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location);
-                            if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
-                                return true;
-                            }
-                        }
-
-//                        ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getEstate().getItemWhitelist());
-                        for (String itemName : parcel.getEstate().getItemWhitelist()) {
-                            ResourceLocation location = new ResourceLocation(itemName);
-//                            ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
-                            if (ModUtil.getName(heldItem.getItem()).equals(location)) {
-                                return true;
-                            }
-                        }
-                    }
-
-                    return parcel.grantsAccess(entityId, heldItem);
-                })
-                .orElse(true);
-    }
+//    public static boolean hasInteractAccess(ICoords coords1, ICoords coords2, UUID entityId, BlockState state, ItemStack heldItem) {
+//        return resolveParcelAt(coords1, coords2)
+//                .map(parcel -> {
+//                    ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}", state.getBlock().getName().getString(), parcel);
+//
+//                    for (String tagName : parcel.getEstate().getBlockTagWhitelist()) {
+//                        ResourceLocation location = new ResourceLocation(tagName);
+//                        ClaimMyLand.LOGGER.debug("creating tag for parcel block tag -> {}", location);
+//                        if (TagHelper.doesBlockBelongToTag(state.getBlock(), location)) {
+//                            return true;
+//                        }
+//                    }
+//
+////                    ClaimMyLand.LOGGER.debug("value of block white list -> {}", parcel.getEstate().getBlockWhitelist());
+//                    for (String blockName : parcel.getEstate().getBlockWhitelist()) {
+//                        ResourceLocation location = new ResourceLocation(blockName);
+////                        ClaimMyLand.LOGGER.debug("comparing block locations for parcel block -> {}", blockName);
+//                        if (ModUtil.getName(state.getBlock()).equals(location)) {
+//                            return true;
+//                        }
+//                    }
+//
+//                    if (heldItem != null && !heldItem.isEmpty()) {
+////                        ClaimMyLand.LOGGER.debug("trying to use item {} in parcel -> {}", heldItem.getDisplayName().getString(), parcel);
+//
+//                        for (String tagName : parcel.getEstate().getItemTagWhitelist()) {
+//                            ResourceLocation location = new ResourceLocation(tagName);
+////                            ClaimMyLand.LOGGER.debug("creating tag for parcel item tag -> {}", location);
+//                            if (TagHelper.doesItemBelongToTag(heldItem.getItem(), location)) {
+//                                return true;
+//                            }
+//                        }
+//
+////                        ClaimMyLand.LOGGER.debug("value of item white list -> {}", parcel.getEstate().getItemWhitelist());
+//                        for (String itemName : parcel.getEstate().getItemWhitelist()) {
+//                            ResourceLocation location = new ResourceLocation(itemName);
+////                            ClaimMyLand.LOGGER.debug("comparing item locations for held item -> {}", itemName);
+//                            if (ModUtil.getName(heldItem.getItem()).equals(location)) {
+//                                return true;
+//                            }
+//                        }
+//                    }
+//
+//                    return parcel.grantsAccess(entityId, heldItem);
+//                })
+//                .orElse(true);
+//    }
 
     public static boolean hasInteractAccess(UUID playerId, ICoords coords, String dimension, ItemStack itemStack) {
         return resolveParcelCached(playerId, coords, dimension)
@@ -1256,10 +1255,10 @@ public class ParcelRegistry {
      * Dimension-blind variant used only by internal callers that have no dimension.
      * @deprecated Prefer {@link #findLeastSignificant(ICoords, String)}.
      */
-    @Deprecated(since = "2.4")
-    private static Optional<Parcel> findLeastSignificant(ICoords coords) {
-        return findLeastSignificant(coords, CoordsInterval.DEFAULT_DIMENSION);
-    }
+//    @Deprecated(since = "2.4")
+//    private static Optional<Parcel> findLeastSignificant(ICoords coords) {
+//        return findLeastSignificant(coords, CoordsInterval.DEFAULT_DIMENSION);
+//    }
 
     private static Optional<Parcel> findLeastSignificant(List<Parcel> parcels) {
         Parcel parcel = null;
@@ -1358,10 +1357,10 @@ public class ParcelRegistry {
     /**
      * @deprecated Prefer {@link #isFireSpreadPrevented(ICoords, BlockState, String)}.
      */
-    @Deprecated(since = "2.4")
-    public static boolean isFireSpreadPrevented(ICoords coords, BlockState state) {
-        return isFireSpreadPrevented(coords, state, CoordsInterval.DEFAULT_DIMENSION);
-    }
+//    @Deprecated(since = "2.4")
+//    public static boolean isFireSpreadPrevented(ICoords coords, BlockState state) {
+//        return isFireSpreadPrevented(coords, state, CoordsInterval.DEFAULT_DIMENSION);
+//    }
 
 //    /*
 //     * TODO updateOwner() methods are no longer called.
@@ -1456,10 +1455,10 @@ public class ParcelRegistry {
      * Dimension-blind fallback for internal callers that haven't been migrated.
      * @deprecated Prefer {@link #resolveParcelAt(ICoords, ICoords, String)}.
      */
-    @Deprecated(since = "2.4")
-    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
-        return resolveParcelAt(coords1, coords2, CoordsInterval.DEFAULT_DIMENSION);
-    }
+//    @Deprecated(since = "2.4")
+//    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
+//        return resolveParcelAt(coords1, coords2, CoordsInterval.DEFAULT_DIMENSION);
+//    }
 
 //    private static Optional<Parcel> resolveParcelAt(ICoords coords1, ICoords coords2) {
 //        // NOTE: resolveParcelAt() is called from hasAccess() / hasInteractAccess(),
@@ -1508,12 +1507,12 @@ public class ParcelRegistry {
      * Dimension-blind overload kept for call sites that haven't been migrated.
      * @deprecated Prefer {@link #resolveConflictState(Box, UUID, UUID, ParcelType, String)}.
      */
-    @Deprecated(since = "2.4")
-    public static int resolveConflictState(Box proposedBox, UUID ownerId,
-                                           UUID excludeParcelId, ParcelType placingType) {
-        return resolveConflictState(proposedBox, ownerId, excludeParcelId, placingType,
-                CoordsInterval.DEFAULT_DIMENSION);
-    }
+//    @Deprecated(since = "2.4")
+//    public static int resolveConflictState(Box proposedBox, UUID ownerId,
+//                                           UUID excludeParcelId, ParcelType placingType) {
+//        return resolveConflictState(proposedBox, ownerId, excludeParcelId, placingType,
+//                CoordsInterval.DEFAULT_DIMENSION);
+//    }
 
 //    public static int resolveConflictState(Box proposedBox, UUID ownerId, UUID excludeParcelId, ParcelType placingType) {
 //        // rule 1: border-vs-border — any overlap is a conflict, excluding self and allowed ancestors

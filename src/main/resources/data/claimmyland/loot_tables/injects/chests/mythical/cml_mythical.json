@@ -1,0 +1,28 @@
+{
+  "pools": [
+    {
+      "name": "cml_deed",
+      "rolls": 1,
+      "entries": [
+        {
+          "entryName": "player_deed_32",
+          "type": "minecraft:item",
+          "name": "claimmyland:player_deed_32",
+          "weight": 60,
+          "conditions": [
+            { "condition": "random_chance", "chance": 0.25 }
+          ]
+        },
+        {
+          "entryName": "nation_deed_100",
+          "type": "minecraft:item",
+          "name": "claimmyland:nation_deed_100",
+          "weight": 40,
+          "conditions": [
+            { "condition": "random_chance", "chance": 0.2 }
+          ]
+        }
+      ]
+    }
+  ]
+}

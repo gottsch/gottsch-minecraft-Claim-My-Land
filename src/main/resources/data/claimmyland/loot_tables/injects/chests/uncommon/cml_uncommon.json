@@ -1,0 +1,37 @@
+{
+  "pools": [
+    {
+      "name": "cml_deed",
+      "rolls": 1,
+      "entries": [
+        {
+          "entryName": "player_deed_10",
+          "type": "minecraft:item",
+          "name": "claimmyland:player_deed_10",
+          "weight": 60,
+          "conditions": [
+            { "condition": "random_chance", "chance": 0.15 }
+          ]
+        },
+        {
+          "entryName": "player_deed_16",
+          "type": "minecraft:item",
+          "name": "claimmyland:player_deed_16",
+          "weight": 30,
+          "conditions": [
+            { "condition": "random_chance", "chance": 0.12 }
+          ]
+        },
+        {
+          "entryName": "player_deed_32",
+          "type": "minecraft:item",
+          "name": "claimmyland:player_deed_32",
+          "weight": 10,
+          "conditions": [
+            { "condition": "random_chance", "chance": 0.1 }
+          ]
+        }
+      ]
+    }
+  ]
+}

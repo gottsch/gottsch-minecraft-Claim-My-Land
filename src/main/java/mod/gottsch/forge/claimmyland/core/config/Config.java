@@ -30,6 +30,7 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -129,6 +130,8 @@ public class Config extends AbstractConfig {
 		public Backup backup;
 		public StructureProtection structureProtection;
 		public Dimensions dimensions;
+		public CelebrationConfig celebration;
+
 		public BooleanValue preventFireSpread;
 
         public ServerConfig(ForgeConfigSpec.Builder builder) {
@@ -138,6 +141,7 @@ public class Config extends AbstractConfig {
 			backup = new Backup(builder);
 			structureProtection = new StructureProtection(builder);
 			dimensions = new Dimensions(builder);
+			celebration = new CelebrationConfig(builder);
 		}
 	}
 
@@ -210,20 +214,19 @@ public class Config extends AbstractConfig {
 	 *
 	 */
 	public static class General {
-//		public IntValue giveCommandLevel;
 		public IntValue parcelsPerPlayer;
 		public IntValue opsPermissionLevel;
 		public IntValue parcelBufferRadius;
 		public IntValue nationParcelBufferRadius;
 		public BooleanValue allowMojangNameCalls;
 		public BooleanValue enableParcelEntryTitle;
+		public BooleanValue foundationStoneCentered;
+		public BooleanValue enableDeedLoot;
+		public final ForgeConfigSpec.ConfigValue<List<? extends String>> opsList;
 
 		General(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, " General properties for Protect It  mod.", CATEGORY_DIV).push(GENERAL_CATEGORY);
-			
-//			giveCommandLevel = builder
-//					.comment("The access level required for the Claim My Land 'give' command.")
-//					.defineInRange("giveCommandLevel", 0, 0, 4);
+
 			parcelsPerPlayer = builder
 					.comment(" The number of parcels each player can own per world.")
 					.defineInRange("parcelsPerPlayer", 5, 1, 100);
@@ -259,15 +262,32 @@ public class Config extends AbstractConfig {
 							"Default: true.")
 					.define("enableParcelEntryTitle", true);
 
+			foundationStoneCentered = builder
+					.comment("If true, the Foundation Stone is placed at the XZ centre of the parcel.",
+							"If false, the stone is placed at the min corner (legacy behaviour).",
+							"Default: true.")
+					.define("foundationStoneCentered", true);
+
+			opsList = builder
+					.comment("List of player UUIDs with CML ops-level permission.",
+							"These players can use /cml-ops commands without being server operators.",
+							"Format: UUID strings e.g. [\"550e8400-e29b-41d4-a716-446655440000\"]",
+							"Default: empty list.")
+					.defineListAllowEmpty("opsList", Collections.emptyList(), o -> o instanceof String);
+
+			enableDeedLoot = builder
+					.comment("If true, deeds can appear in loot tables (chests, mob drops, fishing, etc.).",
+							"Disable to prevent deeds from appearing in loot if you prefer admin-only distribution.",
+							"Default: true.")
+					.define("enableDeedLoot", true);
+
 			builder.pop();
 		}
 	}
 
 	public static class Borders {
-//		public ForgeConfigSpec.LongValue ticksPerBorderStoneRefresh;
 		public ForgeConfigSpec.IntValue borderStoneLifeSpan;
 		public ForgeConfigSpec.IntValue foundationStoneLifeSpan;
-//		public ForgeConfigSpec.IntValue largeParcelsThreshold;
 		public ForgeConfigSpec.IntValue nationBorderHeight;
 		// default 20, min 1, max 256
 
@@ -278,20 +298,9 @@ public class Config extends AbstractConfig {
 					.comment(" The life span of a border stone in ticks.")
 					.defineInRange("borderStoneLifeSpan", 6000, 1200, Integer.MAX_VALUE);
 
-//			ticksPerBorderStoneRefresh = builder
-//					.comment(" The number of ticks between border refreshes.")
-//					.defineInRange("ticksPerBorderStoneRefresh", 400, 200, Long.MAX_VALUE);
-
 			foundationStoneLifeSpan = builder
 					.comment(" The life span of a foundation stone in ticks.")
 					.defineInRange("foundationStoneLifeSpan", 6000, 1200, Integer.MAX_VALUE);
-
-//			largeParcelsThreshold = builder
-//					.comment(" Parcel area threshold (in blocks) above which physical border/buffer blocks",
-//							" are replaced by the visual ParcelBorderRenderer.",
-//							" Area is calculated as (maxX - minX) * (maxZ - minZ).",
-//							" Default: 4096 (a 64x64 parcel).")
-//					.defineInRange("largeParcelsThreshold", 4096, 1, Integer.MAX_VALUE);
 
 			nationBorderHeight = builder
 					.comment(" Height in blocks of the visual border and buffer wall for Nation parcels.")
@@ -312,6 +321,8 @@ public class Config extends AbstractConfig {
 		public BooleanValue enablePistionEvent;
 		public BooleanValue enableExplosionDetonateEvent;
 		public BooleanValue preventFireSpread;
+		public BooleanValue enableFarmlandTrampleEvent;
+		public BooleanValue enableChorusFruitTeleport;
 
 		Protection(final ForgeConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, 
@@ -362,6 +373,16 @@ public class Config extends AbstractConfig {
 							" Can be overridden per-estate.",
 							" Default: true.")
 					.define("preventFireSpread", true);
+
+			enableFarmlandTrampleEvent = builder
+					.comment("If true, prevents players and entities from trampling farmland inside protected parcels.",
+							"Default: true.")
+					.define("enableFarmlandTrampleEvent", true);
+
+			enableChorusFruitTeleport = builder
+					.comment("If true, prevents players from teleporting into protected parcels via chorus fruit.",
+							"Default: true.")
+					.define("enableChorusFruitTeleport", true);
 
 			builder.pop();
 		}
@@ -460,6 +481,19 @@ public class Config extends AbstractConfig {
 							List.of(),
 							String.class::isInstance);
 
+			builder.pop();
+		}
+	}
+
+	public static class CelebrationConfig {
+		public final ForgeConfigSpec.BooleanValue fireworksEnabled;
+
+		CelebrationConfig(ForgeConfigSpec.Builder builder) {
+			builder.push("celebration");
+			fireworksEnabled = builder
+					.comment("If true, fireworks are launched at the parcel centre on claim commit.",
+							"Default: true.")
+					.define("fireworksEnabled", true);
 			builder.pop();
 		}
 	}

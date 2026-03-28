@@ -100,9 +100,8 @@ public class NationParcel extends AbstractParcel implements INationParcel {
     }
 
     @Override
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
-        ClaimResult result = ClaimResult.FAILURE;
-        return result;
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel) { //}, Box parcelBox) {
+        return ClaimResult.FAILURE;
     }
 
     // TODO these need to use the level min and max build heights

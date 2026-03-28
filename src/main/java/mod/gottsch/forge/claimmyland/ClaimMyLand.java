@@ -8,6 +8,7 @@ import mod.gottsch.forge.claimmyland.core.block.ModBlocks;
 import mod.gottsch.forge.claimmyland.core.block.entity.ModBlockEntities;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.item.ModItems;
+import mod.gottsch.forge.claimmyland.core.loot.ModLootModifiers;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.RollingJsonSaver;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
@@ -20,6 +21,7 @@ import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 import org.apache.logging.log4j.LogManager;
@@ -56,11 +58,12 @@ public class ClaimMyLand {
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus);
+        ModLootModifiers.register(modEventBus);
 
         // register 'ModSetup::init' to be called at mod setup time (server and client)
         modEventBus.addListener(CommonSetup::init);
         modEventBus.addListener(ClientSetup::init);
-
+        modEventBus.addListener(this::onConfigReload);
 //        File saveDir = new File("world/data/claimmyland"); // TODO config option
 //        Type listType = new TypeToken<List<Parcel>>(){}.getType();
 //
@@ -93,6 +96,15 @@ public class ClaimMyLand {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         ClaimMyLand.reinitBackup();
+    }
+
+    /**
+     * @author Mark Gottschling on March 26, 2026
+     */
+    public void onConfigReload(ModConfigEvent.Reloading event) {
+        if (event.getConfig().getModId().equals(MOD_ID)) {
+            ClaimMyLand.reinitBackup();
+        }
     }
 
     /**
