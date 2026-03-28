@@ -190,33 +190,22 @@ public interface Parcel {
      * @param level
      * @return
      */
-    default public ClaimResult handleClaim(Level level) { //}, Box parcelBox) {
+    default public ClaimResult handleClaim(Level level) {
         String dimension = ((ServerLevel) level).dimension().location().toString();
 
-        // TODO all this can be replace with hasBoxToBufferedBoxIntersections
-        // find overlaps of the parcel with buffered registry parcels.
-        // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(getBox(), dimension);
+        Box checkBox = getBufferSize() > 0
+                ? ModUtil.inflate(getBox(), getBufferSize())
+                : getBox();
+
+        List<Parcel> overlaps = ParcelRegistry.findBuffer(checkBox, dimension);
+
         if (!overlaps.isEmpty()) {
             for (Parcel overlapParcel : overlaps) {
-                // if parcel in hand equals parcel in world then fail
-                /*
-                 * NOTE this should be moot as the deed shouldn't exist at this point anymore (survival)
-                 * as this can potentially only happen in creative.
-                 */
                 if (getId().equals(overlapParcel.getId())) {
                     return ClaimResult.FAILURE;
                 }
-
-                /*
-                 * if parcel in hand has same owner as parcel in world, ignore buffers,
-                 * but check border overlaps. parcels owned by the same player can be touching.
-                 */
                 if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-                    // get the existing owned parcel
                     Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-
-                    // test if the non-buffered parcels intersect
                     if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
                         return ClaimResult.INTERSECTS;
                     }
@@ -226,35 +215,73 @@ public interface Parcel {
             }
         }
 
-        // add to the registry
         return nameAndRegister(level);
     }
-
-
-    default public ClaimResult handleClaim(Level level, Box parcelBox, ServerPlayer claimingPlayer) {
-        String dimension = ((ServerLevel) level).dimension().location().toString();
-
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, dimension);
-        if (!overlaps.isEmpty()) {
-            for (Parcel overlapParcel : overlaps) {
-                if (getId().equals(overlapParcel.getId())) {
-                    return ClaimResult.FAILURE;
-                }
-                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
-                        return ClaimResult.INTERSECTS;
-                    }
-                } else {
-                    return ClaimResult.INTERSECTS;
-                }
-            }
-        }
-//        ParcelRegistry.register((ServerLevel) level, this, claimingPlayer.getScoreboardName());
-//        CommandHelper.save(level);
-//        return ClaimResult.SUCCESS;
-        return nameAndRegister(level, claimingPlayer.getScoreboardName());
-    }
+//    default public ClaimResult handleClaim(Level level) { //}, Box parcelBox) {
+//        String dimension = ((ServerLevel) level).dimension().location().toString();
+//
+//        // TODO all this can be replace with hasBoxToBufferedBoxIntersections
+//        // find overlaps of the parcel with buffered registry parcels.
+//        // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
+//        List<Parcel> overlaps = ParcelRegistry.findBuffer(getBox(), dimension);
+//        if (!overlaps.isEmpty()) {
+//            for (Parcel overlapParcel : overlaps) {
+//                // if parcel in hand equals parcel in world then fail
+//                /*
+//                 * NOTE this should be moot as the deed shouldn't exist at this point anymore (survival)
+//                 * as this can potentially only happen in creative.
+//                 */
+//                if (getId().equals(overlapParcel.getId())) {
+//                    return ClaimResult.FAILURE;
+//                }
+//
+//                /*
+//                 * if parcel in hand has same owner as parcel in world, ignore buffers,
+//                 * but check border overlaps. parcels owned by the same player can be touching.
+//                 */
+//                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+//                    // get the existing owned parcel
+//                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+//
+//                    // test if the non-buffered parcels intersect
+//                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
+//                        return ClaimResult.INTERSECTS;
+//                    }
+//                } else {
+//                    return ClaimResult.INTERSECTS;
+//                }
+//            }
+//        }
+//
+//        // add to the registry
+//        return nameAndRegister(level);
+//    }
+//
+//
+//    default public ClaimResult handleClaim(Level level, Box parcelBox, ServerPlayer claimingPlayer) {
+//        String dimension = ((ServerLevel) level).dimension().location().toString();
+//
+//        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, dimension);
+//        if (!overlaps.isEmpty()) {
+//            for (Parcel overlapParcel : overlaps) {
+//                if (getId().equals(overlapParcel.getId())) {
+//                    return ClaimResult.FAILURE;
+//                }
+//                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+//                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+//                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
+//                        return ClaimResult.INTERSECTS;
+//                    }
+//                } else {
+//                    return ClaimResult.INTERSECTS;
+//                }
+//            }
+//        }
+////        ParcelRegistry.register((ServerLevel) level, this, claimingPlayer.getScoreboardName());
+////        CommandHelper.save(level);
+////        return ClaimResult.SUCCESS;
+//        return nameAndRegister(level, claimingPlayer.getScoreboardName());
+//    }
 
     /**
      * Validates the proposed parcel against structure intersection rules.

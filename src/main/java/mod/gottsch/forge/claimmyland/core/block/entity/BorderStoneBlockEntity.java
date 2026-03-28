@@ -163,16 +163,18 @@ public class BorderStoneBlockEntity extends BlockEntity {
 public Box getAbsoluteBox() {
     if (relativeBox == null || coords == null) return null;
     if (Config.SERVER.general.foundationStoneCentered.get()) {
-        int halfX = relativeBox.getMaxCoords().getX() / 2;
-        int halfZ = relativeBox.getMaxCoords().getZ() / 2;
+        int sizeX = relativeBox.getMaxCoords().getX() - relativeBox.getMinCoords().getX() + 1;
+        int sizeZ = relativeBox.getMaxCoords().getZ() - relativeBox.getMinCoords().getZ() + 1;
+        int halfX = sizeX / 2;
+        int halfZ = sizeZ / 2;
         ICoords min = Coords.of(
                 coords.getX() - halfX,
                 coords.getY() + relativeBox.getMinCoords().getY(),
                 coords.getZ() - halfZ);
         ICoords max = Coords.of(
-                coords.getX() + halfX,
+                coords.getX() - halfX + sizeX - 1,
                 coords.getY() + relativeBox.getMaxCoords().getY(),
-                coords.getZ() + halfZ);
+                coords.getZ() - halfZ + sizeZ - 1);
         return new Box(min, max);
     }
     // legacy: stone is min corner
@@ -328,11 +330,11 @@ public Box getAbsoluteBox() {
                 if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity
                 && foundationStoneBlockEntity.getPlacingPlayerId() != null) {
                     ClaimMyLand.LOGGER.debug("sent to placer");
-                    CMLNetwork.syncBorderVisibleToOwnerAndPlacer(serverLevel, parcel.get(), getBlockPos().getY(),
+                    CMLNetwork.syncBorderVisibleToOwnerAndPlacer(serverLevel, parcel.get(), getBlockPos().getY(), 0,
                             foundationStoneBlockEntity.getPlacingPlayerId());
                 } else {
                     ClaimMyLand.LOGGER.debug("just send to owner");
-                    CMLNetwork.syncBorderVisibleToOwner(serverLevel, parcel.get(), getBlockPos().getY());
+                    CMLNetwork.syncBorderVisibleToOwner(serverLevel, parcel.get(), getBlockPos().getY(), 0);
                 }
             // TODO this is bad... a parent class referencing a sub class?
             } else if (this instanceof FoundationStoneBlockEntity fsbe) {

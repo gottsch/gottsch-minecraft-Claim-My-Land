@@ -100,6 +100,14 @@ public class NationParcel extends AbstractParcel implements INationParcel {
     }
 
     @Override
+    public boolean canPlaceAt(Level level, ICoords coords) {
+        // Nations can only be placed in open wilderness — not inside any existing parcel.
+        // Buffer zone proximity is validated at claim commit time, not here.
+        String dimension = level.dimension().location().toString();
+        return ParcelRegistry.findLeastSignificant(coords, dimension).isEmpty();
+    }
+
+    @Override
     public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel) { //}, Box parcelBox) {
         return ClaimResult.FAILURE;
     }
@@ -120,7 +128,6 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         return Config.SERVER.general.nationParcelBufferRadius.get();
     }
 
-    @Deprecated(forRemoval = true, since = "2.0")
     @Override
     public List<UUID> getBlacklist() {
         if (blacklist == null) {

@@ -87,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `epic` → epic pool
   - `legendary` → epic pool (higher chance than standard epic)
   - `mythical` → epic pool (highest chance)
-- Inject files under `data/claimmyland/loot_tables/treasure2/injects/chests/`.
+- Inject files under `data/treasure2/loot_tables/injects/chests/` prefixed with `cml_` (e.g. `cml_uncommon.json`).
 
 ---
 

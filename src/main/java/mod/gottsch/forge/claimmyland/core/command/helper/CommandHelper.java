@@ -19,6 +19,7 @@
 package mod.gottsch.forge.claimmyland.core.command.helper;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
@@ -248,6 +249,10 @@ public class CommandHelper {
 	public static Optional<Estate> getEstateByOwner(CommandSourceStack source,
 													UUID ownerUuid,
 													String estateName) {
+		ClaimMyLand.LOGGER.info("EstateRegistry.findByOwner for {}: {}",
+				ownerUuid,
+				EstateRegistry.findByOwner(ownerUuid).stream()
+						.map(Estate::getName).toList());
 		return getEstatesByOwner(source, ownerUuid).stream()
 				.filter(e -> e.getName().equalsIgnoreCase(estateName))
 				.findFirst();

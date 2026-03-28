@@ -355,6 +355,20 @@ public abstract class Deed extends Item {
 
             BlockPlaceContext placeContext = new BlockPlaceContext(context);
             ICoords placeTargetCoords = Coords.of(placeContext.getClickedPos());
+
+            // DEBUG
+            ClaimMyLand.LOGGER.info("=== NATION PLACEMENT DEBUG ===");
+            ClaimMyLand.LOGGER.info("placeTargetCoords: {}", placeTargetCoords.toShortString());
+            ClaimMyLand.LOGGER.info("canPlaceAt result: {}", parcel.canPlaceAt(context.getLevel(), placeTargetCoords));
+
+            BlockContext bc = new BlockContext(context.getLevel(), placeContext.getClickedPos());
+            ClaimMyLand.LOGGER.info("target block isAir: {}, isReplaceable: {}", bc.isAir(), bc.isReplaceable());
+
+            ClaimMyLand.LOGGER.info("size minY={} maxY={}", size.getMinCoords().getY(), size.getMaxCoords().getY());
+            ClaimMyLand.LOGGER.info("outsideBuildHeight min={} max={}",
+                    context.getLevel().isOutsideBuildHeight(size.getMinCoords().getY()),
+                    context.getLevel().isOutsideBuildHeight(size.getMaxCoords().getY()));
+
             // TODO need some feedback to player that !canPlaceAt() like "Player parcel cannot be placed in CLOSED Nation parcel"
             return parcel.canPlaceAt(context.getLevel(), placeTargetCoords)
                     && this.placeBlock(placeContext, foundationStone.defaultBlockState())
@@ -366,7 +380,14 @@ public abstract class Deed extends Item {
     protected void applyWorldPosition(Parcel parcel, FoundationStoneBlockEntity fbe) {
         Box parcelBox = fbe.getAbsoluteBox();
         parcel.setCoords(parcelBox.getMinCoords());
-        parcel.setSize(new Box(Coords.of(0, 0, 0), parcelBox.getSize()));
+        parcel.setSize(new Box(
+                Coords.of(0, 0, 0),
+                Coords.of(
+                        parcelBox.getMaxCoords().getX() - parcelBox.getMinCoords().getX(),
+                        parcelBox.getMaxCoords().getY() - parcelBox.getMinCoords().getY(),
+                        parcelBox.getMaxCoords().getZ() - parcelBox.getMinCoords().getZ()
+                )
+        ));
     }
 
     /**

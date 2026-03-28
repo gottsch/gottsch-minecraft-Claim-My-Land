@@ -116,6 +116,7 @@ public class DemolishEstateSubCommand implements SubCommand {
             estate.get().findParcels().forEach(parcel -> {
                 demolishParcel(source, player, parcel);
             });
+            save(source.getLevel());
 
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred demolishing an estate:", e);

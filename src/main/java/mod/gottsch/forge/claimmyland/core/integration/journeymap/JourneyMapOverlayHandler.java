@@ -157,7 +157,7 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
     /**
      * Removes all Claim My Land overlays — called on {@code MAPPING_STOPPED}.
      */
-    static void removeAllOverlays() {
+    public static void removeAllOverlays() {
         if (jmApi == null) return;
         jmApi.removeAll(ClaimMyLand.MOD_ID);
         LOGGER.debug("[{}] Removed all parcel overlays from JourneyMap.", ClaimMyLand.MOD_ID);

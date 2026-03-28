@@ -38,6 +38,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -89,13 +90,24 @@ public class ModEvents {
         ParcelRegistry.REGION_CACHE.invalidatePlayer(event.getEntity().getUUID());
     }
 
+    //    @SubscribeEvent
+//    public static void onPlayerLogin(final PlayerEvent.PlayerLoggedInEvent event) {
+//        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+//        ParcelRegistry.REGION_CACHE.invalidatePlayer(player.getUUID()); // ← ADD: force tick handler to BST on first tick
+//        // Bulk sync all parcels to the joining player so their ClientParcelRegistry
+//        // is populated immediately. CacheSyncPackets will keep it updated from there.
+//        CMLNetwork.syncAllParcelsToPlayer(player);
+//    }
     @SubscribeEvent
     public static void onPlayerLogin(final PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        ParcelRegistry.REGION_CACHE.invalidatePlayer(player.getUUID()); // ← ADD: force tick handler to BST on first tick
-        // Bulk sync all parcels to the joining player so their ClientParcelRegistry
-        // is populated immediately. CacheSyncPackets will keep it updated from there.
-        CMLNetwork.syncAllParcelsToPlayer(player);
+        ParcelRegistry.REGION_CACHE.invalidatePlayer(player.getUUID());
+
+        // delay by 1 tick to allow border stone onLoad() to fire first
+        player.getServer().tell(new TickTask(
+                player.getServer().getTickCount() + 1,
+                () -> CMLNetwork.syncAllParcelsToPlayer(player)
+        ));
     }
 
     @SubscribeEvent
