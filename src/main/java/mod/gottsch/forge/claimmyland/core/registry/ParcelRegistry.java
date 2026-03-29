@@ -1498,9 +1498,29 @@ public class ParcelRegistry {
                 .filter(p -> !isAllowedAncestor(p.getType(), placingType))
                 .filter(p -> !isAllowedDescendant(p.getType(), placingType))
                 .toList();
-        boolean foreignBufferConflict = bufferOverlaps.stream()
-                .anyMatch(p -> !ownerId.equals(p.getOwnerId()));
+
+        // find existing parcel boxes that the proposed parcel's own buffer reaches into
+        int placingBuffer = getBufferSizeForType(placingType);
+        List<Parcel> inflatedOverlaps = placingBuffer > 0
+                ? find(ModUtil.inflate(proposedBox, placingBuffer), dimension).stream()
+                .filter(p -> !p.getId().equals(excludeParcelId))
+                .filter(p -> !isAllowedAncestor(p.getType(), placingType))
+                .filter(p -> !isAllowedDescendant(p.getType(), placingType))
+                .filter(p -> !isSameOwnerSibling(p, ownerId, placingType, proposedBox))
+                .toList()
+                : List.of();
+
+        boolean foreignBufferConflict = bufferOverlaps.stream().anyMatch(p -> !ownerId.equals(p.getOwnerId()))
+                || inflatedOverlaps.stream().anyMatch(p -> !ownerId.equals(p.getOwnerId()));
         return foreignBufferConflict ? 1 : 0;
+    }
+
+    private static int getBufferSizeForType(ParcelType type) {
+        return switch (type) {
+            case NATION -> Config.SERVER.general.nationParcelBufferRadius.get();
+            case PLAYER, CITIZEN -> Config.SERVER.general.parcelBufferRadius.get();
+            default -> 0;
+        };
     }
 
     /**

@@ -193,30 +193,72 @@ public interface Parcel {
     default public ClaimResult handleClaim(Level level) {
         String dimension = ((ServerLevel) level).dimension().location().toString();
 
-        Box checkBox = getBufferSize() > 0
-                ? ModUtil.inflate(getBox(), getBufferSize())
-                : getBox();
-
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(checkBox, dimension);
-
-        if (!overlaps.isEmpty()) {
-            for (Parcel overlapParcel : overlaps) {
-                if (getId().equals(overlapParcel.getId())) {
-                    return ClaimResult.FAILURE;
-                }
-                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
-                        return ClaimResult.INTERSECTS;
-                    }
-                } else {
+        // Rule 1: direct box-to-box overlap (existing parcels physically inside this parcel's box)
+        List<Parcel> directOverlaps = ParcelRegistry.find(getBox(), dimension);
+        for (Parcel overlapParcel : directOverlaps) {
+            if (getId().equals(overlapParcel.getId())) {
+                return ClaimResult.FAILURE;
+            }
+            if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+                Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+                if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
                     return ClaimResult.INTERSECTS;
                 }
+            } else {
+                return ClaimResult.INTERSECTS;
             }
+        }
+
+        // Rule 2: bidirectional buffer conflict
+        // 2a — existing parcels whose buffer zones reach into this parcel's raw box
+        List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(getBox(), dimension);
+
+        // 2b — existing parcel raw boxes that this parcel's own buffer zone reaches into
+        int bufferSize = getBufferSize();
+        List<Parcel> inflatedOverlaps = bufferSize > 0
+                ? ParcelRegistry.find(ModUtil.inflate(getBox(), bufferSize), dimension)
+                : List.of();
+
+        boolean foreignBufferConflict =
+                bufferOverlaps.stream()
+                        .anyMatch(p -> !getOwnerId().equals(p.getOwnerId()))
+                        || inflatedOverlaps.stream()
+                        .filter(p -> !getId().equals(p.getId()))
+                        .anyMatch(p -> !getOwnerId().equals(p.getOwnerId()));
+
+        if (foreignBufferConflict) {
+            return ClaimResult.INTERSECTS;
         }
 
         return nameAndRegister(level);
     }
+//    default public ClaimResult handleClaim(Level level) {
+//        String dimension = ((ServerLevel) level).dimension().location().toString();
+//
+//        Box checkBox = getBufferSize() > 0
+//                ? ModUtil.inflate(getBox(), getBufferSize())
+//                : getBox();
+//
+//        List<Parcel> overlaps = ParcelRegistry.findBuffer(checkBox, dimension);
+//
+//        if (!overlaps.isEmpty()) {
+//            for (Parcel overlapParcel : overlaps) {
+//                if (getId().equals(overlapParcel.getId())) {
+//                    return ClaimResult.FAILURE;
+//                }
+//                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+//                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+//                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
+//                        return ClaimResult.INTERSECTS;
+//                    }
+//                } else {
+//                    return ClaimResult.INTERSECTS;
+//                }
+//            }
+//        }
+//
+//        return nameAndRegister(level);
+//    }
 //    default public ClaimResult handleClaim(Level level) { //}, Box parcelBox) {
 //        String dimension = ((ServerLevel) level).dimension().location().toString();
 //
