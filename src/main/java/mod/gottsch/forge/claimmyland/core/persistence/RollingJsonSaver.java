@@ -105,7 +105,7 @@ public class RollingJsonSaver<T> {
                 GSON.toJson(data, writer);
             }
 
-            LOGGER.info("Saved data to: {}", saveFile.getName());
+            LOGGER.debug("Saved data to: {}", saveFile.getName());
 
             // Clean up old files
             cleanupOldFiles();
@@ -135,7 +135,7 @@ public class RollingJsonSaver<T> {
         int toDelete = savedFiles.length - maxFiles;
         for (int i = 0; i < toDelete; i++) {
             if (savedFiles[i].delete()) {
-                LOGGER.info("Deleted old save: {}", savedFiles[i].getName());
+                LOGGER.debug("Deleted old save: {}", savedFiles[i].getName());
             }
         }
     }
@@ -165,7 +165,7 @@ public class RollingJsonSaver<T> {
     public T loadFromFile(File file) {
         try (FileReader reader = new FileReader(file)) {
             T data = GSON.fromJson(reader, dataType);
-            LOGGER.info("Loaded data from: {}", file.getName());
+            LOGGER.debug("Loaded data from: {}", file.getName());
             return data;
         } catch (IOException e) {
             LOGGER.error("Failed to load from file", e);

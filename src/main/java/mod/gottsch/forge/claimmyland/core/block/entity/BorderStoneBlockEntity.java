@@ -202,7 +202,7 @@ public Box getAbsoluteBox() {
      * @author Mark Gottschling on Mar 11, 2026
      */
     public void placeParcelBorder(ServerPlayer placingPlayer) {
-//        ClaimMyLand.LOGGER.info("parcel id -> {}", getParcelId());
+//        ClaimMyLand.LOGGER.debug("parcel id -> {}", getParcelId());
         if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;
 
         Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
@@ -219,29 +219,29 @@ public Box getAbsoluteBox() {
                 : parcel.get().getEstate().getOwnerId())
                 : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
 
-//        ClaimMyLand.LOGGER.info("ownerId -> {}", String.valueOf(ownerId));
+//        ClaimMyLand.LOGGER.debug("ownerId -> {}", String.valueOf(ownerId));
 
         String dimension = level.dimension().location().toString();
         int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? getParcelId() : null,
                 parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())), dimension);
 
-        ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
-                getParcelId(), parcel.isPresent(), conflictState, getBlockPos().getY(),
-                placingPlayer != null ? placingPlayer.getName().getString() : "null");
+//        ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
+//                getParcelId(), parcel.isPresent(), conflictState, getBlockPos().getY(),
+//                placingPlayer != null ? placingPlayer.getName().getString() : "null");
 
         if (parcel.isPresent()) {
             if (placingPlayer != null) {
-//                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrakcingPlayersAndSelf...");
+//                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrakcingPlayersAndSelf...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayersAndSelf(
                         serverLevel, placingPlayer, parcel.get(), true, conflictState, getBlockPos().getY());
             } else {
-//                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrackingPlayers...");
+//                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrackingPlayers...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayers(
                         serverLevel, parcel.get(), true, conflictState, getBlockPos().getY());
             }
             ActiveBorderStoneRegistry.add(this);
         } else if (placingPlayer != null) {
-//            ClaimMyLand.LOGGER.info("syncPreviewParcelToTrackingPlayersAndSelf...");
+//            ClaimMyLand.LOGGER.debug("syncPreviewParcelToTrackingPlayersAndSelf...");
             // phase 1 preview — parcel not yet registered; register on client first
             CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
                     serverLevel, placingPlayer,
@@ -313,8 +313,8 @@ public Box getAbsoluteBox() {
     @Override
     public void onLoad() {
         super.onLoad();
-        ClaimMyLand.LOGGER.debug("BorderStoneBlockEntity.onLoad: parcelId={} level={}",
-                getParcelId(), level != null ? level.getClass().getSimpleName() : "null");
+//        ClaimMyLand.LOGGER.debug("BorderStoneBlockEntity.onLoad: parcelId={} level={}",
+//                getParcelId(), level != null ? level.getClass().getSimpleName() : "null");
 
         if (level instanceof ServerLevel serverLevel && getParcelId() != null) {
             Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
@@ -323,17 +323,16 @@ public Box getAbsoluteBox() {
                 // committed parcel — restore border visibility to owner
                 ActiveBorderStoneRegistry.add(this);
 
-                ClaimMyLand.LOGGER.debug("is foundation stone -> {}", (this instanceof FoundationStoneBlockEntity));
-                if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity) {
-                    ClaimMyLand.LOGGER.debug("foundation stone placing player -> {}", foundationStoneBlockEntity.getPlacingPlayerId());
-                }
+//                ClaimMyLand.LOGGER.debug("is foundation stone -> {}", (this instanceof FoundationStoneBlockEntity));
+//                if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity) {
+//                    ClaimMyLand.LOGGER.debug("foundation stone placing player -> {}", foundationStoneBlockEntity.getPlacingPlayerId());
+//                }
                 if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity
                 && foundationStoneBlockEntity.getPlacingPlayerId() != null) {
-                    ClaimMyLand.LOGGER.debug("sent to placer");
+//                    ClaimMyLand.LOGGER.debug("sent to placer");
                     CMLNetwork.syncBorderVisibleToOwnerAndPlacer(serverLevel, parcel.get(), getBlockPos().getY(), 0,
                             foundationStoneBlockEntity.getPlacingPlayerId());
                 } else {
-                    ClaimMyLand.LOGGER.debug("just send to owner");
                     CMLNetwork.syncBorderVisibleToOwner(serverLevel, parcel.get(), getBlockPos().getY(), 0);
                 }
             // TODO this is bad... a parent class referencing a sub class?

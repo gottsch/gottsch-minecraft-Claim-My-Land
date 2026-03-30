@@ -272,6 +272,9 @@ public class CMLNetwork {
     public static void syncBorderVisibilityToTrackingPlayers(ServerLevel level, Parcel parcel,
                                                              boolean visible, int conflictState,
                                                              int borderStoneY) {
+//        ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrackingPlayers: parcel={} type={} conflictState={}",
+//                parcel.getName(), parcel.getType(), conflictState);
+
         CHANNEL.send(
                 PacketDistributor.TRACKING_CHUNK.with(() ->
                         level.getChunkAt(new BlockPos(
@@ -297,19 +300,38 @@ public class CMLNetwork {
                 ServerConfigSyncPacket.fromServerConfig()
         );
 
+//        List<SyncParcelPacket> packets = ParcelRegistry.getParcels().stream()
+//                .map(parcel -> new SyncParcelPacket(parcel,
+//                        resolveOwnerName(player.serverLevel(), parcel.getEstate().getOwnerId())))
+//                .toList();
+//        ClaimMyLand.LOGGER.debug("syncAllParcelsToPlayer: building packets with fresh conflictState");
+
         List<SyncParcelPacket> packets = ParcelRegistry.getParcels().stream()
-                .map(parcel -> new SyncParcelPacket(parcel,
-                        resolveOwnerName(player.serverLevel(), parcel.getEstate().getOwnerId())))
+                .map(parcel -> {
+                    String ownerName = resolveOwnerName(player.serverLevel(), parcel.getEstate().getOwnerId());
+                    String parcelDimension = parcel.getDimension() != null
+                            ? parcel.getDimension()
+                            : player.serverLevel().dimension().location().toString();
+                    int conflictState = ParcelRegistry.resolveConflictState(
+                            parcel.getBox(),
+                            parcel.getEstate().getOwnerId(),
+                            parcel.getId(),
+                            parcel.getType(),
+                            parcelDimension);
+//                    ClaimMyLand.LOGGER.debug("syncAllParcelsToPlayer: parcel={} type={} conflictState={}",
+//                            parcel.getName(), parcel.getType(), conflictState);
+                    return new SyncParcelPacket(parcel, ownerName, 0, conflictState);
+                })
                 .toList();
 
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), new SyncAllParcelsPacket(packets));
-
-        ClaimMyLand.LOGGER.debug("CMLNetwork: synced {} parcel(s) to player {}",
-                packets.size(), player.getScoreboardName());
+//
+//        ClaimMyLand.LOGGER.debug("CMLNetwork: synced {} parcel(s) to player {}",
+//                packets.size(), player.getScoreboardName());
 
         // send BorderVisibilityPacket for each active stone — but only if the stone block
         // still physically exists in the world (guards against stale ACTIVE_BORDER_STONES entries)
-        ClaimMyLand.LOGGER.info("syncAllParcelsToPlayer: {} active border stones", ActiveBorderStoneRegistry.getAll().size());
+//        ClaimMyLand.LOGGER.debug("syncAllParcelsToPlayer: {} active border stones", ActiveBorderStoneRegistry.getAll().size());
         for (BorderStoneBlockEntity stone : ActiveBorderStoneRegistry.getAll()) {
             if (stone.getParcelId() == null || stone.getLevel() == null) {
                 ActiveBorderStoneRegistry.remove(stone);
@@ -320,7 +342,8 @@ public class CMLNetwork {
                 ActiveBorderStoneRegistry.remove(stone);
                 continue;
             }
-            ClaimMyLand.LOGGER.debug("CMLNetwork: processing border stone...");
+
+//            ClaimMyLand.LOGGER.debug("CMLNetwork: processing border stone...");
             ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel -> {
 
                 // Only send to the owner of this parcel
@@ -354,6 +377,7 @@ public class CMLNetwork {
                                                                  UUID ownerId, ParcelType parcelType,
                                                                  Box box, int stoneY,
                                                                  String dimension, int conflictState) {
+
         String ownerName = resolveOwnerName(level, ownerId);
         SyncParcelPacket packet = SyncParcelPacket.forPreview(
                 parcelId, estateId, ownerId, ownerName, parcelType, box, stoneY, dimension, conflictState);
@@ -378,6 +402,7 @@ public class CMLNetwork {
     public static void syncBorderVisibilityToPlayer(ServerPlayer player, UUID parcelId,
                                                     boolean visible, int conflictState,
                                                     int borderStoneY) {
+
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
                 new BorderVisibilityPacket(parcelId, visible, conflictState, borderStoneY, null));
@@ -396,8 +421,10 @@ public class CMLNetwork {
                                                                     boolean visible,
                                                                     int conflictState,
                                                                     int borderStoneY) {
+//        ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrackingPlayersAndSelf: parcel={} type={} conflictState={}",
+//                parcel.getName(), parcel.getType(), conflictState);
         syncBorderVisibilityToTrackingPlayers(level, parcel, visible, conflictState, borderStoneY);
-        ClaimMyLand.LOGGER.debug("plaery -> {}", player);
+//        ClaimMyLand.LOGGER.debug("plaer -> {}", player);
         CHANNEL.send(
                 PacketDistributor.PLAYER.with(() -> player),
                 new BorderVisibilityPacket(parcel.getId(), visible, conflictState, borderStoneY, player.getUUID())
@@ -437,6 +464,8 @@ public class CMLNetwork {
     }
 
     public static void syncBorderVisibleToOwner(ServerLevel level, Parcel parcel, int borderStoneY, int conflictState) {
+//        ClaimMyLand.LOGGER.debug("syncBorderVisibleToOwner: parcel={} type={} conflictState={}",
+//                parcel.getName(), parcel.getType(), conflictState);
         UUID ownerId = parcel.getEstate().getOwnerId();
         if (ownerId == null) return;
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
@@ -447,7 +476,7 @@ public class CMLNetwork {
     }
 
     public static void syncBorderVisibleToOwnerAndPlacer(ServerLevel level, Parcel parcel, int borderStoneY, UUID placingPlayerId) {
-        ClaimMyLand.LOGGER.debug("syncing border visible to placer");
+//        ClaimMyLand.LOGGER.debug("syncing border visible to placer");
         UUID ownerId = parcel.getEstate().getOwnerId();
         if (ownerId == null) return;
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
@@ -470,7 +499,10 @@ public class CMLNetwork {
     }
 
     public static void syncBorderVisibleToOwnerAndPlacer(ServerLevel level, Parcel parcel, int borderStoneY, int conflictState, UUID placingPlayerId) {
-        ClaimMyLand.LOGGER.debug("syncing border visible to placer");
+//        ClaimMyLand.LOGGER.debug("syncing border visible to placer");
+//        ClaimMyLand.LOGGER.debug("syncBorderVisibleToOwner: parcel={} type={} conflictState={}",
+//                parcel.getName(), parcel.getType(), conflictState);
+
         UUID ownerId = parcel.getEstate().getOwnerId();
         if (ownerId == null) return;
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
@@ -494,6 +526,7 @@ public class CMLNetwork {
                                                 ParcelType parcelType,
                                                 Box box, int stoneY,
                                                 String dimension, int conflictState) {
+
         ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
         if (owner == null) return;
         String ownerName = resolveOwnerName(level, ownerId);

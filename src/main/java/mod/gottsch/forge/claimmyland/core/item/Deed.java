@@ -356,19 +356,6 @@ public abstract class Deed extends Item {
             BlockPlaceContext placeContext = new BlockPlaceContext(context);
             ICoords placeTargetCoords = Coords.of(placeContext.getClickedPos());
 
-            // DEBUG
-            ClaimMyLand.LOGGER.info("=== NATION PLACEMENT DEBUG ===");
-            ClaimMyLand.LOGGER.info("placeTargetCoords: {}", placeTargetCoords.toShortString());
-            ClaimMyLand.LOGGER.info("canPlaceAt result: {}", parcel.canPlaceAt(context.getLevel(), placeTargetCoords));
-
-            BlockContext bc = new BlockContext(context.getLevel(), placeContext.getClickedPos());
-            ClaimMyLand.LOGGER.info("target block isAir: {}, isReplaceable: {}", bc.isAir(), bc.isReplaceable());
-
-            ClaimMyLand.LOGGER.info("size minY={} maxY={}", size.getMinCoords().getY(), size.getMaxCoords().getY());
-            ClaimMyLand.LOGGER.info("outsideBuildHeight min={} max={}",
-                    context.getLevel().isOutsideBuildHeight(size.getMinCoords().getY()),
-                    context.getLevel().isOutsideBuildHeight(size.getMaxCoords().getY()));
-
             // TODO need some feedback to player that !canPlaceAt() like "Player parcel cannot be placed in CLOSED Nation parcel"
             return parcel.canPlaceAt(context.getLevel(), placeTargetCoords)
                     && this.placeBlock(placeContext, foundationStone.defaultBlockState())

@@ -122,7 +122,6 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
             tag.putUUID(NATION_ESTATE_ID, getNationEstateId());
         }
         if (ObjectUtils.isNotEmpty(getPlacingPlayerId())) {
-            ClaimMyLand.LOGGER.debug("saving placing player -> {}", getPlacingPlayerId());
             tag.putUUID(PLACING_PLAYER_ID, getPlacingPlayerId());
         }
     }
@@ -142,7 +141,6 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
         }
         if (tag.contains(PLACING_PLAYER_ID)) {
             setPlacingPlayerId(tag.getUUID(PLACING_PLAYER_ID));
-            ClaimMyLand.LOGGER.debug("loading placing player -> {}", getPlacingPlayerId());
         }
     }
 

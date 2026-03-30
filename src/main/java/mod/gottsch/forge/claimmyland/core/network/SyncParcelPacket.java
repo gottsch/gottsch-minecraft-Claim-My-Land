@@ -90,16 +90,40 @@ public class SyncParcelPacket {
      * constructing this packet, as done in CMLNetwork.
      */
     public SyncParcelPacket(Parcel parcel, String resolvedOwnerName, int borderStoneY) {
-        this.parcelId    = parcel.getId();
-        this.estateId    = parcel.getEstate().getId();
-        this.parcelName  = parcel.getName() != null ? parcel.getName() : "";
-        this.estateName  = parcel.getEstate().getName() != null ? parcel.getEstate().getName() : "";
-        this.nationName = (parcel instanceof NationalizedParcel np)
-                ? np.getNationEstate().getName()
-                : null;
-        this.ownerName   = resolvedOwnerName != null ? resolvedOwnerName : "";
-        this.ownerId = parcel.getEstate().getOwnerId();
-        this.parcelType  = parcel.getType() != null ? parcel.getType() : ParcelType.NONE;
+        this(parcel, resolvedOwnerName, borderStoneY, 0);
+//        this.parcelId    = parcel.getId();
+//        this.estateId    = parcel.getEstate().getId();
+//        this.parcelName  = parcel.getName() != null ? parcel.getName() : "";
+//        this.estateName  = parcel.getEstate().getName() != null ? parcel.getEstate().getName() : "";
+//        this.nationName = (parcel instanceof NationalizedParcel np)
+//                ? np.getNationEstate().getName()
+//                : null;
+//        this.ownerName   = resolvedOwnerName != null ? resolvedOwnerName : "";
+//        this.ownerId = parcel.getEstate().getOwnerId();
+//        this.parcelType  = parcel.getType() != null ? parcel.getType() : ParcelType.NONE;
+//        this.relinquished = parcel.getEstate().isRelinquished();
+//        this.minX = parcel.getMinCoords().getX();
+//        this.minY = parcel.getMinCoords().getY();
+//        this.minZ = parcel.getMinCoords().getZ();
+//        this.maxX = parcel.getMaxCoords().getX();
+//        this.maxY = parcel.getMaxCoords().getY();
+//        this.maxZ = parcel.getMaxCoords().getZ();
+//        this.dimension   = parcel.getDimension();
+//        this.borderStoneY = borderStoneY;
+//        this.isPreview = false;
+//        this.isBorderVisible = false;
+//        this.conflictState = 0;
+    }
+
+    public SyncParcelPacket(Parcel parcel, String resolvedOwnerName, int borderStoneY, int conflictState) {
+        this.parcelId     = parcel.getId();
+        this.estateId     = parcel.getEstate().getId();
+        this.parcelName   = parcel.getName() != null ? parcel.getName() : "";
+        this.estateName   = parcel.getEstate().getName() != null ? parcel.getEstate().getName() : "";
+        this.nationName   = (parcel instanceof NationalizedParcel np) ? np.getNationEstate().getName() : null;
+        this.ownerName    = resolvedOwnerName != null ? resolvedOwnerName : "";
+        this.ownerId      = parcel.getEstate().getOwnerId();
+        this.parcelType   = parcel.getType() != null ? parcel.getType() : ParcelType.NONE;
         this.relinquished = parcel.getEstate().isRelinquished();
         this.minX = parcel.getMinCoords().getX();
         this.minY = parcel.getMinCoords().getY();
@@ -107,11 +131,11 @@ public class SyncParcelPacket {
         this.maxX = parcel.getMaxCoords().getX();
         this.maxY = parcel.getMaxCoords().getY();
         this.maxZ = parcel.getMaxCoords().getZ();
-        this.dimension   = parcel.getDimension();
-        this.borderStoneY = borderStoneY;
-        this.isPreview = false;
+        this.dimension       = parcel.getDimension();
+        this.borderStoneY    = borderStoneY;
+        this.isPreview       = false;
         this.isBorderVisible = false;
-        this.conflictState = 0;
+        this.conflictState   = conflictState;
     }
 
     /**

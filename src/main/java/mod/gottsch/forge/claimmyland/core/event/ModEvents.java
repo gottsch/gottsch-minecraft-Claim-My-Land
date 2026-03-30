@@ -442,9 +442,9 @@ public class ModEvents {
                 ClaimMyLand.LOGGER.debug("player -> {} is hold item in main hand -> {}", event.getEntity().getDisplayName().getString(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
             } // TODO check other hand
 
-//            ClaimMyLand.LOGGER.info("event.pos -> {}", event.getPos());
-//            ClaimMyLand.LOGGER.info("event.face -> {}", event.getFace());
-//            ClaimMyLand.LOGGER.info("event.placement pos -> {}", event.getPos().relative(event.getFace()));
+//            ClaimMyLand.LOGGER.debug("event.pos -> {}", event.getPos());
+//            ClaimMyLand.LOGGER.debug("event.face -> {}", event.getFace());
+//            ClaimMyLand.LOGGER.debug("event.placement pos -> {}", event.getPos().relative(event.getFace()));
 
             BlockState state = event.getLevel().getBlockState(event.getPos());
 //            if (!ParcelRegistry.hasInteractAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), state, heldItem)) {

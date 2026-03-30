@@ -199,7 +199,21 @@ public interface Parcel {
             if (getId().equals(overlapParcel.getId())) {
                 return ClaimResult.FAILURE;
             }
+//            if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+//                Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+//                if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
+//                    return ClaimResult.INTERSECTS;
+//                }
+//            } else {
+//                return ClaimResult.INTERSECTS;
+//            }
             if (getOwnerId().equals(overlapParcel.getOwnerId())) {
+                boolean hierarchical = ParcelRegistry.isAllowedAncestor(overlapParcel.getType(), getType())
+                        || ParcelRegistry.isAllowedDescendant(overlapParcel.getType(), getType());
+                boolean sameType = overlapParcel.getType() == getType();
+                if (!hierarchical && !sameType) {
+                    return ClaimResult.INTERSECTS;  // PLAYER too close to own NATION/ZONE
+                }
                 Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
                 if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
                     return ClaimResult.INTERSECTS;

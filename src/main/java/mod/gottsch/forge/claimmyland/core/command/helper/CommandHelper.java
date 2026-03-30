@@ -249,10 +249,7 @@ public class CommandHelper {
 	public static Optional<Estate> getEstateByOwner(CommandSourceStack source,
 													UUID ownerUuid,
 													String estateName) {
-		ClaimMyLand.LOGGER.info("EstateRegistry.findByOwner for {}: {}",
-				ownerUuid,
-				EstateRegistry.findByOwner(ownerUuid).stream()
-						.map(Estate::getName).toList());
+
 		return getEstatesByOwner(source, ownerUuid).stream()
 				.filter(e -> e.getName().equalsIgnoreCase(estateName))
 				.findFirst();

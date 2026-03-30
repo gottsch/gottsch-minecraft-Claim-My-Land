@@ -85,7 +85,7 @@ public class BorderVisibilityPacket {
         if (placingPlayerFlag) {
             placingPlayer = buf.readUUID();
         }
-        ClaimMyLand.LOGGER.debug("placingPLayerId -> {}", String.valueOf(placingPlayer));
+//        ClaimMyLand.LOGGER.debug("placingPLayerId -> {}", String.valueOf(placingPlayer));
         return new BorderVisibilityPacket(parcelId, isBorderVisible, conflictState, borderStoneY, placingPlayer);
     }
 
@@ -94,11 +94,15 @@ public class BorderVisibilityPacket {
     // -------------------------------------------------------------------------
 
     public static void handle(BorderVisibilityPacket packet, Supplier<NetworkEvent.Context> ctx) {
-        ClaimMyLand.LOGGER.debug("BorderVisibilityPacket.handle: parcelId={}, visible={}, conflictState={}, stoneY={}, placingPlayer={}",
-                packet.parcelId, packet.isBorderVisible, packet.conflictState, packet.borderStoneY, packet.placingPlayerId);
+//        ClaimMyLand.LOGGER.debug("BorderVisibilityPacket.handle: parcelId={}, visible={}, conflictState={}, stoneY={}, placingPlayer={}",
+//                packet.parcelId, packet.isBorderVisible, packet.conflictState, packet.borderStoneY, packet.placingPlayerId);
+//        ClaimMyLand.LOGGER.debug("BorderVisibilityPacket.handle: parcelId={} conflictState={} existing={}",
+//                packet.parcelId, packet.conflictState,
+//                ClientParcelRegistry.findById(packet.parcelId)
+//                        .map(p -> "conflictState=" + p.conflictState()).orElse("none"));
         ctx.get().enqueueWork(() -> {
             ClientParcelRegistry.findById(packet.parcelId).ifPresent(parcel -> {
-                ClaimMyLand.LOGGER.debug("found client parcel -> {}", parcel);
+//                ClaimMyLand.LOGGER.debug("found client parcel -> {}", parcel);
                 ClientParcelRegistry.register(
                         parcel.withBorderVisibility(packet.isBorderVisible, packet.conflictState, packet.borderStoneY, packet.placingPlayerId)
                 );
