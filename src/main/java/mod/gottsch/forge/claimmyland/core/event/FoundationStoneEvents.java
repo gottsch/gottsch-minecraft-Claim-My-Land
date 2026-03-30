@@ -10,6 +10,7 @@ import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.DimensionHelper;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -23,6 +24,7 @@ import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Client-side event handler that refreshes conflict highlights when the player
@@ -56,6 +58,11 @@ public class FoundationStoneEvents {
         if (fsbe.getParcelId() == null) return;
         if (fsbe.getAbsoluteBox() == null) return;
 
+        ClientParcel preview = ClientParcelRegistry.findById(fsbe.getParcelId()).orElse(null);
+        if (preview == null) return;
+
+        List<ClientParcel> conflicting = ClientParcelRegistry.findConflicting(preview);
+
         int minX = fsbe.getAbsoluteBox().getMinCoords().getX();
         int minY = fsbe.getAbsoluteBox().getMinCoords().getY();
         int minZ = fsbe.getAbsoluteBox().getMinCoords().getZ();
@@ -63,63 +70,12 @@ public class FoundationStoneEvents {
         int maxY = fsbe.getAbsoluteBox().getMaxCoords().getY();
         int maxZ = fsbe.getAbsoluteBox().getMaxCoords().getZ();
 
-        ParcelType proposedType = ParcelType.fromString(fsbe.getParcelType());
-        boolean intersects = clientSideIntersects(minX, minY, minZ, maxX, maxY, maxZ, proposedType);
-
         ResourceKey<Level> dimensionKey = level.dimension();
         ParcelPolygonOverlayFactory.showPreviewOverlay(
                 fsbe.getParcelId(),
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
-                intersects,
+                !conflicting.isEmpty(),
                 dimensionKey);
-    }
-
-    private static boolean clientSideIntersects(int minX, int minY, int minZ,
-                                                int maxX, int maxY, int maxZ,
-                                                ParcelType proposedType) {
-        int proposedBuffer = switch (proposedType) {
-            case NATION -> ClientServerConfig.getNationParcelBufferRadius();
-            case PLAYER, CITIZEN -> ClientServerConfig.getParcelBufferRadius();
-            default -> 0;
-        };
-
-        for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
-            if (parcel.isPreview()) continue;
-
-            int existingBuffer = switch (parcel.parcelType()) {
-                case NATION -> ClientServerConfig.getNationParcelBufferRadius();
-                case PLAYER, CITIZEN -> ClientServerConfig.getParcelBufferRadius();
-                default -> 0;
-            };
-
-            // Rule 1: direct box overlap
-            if (boxesOverlap(parcel.minX(), parcel.minY(), parcel.minZ(),
-                    parcel.maxX(), parcel.maxY(), parcel.maxZ(),
-                    minX, minY, minZ, maxX, maxY, maxZ)) return true;
-
-            // Rule 2a: existing parcel's buffer reaches proposed box
-            if (existingBuffer > 0) {
-                if (boxesOverlap(parcel.minX() - existingBuffer, parcel.minY() - existingBuffer, parcel.minZ() - existingBuffer,
-                        parcel.maxX() + existingBuffer, parcel.maxY() + existingBuffer, parcel.maxZ() + existingBuffer,
-                        minX, minY, minZ, maxX, maxY, maxZ)) return true;
-            }
-
-            // Rule 2b: proposed parcel's own buffer reaches existing box
-            if (proposedBuffer > 0) {
-                if (boxesOverlap(parcel.minX(), parcel.minY(), parcel.minZ(),
-                        parcel.maxX(), parcel.maxY(), parcel.maxZ(),
-                        minX - proposedBuffer, minY - proposedBuffer, minZ - proposedBuffer,
-                        maxX + proposedBuffer, maxY + proposedBuffer, maxZ + proposedBuffer)) return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean boxesOverlap(int aMinX, int aMinY, int aMinZ, int aMaxX, int aMaxY, int aMaxZ,
-                                        int bMinX, int bMinY, int bMinZ, int bMaxX, int bMaxY, int bMaxZ) {
-        return aMaxX >= bMinX && aMinX <= bMaxX
-                && aMaxY >= bMinY && aMinY <= bMaxY
-                && aMaxZ >= bMinZ && aMinZ <= bMaxZ;
     }
 }

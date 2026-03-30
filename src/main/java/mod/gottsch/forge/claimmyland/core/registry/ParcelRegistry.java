@@ -1039,39 +1039,29 @@ public class ParcelRegistry {
                                            String dimension) {
         // Rule 1: direct box overlap
         List<Parcel> borderOverlaps = find(proposedBox, dimension).stream()
-//                .peek(p -> ClaimMyLand.LOGGER.debug(
-//                        "resolveConflictState: excludeParcelId={}, overlap parcel id={}, match={}",
-//                        excludeParcelId, p.getId(), p.getId().equals(excludeParcelId)))
                 .filter(p -> !p.getId().equals(excludeParcelId))
                 .filter(p -> !isAllowedAncestor(p.getType(), placingType))
                 .filter(p -> !isAllowedDescendant(p.getType(), placingType))
                 .filter(p -> !isSameOwnerSibling(p, ownerId, placingType, proposedBox))
                 .toList();
-
         if (!borderOverlaps.isEmpty()) return 1;
 
         // Rule 2a: existing parcels whose buffer zones reach into the proposed box
         List<Parcel> bufferOverlaps = findBuffer(proposedBox, dimension).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))
-                .filter(p -> !isAllowedAncestor(p.getType(), placingType))
-                .filter(p -> !isAllowedDescendant(p.getType(), placingType))
                 .toList();
 
-        // Rule 2b: existing parcel boxes that the proposed parcel's own buffer reaches into
+        // Rule 2b: proposed parcel's own buffer zone reaches into existing parcel boxes
         int placingBuffer = getBufferSizeForType(placingType);
         List<Parcel> inflatedOverlaps = placingBuffer > 0
                 ? find(ModUtil.inflate(proposedBox, placingBuffer), dimension).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))
-                .filter(p -> !isAllowedAncestor(p.getType(), placingType))
-                .filter(p -> !isAllowedDescendant(p.getType(), placingType))
-                .filter(p -> !isSameOwnerSibling(p, ownerId, placingType, proposedBox))
                 .toList()
                 : List.of();
 
         boolean foreignBufferConflict =
-                bufferOverlaps.stream().anyMatch(p -> !ownerId.equals(p.getOwnerId()))
-                        || inflatedOverlaps.stream().anyMatch(p -> !ownerId.equals(p.getOwnerId()));
-
+                bufferOverlaps.stream().anyMatch(p -> isConflict(p, ownerId, placingType))
+                        || inflatedOverlaps.stream().anyMatch(p -> isConflict(p, ownerId, placingType));
         return foreignBufferConflict ? 1 : 0;
     }
 
@@ -1108,6 +1098,15 @@ public class ParcelRegistry {
         if (!p.getOwnerId().equals(ownerId)) return false;
         if (p.getType() != placingType) return false;
         return true;  // same owner, same type → always a sibling, never a conflict
+    }
+
+    private static boolean isConflict(Parcel other, UUID ownerId, ParcelType placingType) {
+        // Hierarchical relationships are never conflicts regardless of owner
+        if (isAllowedAncestor(other.getType(), placingType)) return false;
+        if (isAllowedDescendant(other.getType(), placingType)) return false;
+        if (!ownerId.equals(other.getOwnerId())) return true;  // foreign owner, non-hierarchical
+        // same owner — only exempt if same type
+        return other.getType() != placingType;
     }
 
     // -------------------------------------------------------------------------

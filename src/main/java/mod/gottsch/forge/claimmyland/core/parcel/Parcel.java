@@ -224,21 +224,22 @@ public interface Parcel {
         }
 
         // Rule 2: bidirectional buffer conflict
-        // 2a — existing parcels whose buffer zones reach into this parcel's raw box
-        List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(getBox(), dimension);
+        // Rule 2a
+        List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(getBox(), dimension).stream()
+                .filter(p -> !getId().equals(p.getId()))
+                .toList();
 
-        // 2b — existing parcel raw boxes that this parcel's own buffer zone reaches into
+        // Rule 2b
         int bufferSize = getBufferSize();
         List<Parcel> inflatedOverlaps = bufferSize > 0
-                ? ParcelRegistry.find(ModUtil.inflate(getBox(), bufferSize), dimension)
+                ? ParcelRegistry.find(ModUtil.inflate(getBox(), bufferSize), dimension).stream()
+                .filter(p -> !getId().equals(p.getId()))
+                .toList()
                 : List.of();
 
         boolean foreignBufferConflict =
-                bufferOverlaps.stream()
-                        .anyMatch(p -> !getOwnerId().equals(p.getOwnerId()))
-                        || inflatedOverlaps.stream()
-                        .filter(p -> !getId().equals(p.getId()))
-                        .anyMatch(p -> !getOwnerId().equals(p.getOwnerId()));
+                bufferOverlaps.stream().anyMatch(this::isBufferConflict)
+                        || inflatedOverlaps.stream().anyMatch(this::isBufferConflict);
 
         if (foreignBufferConflict) {
             return ClaimResult.INTERSECTS;
@@ -246,6 +247,14 @@ public interface Parcel {
 
         return nameAndRegister(level);
     }
+
+   default public boolean isBufferConflict(Parcel other) {
+        if (ParcelRegistry.isAllowedAncestor(other.getType(), getType())) return false;
+        if (ParcelRegistry.isAllowedDescendant(other.getType(), getType())) return false;
+        if (!getOwnerId().equals(other.getOwnerId())) return true;
+        return other.getType() != getType();
+    }
+
 //    default public ClaimResult handleClaim(Level level) {
 //        String dimension = ((ServerLevel) level).dimension().location().toString();
 //

@@ -20,7 +20,9 @@
 package mod.gottsch.forge.claimmyland.core.registry;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.config.ClientServerConfig;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -169,13 +171,53 @@ public class ClientParcelRegistry {
      * identify parcels that conflict with a Foundation Stone placement.
      */
     public static List<ClientParcel> findConflicting(ClientParcel preview) {
+        int proposedBuffer = switch (preview.parcelType()) {
+            case NATION -> ClientServerConfig.getNationParcelBufferRadius();
+            case PLAYER, CITIZEN -> ClientServerConfig.getParcelBufferRadius();
+            default -> 0;
+        };
+
+        UUID previewOwner = preview.ownerId();
         List<ClientParcel> result = new ArrayList<>();
+
         for (ClientParcel parcel : getAll()) {
             if (parcel.isPreview()) continue;
-            if (parcel.maxX() < preview.minX() || parcel.minX() > preview.maxX()) continue;
-            if (parcel.maxY() < preview.minY() || parcel.minY() > preview.maxY()) continue;
-            if (parcel.maxZ() < preview.minZ() || parcel.minZ() > preview.maxZ()) continue;
-            result.add(parcel);
+
+            // Skip hierarchical relationships — never a conflict
+            if (ParcelType.isAllowedAncestor(parcel.parcelType(), preview.parcelType())) continue;
+            if (ParcelType.isAllowedDescendant(parcel.parcelType(), preview.parcelType())) continue;
+
+            // Same owner, same type — sibling, never a conflict
+            if (previewOwner != null && previewOwner.equals(parcel.ownerId())
+                    && parcel.parcelType() == preview.parcelType()) continue;
+
+            int existingBuffer = switch (parcel.parcelType()) {
+                case NATION -> ClientServerConfig.getNationParcelBufferRadius();
+                case PLAYER, CITIZEN -> ClientServerConfig.getParcelBufferRadius();
+                default -> 0;
+            };
+
+            // Rule 1: direct box overlap
+            boolean directOverlap =
+                    parcel.maxX() >= preview.minX() && parcel.minX() <= preview.maxX() &&
+                            parcel.maxY() >= preview.minY() && parcel.minY() <= preview.maxY() &&
+                            parcel.maxZ() >= preview.minZ() && parcel.minZ() <= preview.maxZ();
+
+            // Rule 2a: existing parcel's buffer reaches proposed box
+            boolean existingBufferOverlap = existingBuffer > 0 &&
+                    (parcel.maxX() + existingBuffer) >= preview.minX() && (parcel.minX() - existingBuffer) <= preview.maxX() &&
+                    (parcel.maxY() + existingBuffer) >= preview.minY() && (parcel.minY() - existingBuffer) <= preview.maxY() &&
+                    (parcel.maxZ() + existingBuffer) >= preview.minZ() && (parcel.minZ() - existingBuffer) <= preview.maxZ();
+
+            // Rule 2b: proposed parcel's own buffer reaches existing box
+            boolean proposedBufferOverlap = proposedBuffer > 0 &&
+                    parcel.maxX() >= (preview.minX() - proposedBuffer) && parcel.minX() <= (preview.maxX() + proposedBuffer) &&
+                    parcel.maxY() >= (preview.minY() - proposedBuffer) && parcel.minY() <= (preview.maxY() + proposedBuffer) &&
+                    parcel.maxZ() >= (preview.minZ() - proposedBuffer) && parcel.minZ() <= (preview.maxZ() + proposedBuffer);
+
+            if (directOverlap || existingBufferOverlap || proposedBufferOverlap) {
+                result.add(parcel);
+            }
         }
         return result;
     }
