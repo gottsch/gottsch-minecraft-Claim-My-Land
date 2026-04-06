@@ -84,7 +84,7 @@ public abstract class FoundationStoneBlockEntity extends BorderStoneBlockEntity 
                 if (parcel.isPresent()) {
                     // committed parcel — hide the visual border
                     CMLNetwork.syncBorderVisibilityToTrackingPlayers(
-                            serverLevel, parcel.get(), false, 0, getBlockPos().getY());
+                            serverLevel, parcel.get(), 0, getBlockPos().getY());
                     ActiveBorderStoneRegistry.remove(this);
                 } else {
                     // phase 1 preview — parcel never committed; remove from client registries

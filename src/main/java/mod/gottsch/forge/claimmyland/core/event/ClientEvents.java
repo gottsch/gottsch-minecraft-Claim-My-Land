@@ -23,6 +23,7 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.client.hud.ParcelEntryTitleRenderer;
 import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.forge.claimmyland.core.cache.ClientParcelCache;
+import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.gottschcore.spatial.Coords;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -34,6 +35,7 @@ import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 
 /**
@@ -62,6 +64,9 @@ public class ClientEvents {
     public static void onPlayerLogout(final PlayerEvent.PlayerLoggedOutEvent event) {
         ClientParcelCache.setWilderness();
         ParcelBorderRenderer.clearConflictHighlights();
+        if (ModList.get().isLoaded("journeymap")) {
+            ParcelPolygonOverlayFactory.clearConflictOverlays();
+        }
         ParcelEntryTitleRenderer.clearCooldowns();
         ClaimMyLand.LOGGER.debug("ClientEvents: cache cleared on logout");
     }
@@ -70,6 +75,9 @@ public class ClientEvents {
     public static void onPlayerChangeDimension(final PlayerEvent.PlayerChangedDimensionEvent event) {
         ClientParcelCache.setWilderness();
         ParcelBorderRenderer.clearConflictHighlights();
+        if (ModList.get().isLoaded("journeymap")) {
+            ParcelPolygonOverlayFactory.clearConflictOverlays();
+        }
         ParcelEntryTitleRenderer.clearCooldowns();
         ClaimMyLand.LOGGER.debug("ClientEvents: cache cleared on dimension change");
     }

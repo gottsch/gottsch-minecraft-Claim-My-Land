@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.event;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
@@ -183,16 +184,20 @@ public class ModEvents {
         for (BorderStoneBlockEntity stone : stones) {
             if (stone.getParcelId() == null || stone.getLevel() == null) continue;
             if (!(stone.getLevel() instanceof ServerLevel serverLevel)) continue;
+
             ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel -> {
-                // resync full parcel state (name, ownership, etc.) to this player
+                // Send the full parcel data first so the client has it registered
                 CMLNetwork.syncParcelToPlayer(serverLevel, player, parcel);
-                // resync border visibility
+
+                // Then send border visibility as a second SyncParcelPacket with
+                // isBorderVisible=true and fresh server-computed conflictState
                 String dimension = serverLevel.dimension().location().toString();
                 int conflictState = ParcelRegistry.resolveConflictState(
                         stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(),
                         parcel.getId(), parcel.getType(), dimension);
-                CMLNetwork.syncBorderVisibilityToPlayer(player,
-                        parcel.getId(), true, conflictState, stone.getBlockPos().getY());
+
+                CMLNetwork.syncBorderVisibilityToPlayer(
+                        player, parcel.getId(), conflictState, stone.getBlockPos().getY());
             });
         }
     }
@@ -233,6 +238,13 @@ public class ModEvents {
             return;
         }
 
+        // allow a player to break their own Foundation Stone preview,
+        // even inside another player's parcel ex. citizen inside zone/nation
+        if (event.getLevel().getBlockEntity(event.getPos()) instanceof FoundationStoneBlockEntity fsbe) {
+            if (fsbe.getOwnerId() != null && fsbe.getOwnerId().equals(event.getPlayer().getUUID())) {
+                return;
+            }
+        }
         // prevent protected blocks from breaking
 //        if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID())) {
         if (!ParcelRegistry.hasAccess(
@@ -257,9 +269,9 @@ public class ModEvents {
             return;
         }
 
-        ClaimMyLand.LOGGER.debug("player is attempting to place block");
-        ClaimMyLand.LOGGER.debug("onBlockPlace — entity={}, block={}, pos={}",
-                event.getEntity(), event.getPlacedBlock().getBlock(), event.getPos());
+//        ClaimMyLand.LOGGER.debug("player is attempting to place block");
+//        ClaimMyLand.LOGGER.debug("onBlockPlace — entity={}, block={}, pos={}",
+//                event.getEntity(), event.getPlacedBlock().getBlock(), event.getPos());
 
         // chunk pre-filter
         BlockPos pos = event.getPos();

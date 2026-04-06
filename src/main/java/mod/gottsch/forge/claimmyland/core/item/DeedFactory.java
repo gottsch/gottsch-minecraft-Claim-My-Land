@@ -89,10 +89,14 @@ public class DeedFactory {
 
         CompoundTag tag = deed.getOrCreateTag();
         CompoundTag sizeTag = new CompoundTag();
-        // modify size to max y limits
-        size.setMinCoords(size.getMinCoords().withY(level.getMinBuildHeight()));
-        size.setMaxCoords(size.getMaxCoords().withY(level.getMaxBuildHeight()-1));
-        size.save(sizeTag);
+        // create a copy — do not mutate the original size
+        Box deedSize = new Box(
+                Coords.of(size.getMinCoords().getX(), size.getMinCoords().getY(), size.getMinCoords().getZ()),
+                Coords.of(size.getMaxCoords().getX(), size.getMaxCoords().getY(), size.getMaxCoords().getZ())
+        );
+        deedSize.setMinCoords(deedSize.getMinCoords().withY(level.getMinBuildHeight()));
+        deedSize.setMaxCoords(deedSize.getMaxCoords().withY(level.getMaxBuildHeight()-1));
+        deedSize.save(sizeTag);
         tag.put(Deed.SIZE, sizeTag);
 
         return deed;

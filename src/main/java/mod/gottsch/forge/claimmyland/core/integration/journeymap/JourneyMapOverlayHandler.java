@@ -168,13 +168,8 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
      * {@link mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry}.
      */
     static void pushAllOverlays() {
-//        if (jmApi == null) return;
-//        List<PolygonOverlay> overlays = ParcelPolygonOverlayFactory.buildAll();
-//        for (PolygonOverlay overlay : overlays) {
-//            showOverlay(overlay);
-//        }
-        if (jmApi == null) return;  // JM not yet initialized or not loaded
-        jmApi.removeAll(ClaimMyLand.MOD_ID);
+        ParcelPolygonOverlayFactory.removeAllPermanentOverlays();
+
         List<PolygonOverlay> overlays = ParcelPolygonOverlayFactory.buildAll();
         overlays.forEach(overlay -> {
             try {
@@ -183,7 +178,20 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
                 LOGGER.error("[{}] Failed to show overlay: {}", ClaimMyLand.MOD_ID, e.getMessage());
             }
         });
-        LOGGER.debug("[{}] Pushed {} parcel overlay(s) to JourneyMap.", ClaimMyLand.MOD_ID, overlays.size());
+
+        // Rebuild and re-show transient overlays (conflict + preview) with fresh
+        // JM overlay objects — DISPLAY_UPDATE may have invalidated the originals.
+        List<PolygonOverlay> transients = ParcelPolygonOverlayFactory.rebuildTransientOverlays();
+        transients.forEach(overlay -> {
+            try {
+                jmApi.show(overlay);
+            } catch (Exception e) {
+                LOGGER.error("[{}] Failed to show transient overlay: {}", ClaimMyLand.MOD_ID, e.getMessage());
+            }
+        });
+
+        LOGGER.debug("[{}] Pushed {} permanent + {} transient overlay(s) to JourneyMap.",
+                ClaimMyLand.MOD_ID, overlays.size(), transients.size());
     }
 
     /**

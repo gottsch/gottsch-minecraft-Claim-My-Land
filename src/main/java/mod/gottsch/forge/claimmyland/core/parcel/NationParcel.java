@@ -112,16 +112,6 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         return ClaimResult.FAILURE;
     }
 
-    // TODO these need to use the level min and max build heights
-    @Override
-    public ICoords getMinCoords() {
-        return getSize().getMinCoords().add(getCoords().getX(), 0, getCoords().getZ());
-    }
-
-    @Override
-    public ICoords getMaxCoords() {
-        return getSize().getMaxCoords().add(getCoords().getX(), 0, getCoords().getZ());
-    }
 
     @Override
     public int getBufferSize() {
