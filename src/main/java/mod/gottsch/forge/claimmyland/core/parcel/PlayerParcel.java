@@ -106,16 +106,37 @@ public class PlayerParcel extends AbstractClaimableParcel {
 
     @Override
     protected ClaimResult claimWithinZone(Level level, Parcel parentParcel, Box parcelBox) {
+        // Rule 1: parcel must be fully within the parent
         if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
-            return ClaimResult.FAILURE;
+            return ClaimResult.NOT_IN_PARENT;
         }
 
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, level.dimension().location().toString()).stream()
+        String dimension = level.dimension().location().toString();
+
+        // Rule 2a: existing parcels whose buffer zones reach into this parcel's box
+        List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(parcelBox, dimension).stream()
                 .filter(p -> !p.getId().equals(parentParcel.getId()))
                 .filter(p -> !p.isNation())
                 .toList();
 
-        if (Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
+        // Rule 2b: this parcel's own buffer zone reaches into existing parcel boxes
+        int bufferSize = getBufferSize();
+        List<Parcel> inflatedOverlaps = bufferSize > 0
+                ? ParcelRegistry.find(ModUtil.inflate(parcelBox, bufferSize), dimension).stream()
+                  .filter(p -> !p.getId().equals(parentParcel.getId()))
+                  .filter(p -> !p.isNation())
+                  .toList()
+                : List.of();
+
+        boolean bufferConflict =
+                bufferOverlaps.stream().anyMatch(p ->
+                        ParcelConflictResolver.isConflict(getType(), p.getType(),
+                                getOwnerId(), p.getOwnerId()))
+                        || inflatedOverlaps.stream().anyMatch(p ->
+                        ParcelConflictResolver.isConflict(getType(), p.getType(),
+                                getOwnerId(), p.getOwnerId()));
+
+        if (bufferConflict) {
             return ClaimResult.INTERSECTS;
         }
 
@@ -133,14 +154,10 @@ public class PlayerParcel extends AbstractClaimableParcel {
         citizenParcel.setCoords(getCoords());
         citizenParcel.setOwnerId(getOwnerId());
 
-        // register the player before the parcel to save a network call to Mojang API.
+        // register the player before the parcel to save a network call to Mojang API
         PlayerRegistry.register(level, getOwnerId());
 
         return citizenParcel.nameAndRegister(level);
-//        ParcelRegistry.register((ServerLevel)level, citizenParcel);
-//        CommandHelper.save(level);
-
-//        return ClaimResult.SUCCESS;
     }
 
     @Override

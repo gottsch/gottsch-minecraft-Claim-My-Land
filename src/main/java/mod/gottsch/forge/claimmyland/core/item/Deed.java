@@ -262,7 +262,10 @@ public abstract class Deed extends Item {
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel)).orElseGet(() -> parcel.handleClaim(context.getLevel()));
 
                 if (claimResult.isSuccess()) {
-
+                    if (context.getPlayer() instanceof ServerPlayer serverPlayer
+                            && context.getLevel() instanceof ServerLevel serverLevel) {
+                        CMLNetwork.syncParcelToPlayer(serverLevel, serverPlayer, parcel);
+                    }
                     // register user name
                     PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());
 

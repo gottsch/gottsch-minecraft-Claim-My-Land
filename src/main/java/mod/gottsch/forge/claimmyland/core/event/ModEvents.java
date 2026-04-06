@@ -183,16 +183,20 @@ public class ModEvents {
         for (BorderStoneBlockEntity stone : stones) {
             if (stone.getParcelId() == null || stone.getLevel() == null) continue;
             if (!(stone.getLevel() instanceof ServerLevel serverLevel)) continue;
+
             ParcelRegistry.findByParcelId(stone.getParcelId()).ifPresent(parcel -> {
-                // resync full parcel state (name, ownership, etc.) to this player
+                // Send the full parcel data first so the client has it registered
                 CMLNetwork.syncParcelToPlayer(serverLevel, player, parcel);
-                // resync border visibility
+
+                // Then send border visibility as a second SyncParcelPacket with
+                // isBorderVisible=true and fresh server-computed conflictState
                 String dimension = serverLevel.dimension().location().toString();
                 int conflictState = ParcelRegistry.resolveConflictState(
                         stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(),
                         parcel.getId(), parcel.getType(), dimension);
-                CMLNetwork.syncBorderVisibilityToPlayer(player,
-                        parcel.getId(), true, conflictState, stone.getBlockPos().getY());
+
+                CMLNetwork.syncBorderVisibilityToPlayer(
+                        player, parcel.getId(), conflictState, stone.getBlockPos().getY());
             });
         }
     }

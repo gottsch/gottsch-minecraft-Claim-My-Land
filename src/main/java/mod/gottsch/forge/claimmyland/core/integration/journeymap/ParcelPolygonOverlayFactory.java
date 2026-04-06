@@ -104,7 +104,8 @@ public class ParcelPolygonOverlayFactory {
     private static PolygonOverlay previewOverlay = null;
     private static PolygonOverlay previewBufferOverlay = null;
     private static UUID previewParcelId = null;
-
+    /** Parcel IDs that currently have conflict highlights — used to rebuild after JM invalidation. */
+    private static final Set<UUID> conflictParcelIds = new HashSet<>();
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -116,17 +117,17 @@ public class ParcelPolygonOverlayFactory {
      */
     public static List<PolygonOverlay> buildAll() {
         ACTIVE_OVERLAYS.clear();
-        BUFFER_OVERLAYS.clear();
-        clearConflictOverlays();
-        List<PolygonOverlay> result = new ArrayList<>();
+
         UUID localPlayerId = localPlayerId();
+        List<PolygonOverlay> result = new ArrayList<>();
 
         for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
             PolygonOverlay[] overlays = buildOverlay(parcel, localPlayerId);
-            if (overlays == null) continue;
-            ACTIVE_OVERLAYS.put(parcel.parcelId(), overlays);
-            result.add(overlays[0]);
-            result.add(overlays[1]);
+            if (overlays != null) {
+                ACTIVE_OVERLAYS.put(parcel.parcelId(), overlays);
+                result.add(overlays[0]);
+                result.add(overlays[1]);
+            }
 
             PolygonOverlay bufferOverlay = buildBufferOverlay(parcel);
             if (bufferOverlay != null) {
@@ -134,14 +135,128 @@ public class ParcelPolygonOverlayFactory {
                 result.add(bufferOverlay);
             }
         }
+
         return result;
     }
+
+    // New method to get all transient overlays for re-showing
+    /**
+     * Rebuilds all transient overlays with fresh JM overlay objects and returns them.
+     * <p>JourneyMap may internally invalidate overlay objects during DISPLAY_UPDATE
+     * events (e.g. fullscreen map open). This method recreates them from source data
+     * so the caller can re-show them via jmApi.show().</p>
+     */
+    public static List<PolygonOverlay> rebuildTransientOverlays() {
+        List<PolygonOverlay> result = new ArrayList<>();
+
+        if (!conflictParcelIds.isEmpty()) {
+            CONFLICT_OVERLAYS.clear();
+            CONFLICT_BUFFER_OVERLAYS.clear();
+
+            for (UUID parcelId : conflictParcelIds) {
+                Optional<ClientParcel> opt = ClientParcelRegistry.findById(parcelId);
+                if (opt.isEmpty()) continue;
+                ClientParcel parcel = opt.get();
+                ResourceKey<Level> dimKey = dimensionKey(parcel.dimension());
+                if (dimKey == null) continue;
+                buildConflictOverlayPair(parcel, dimKey);
+            }
+
+            result.addAll(CONFLICT_OVERLAYS.values());
+            result.addAll(CONFLICT_BUFFER_OVERLAYS.values());
+        }
+
+        if (previewOverlay != null) {
+            result.add(previewOverlay);
+        }
+        if (previewBufferOverlay != null) {
+            result.add(previewBufferOverlay);
+        }
+
+        return result;
+    }
+
+    /**
+     * Builds the inner + buffer conflict overlay pair for a single parcel.
+     * Shared by showConflictOverlays() and rebuildTransientOverlays().
+     */
+    private static void buildConflictOverlayPair(ClientParcel parcel, ResourceKey<Level> dimKey) {
+        int y = parcel.minY();
+        List<BlockPos> corners = List.of(
+                new BlockPos(parcel.minX(),     y, parcel.minZ()),
+                new BlockPos(parcel.maxX() + 1, y, parcel.minZ()),
+                new BlockPos(parcel.maxX() + 1, y, parcel.maxZ() + 1),
+                new BlockPos(parcel.minX(),     y, parcel.maxZ() + 1)
+        );
+        ShapeProperties innerShape = new ShapeProperties()
+                .setFillColor(CONFLICT_TARGET_FILL.getRGB())
+                .setFillOpacity(CONFLICT_TARGET_FILL.getAlpha() / 255f)
+                .setStrokeColor(CONFLICT_TARGET_STROKE.getRGB())
+                .setStrokeOpacity(CONFLICT_TARGET_STROKE.getAlpha() / 255f)
+                .setStrokeWidth(2f);
+        String innerDisplayId = ClaimMyLand.MOD_ID + ":conflict:" + parcel.parcelId();
+        PolygonOverlay innerOverlay = new PolygonOverlay(
+                ClaimMyLand.MOD_ID, innerDisplayId, dimKey, innerShape, new MapPolygon(corners));
+
+        // Label — keeps parcel identified on fullscreen map even during conflict highlight
+        TextProperties textProps = new TextProperties()
+                .setColor(CONFLICT_TARGET_STROKE.getRGB())
+                .setFontShadow(true)
+                .setActiveUIs(EnumSet.of(Context.UI.Fullscreen, Context.UI.Webmap));
+        innerOverlay.setLabel(buildFullLabel(parcel))
+                .setTextProperties(textProps);
+
+        CONFLICT_OVERLAYS.put(parcel.parcelId(), innerOverlay);
+        JourneyMapOverlayHandler.showOverlay(innerOverlay);
+
+        // Buffer conflict overlay
+        int buf = parcel.parcelType() == ParcelType.NATION
+                ? ClientServerConfig.getNationParcelBufferRadius()
+                : ClientServerConfig.getParcelBufferRadius();
+        List<BlockPos> bufCorners = List.of(
+                new BlockPos(parcel.minX() - buf,     y, parcel.minZ() - buf),
+                new BlockPos(parcel.maxX() + buf + 1, y, parcel.minZ() - buf),
+                new BlockPos(parcel.maxX() + buf + 1, y, parcel.maxZ() + buf + 1),
+                new BlockPos(parcel.minX() - buf,     y, parcel.maxZ() + buf + 1)
+        );
+        ShapeProperties bufShape = new ShapeProperties()
+                .setFillColor(0xFFFFFF).setFillOpacity(0f)
+                .setStrokeColor(CONFLICT_TARGET_BUFFER_STROKE.getRGB())
+                .setStrokeOpacity(CONFLICT_TARGET_BUFFER_STROKE.getAlpha() / 255f)
+                .setStrokeWidth(1f);
+        String bufDisplayId = ClaimMyLand.MOD_ID + ":conflict:buffer:" + parcel.parcelId();
+        PolygonOverlay bufOverlay = new PolygonOverlay(
+                ClaimMyLand.MOD_ID, bufDisplayId, dimKey, bufShape, new MapPolygon(bufCorners));
+        CONFLICT_BUFFER_OVERLAYS.put(parcel.parcelId(), bufOverlay);
+        JourneyMapOverlayHandler.showOverlay(bufOverlay);
+    }
+
+    /**
+     * Clears all transient conflict/preview overlays and rebuilds all permanent parcel
+     * overlays from the current ClientParcelRegistry. Called during full registry rebuilds
+     * (login, dimension change) where transient state should be discarded.
+     *
+     * <p>This method is separate from {@link #buildAll()} to make the API contract explicit:
+     * {@code buildAll()} preserves transient overlays across periodic refreshes, while this
+     * method performs a full reset.</p>
+     *
+     * @return list of PolygonOverlay objects to push to JourneyMap
+     * @see #buildAll()
+     */
+    public static List<PolygonOverlay> rebuildAllWithCleanup() {
+        clearConflictOverlays();
+        clearPreviewOverlay();
+        return buildAll();
+    }
+
 
     /**
      * Builds the full-screen and minimap overlays for a single committed parcel.
      *
      * <p>Color priority:
      * <ol>
+     *   <li>If preview — preview colors (red if conflict, muted type color if clear).</li>
+     *   <li>If parcel is a conflict target (in {@code conflictParcelIds}) — orange.</li>
      *   <li>If {@code conflictState > 0} — red conflict colors, regardless of ownership.</li>
      *   <li>If owned by the local player — vivid ownership colors.</li>
      *   <li>Otherwise — muted/desaturated ownership colors.</li>
@@ -173,18 +288,19 @@ public class ParcelPolygonOverlayFactory {
         if (parcel.isPreview()) {
             isPreviewStroke = true;
             if (parcel.conflictState() > 0) {
-                // Conflict — red regardless of type
                 colors = new Color[]{ PREVIEW_CONFLICT_FILL, PREVIEW_CONFLICT_STROKE };
             } else {
-                // Clear — use parcel type color at reduced opacity to show unconfirmed state
                 Color[] typeColors = activeColorsForType(parcel.parcelType());
                 int fillArgb   = (typeColors[0].getRGB() & 0x00FFFFFF) | 0x1A000000;  // ~10% alpha fill
                 int strokeArgb = (typeColors[1].getRGB() & 0x00FFFFFF) | 0x66000000;  // ~40% alpha stroke
                 colors = new Color[]{ new Color(fillArgb, true), new Color(strokeArgb, true) };
             }
+        } else if (conflictParcelIds.contains(parcel.parcelId())) {
+            isPreviewStroke = false;
+            // Orange conflict-target — this parcel conflicts with the current preview
+            colors = new Color[]{ CONFLICT_TARGET_FILL, CONFLICT_TARGET_STROKE };
         } else if (parcel.conflictState() > 0) {
             isPreviewStroke = false;
-            // Conflict overrides ownership color — always red, matching in-world renderer.
             colors = new Color[]{ CONFLICT_FILL, CONFLICT_STROKE };
         } else {
             isPreviewStroke = false;
@@ -194,8 +310,6 @@ public class ParcelPolygonOverlayFactory {
                     : mutedColorsForType(parcel.parcelType());
         }
 
-        // Preview uses strokeWidth=1f (thinner) to visually distinguish from committed.
-        // Committed nation parcels use 4f; others use 2f.
         float strokeWidth = isPreviewStroke ? 1f
                 : (parcel.parcelType() == ParcelType.NATION ? 4f : 2f);
 
@@ -408,50 +522,22 @@ public class ParcelPolygonOverlayFactory {
         if (conflicting == null || conflicting.isEmpty()) return;
 
         for (ClientParcel parcel : conflicting) {
+            conflictParcelIds.add(parcel.parcelId());
             ResourceKey<Level> dimKey = dimensionKey(parcel.dimension());
             if (dimKey == null) continue;
-
-            // Inner conflict overlay
-            int y = parcel.minY();
-            List<BlockPos> corners = List.of(
-                    new BlockPos(parcel.minX(),     y, parcel.minZ()),
-                    new BlockPos(parcel.maxX() + 1, y, parcel.minZ()),
-                    new BlockPos(parcel.maxX() + 1, y, parcel.maxZ() + 1),
-                    new BlockPos(parcel.minX(),     y, parcel.maxZ() + 1)
-            );
-            ShapeProperties innerShape = new ShapeProperties()
-                    .setFillColor(CONFLICT_TARGET_FILL.getRGB())
-                    .setFillOpacity(CONFLICT_TARGET_FILL.getAlpha() / 255f)
-                    .setStrokeColor(CONFLICT_TARGET_STROKE.getRGB())
-                    .setStrokeOpacity(CONFLICT_TARGET_STROKE.getAlpha() / 255f)
-                    .setStrokeWidth(2f);
-            String innerDisplayId = ClaimMyLand.MOD_ID + ":conflict:" + parcel.parcelId();
-            PolygonOverlay innerOverlay = new PolygonOverlay(
-                    ClaimMyLand.MOD_ID, innerDisplayId, dimKey, innerShape, new MapPolygon(corners));
-            CONFLICT_OVERLAYS.put(parcel.parcelId(), innerOverlay);
-            JourneyMapOverlayHandler.showOverlay(innerOverlay);
-
-            // Buffer conflict overlay
-            int buf = parcel.parcelType() == ParcelType.NATION
-                    ? ClientServerConfig.getNationParcelBufferRadius()
-                    : ClientServerConfig.getParcelBufferRadius();
-            List<BlockPos> bufCorners = List.of(
-                    new BlockPos(parcel.minX() - buf,     y, parcel.minZ() - buf),
-                    new BlockPos(parcel.maxX() + buf + 1, y, parcel.minZ() - buf),
-                    new BlockPos(parcel.maxX() + buf + 1, y, parcel.maxZ() + buf + 1),
-                    new BlockPos(parcel.minX() - buf,     y, parcel.maxZ() + buf + 1)
-            );
-            ShapeProperties bufShape = new ShapeProperties()
-                    .setFillColor(0xFFFFFF).setFillOpacity(0f)
-                    .setStrokeColor(CONFLICT_TARGET_BUFFER_STROKE.getRGB())
-                    .setStrokeOpacity(CONFLICT_TARGET_BUFFER_STROKE.getAlpha() / 255f)
-                    .setStrokeWidth(1f);
-            String bufDisplayId = ClaimMyLand.MOD_ID + ":conflict:buffer:" + parcel.parcelId();
-            PolygonOverlay bufOverlay = new PolygonOverlay(
-                    ClaimMyLand.MOD_ID, bufDisplayId, dimKey, bufShape, new MapPolygon(bufCorners));
-            CONFLICT_BUFFER_OVERLAYS.put(parcel.parcelId(), bufOverlay);
-            JourneyMapOverlayHandler.showOverlay(bufOverlay);
+            buildConflictOverlayPair(parcel, dimKey);
         }
+    }
+
+    public static void removeAllPermanentOverlays() {
+        ACTIVE_OVERLAYS.values().forEach(overlays -> {
+            for (PolygonOverlay overlay : overlays) {
+                JourneyMapOverlayHandler.removeOverlay(overlay);
+            }
+        });
+        ACTIVE_OVERLAYS.clear();
+        BUFFER_OVERLAYS.values().forEach(JourneyMapOverlayHandler::removeOverlay);
+        BUFFER_OVERLAYS.clear();
     }
 
     /** Removes all orange conflict highlight overlays from the JourneyMap and clears the caches. */
@@ -460,6 +546,18 @@ public class ParcelPolygonOverlayFactory {
         CONFLICT_OVERLAYS.clear();
         CONFLICT_BUFFER_OVERLAYS.values().forEach(JourneyMapOverlayHandler::removeOverlay);
         CONFLICT_BUFFER_OVERLAYS.clear();
+
+        // Collect IDs before clearing so we can rebuild with normal colors
+        Set<UUID> toRebuild = new HashSet<>(conflictParcelIds);
+        conflictParcelIds.clear();
+
+        // Rebuild permanent overlays — now that conflictParcelIds is empty,
+        // buildOverlay() will use normal ownership colors
+        for (UUID parcelId : toRebuild) {
+            Optional<ClientParcel> opt = ClientParcelRegistry.findById(parcelId);
+            if (opt.isEmpty()) continue;
+            notifyParcelAdded(opt.get());
+        }
     }
 
     // -------------------------------------------------------------------------

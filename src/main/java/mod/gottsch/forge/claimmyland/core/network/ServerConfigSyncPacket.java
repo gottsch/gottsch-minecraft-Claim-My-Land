@@ -24,6 +24,7 @@ public class ServerConfigSyncPacket {
     private final int parcelBufferRadius;
     private final int nationParcelBufferRadius;
     private final boolean enableParcelEntryTitle;
+    private final boolean foundationStoneCentered;
 
     // -------------------------------------------------------------------------
     // Construction
@@ -31,10 +32,12 @@ public class ServerConfigSyncPacket {
 
     public ServerConfigSyncPacket(int parcelBufferRadius,
                                   int nationParcelBufferRadius,
-                                  boolean enableParcelEntryTitle) {
+                                  boolean enableParcelEntryTitle,
+                                  boolean foundationStoneCentered) {
         this.parcelBufferRadius       = parcelBufferRadius;
         this.nationParcelBufferRadius = nationParcelBufferRadius;
         this.enableParcelEntryTitle   = enableParcelEntryTitle;
+        this.foundationStoneCentered = foundationStoneCentered;
     }
 
     /**
@@ -45,7 +48,8 @@ public class ServerConfigSyncPacket {
         return new ServerConfigSyncPacket(
                 Config.SERVER.general.parcelBufferRadius.get(),
                 Config.SERVER.general.nationParcelBufferRadius.get(),
-                Config.SERVER.general.enableParcelEntryTitle.get()
+                Config.SERVER.general.enableParcelEntryTitle.get(),
+                Config.SERVER.general.foundationStoneCentered.get()
         );
     }
 
@@ -57,14 +61,16 @@ public class ServerConfigSyncPacket {
         buf.writeInt(packet.parcelBufferRadius);
         buf.writeInt(packet.nationParcelBufferRadius);
         buf.writeBoolean(packet.enableParcelEntryTitle);
+        buf.writeBoolean(Config.SERVER.general.foundationStoneCentered.get());
     }
 
     public static ServerConfigSyncPacket decode(FriendlyByteBuf buf) {
         int     parcelBufferRadius       = buf.readInt();
         int     nationParcelBufferRadius = buf.readInt();
         boolean enableParcelEntryTitle   = buf.readBoolean();
+        boolean foundationStoneCentered = buf.readBoolean();
         return new ServerConfigSyncPacket(parcelBufferRadius, nationParcelBufferRadius,
-                enableParcelEntryTitle);
+                enableParcelEntryTitle, foundationStoneCentered);
     }
 
     // -------------------------------------------------------------------------
@@ -76,7 +82,8 @@ public class ServerConfigSyncPacket {
             ClientServerConfig.update(
                     packet.parcelBufferRadius,
                     packet.nationParcelBufferRadius,
-                    packet.enableParcelEntryTitle
+                    packet.enableParcelEntryTitle,
+                    packet.foundationStoneCentered
             );
             ClaimMyLand.LOGGER.debug(
                     "ServerConfigSyncPacket: parcelBufferRadius={}, nationParcelBufferRadius={}, enableParcelEntryTitle={}",

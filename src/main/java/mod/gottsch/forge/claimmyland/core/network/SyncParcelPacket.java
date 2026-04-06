@@ -30,12 +30,9 @@ import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.DimensionHelper;
 import mod.gottsch.forge.gottschcore.spatial.Box;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.fml.DistExecutor;
@@ -45,8 +42,6 @@ import net.minecraftforge.network.NetworkEvent;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Supplier;
-
-import static mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry.findConflicting;
 
 /**
  * Server → Client packet. Adds or updates a single parcel in the client's
@@ -75,6 +70,7 @@ public class SyncParcelPacket {
     private final int conflictState;
     private final int borderStoneY;
     private final boolean isPreview;
+    private final UUID placingPlayerId;   // nullable — set only when border is visible
 
     // -------------------------------------------------------------------------
     // Constructors
@@ -91,28 +87,7 @@ public class SyncParcelPacket {
      */
     public SyncParcelPacket(Parcel parcel, String resolvedOwnerName, int borderStoneY) {
         this(parcel, resolvedOwnerName, borderStoneY, 0);
-//        this.parcelId    = parcel.getId();
-//        this.estateId    = parcel.getEstate().getId();
-//        this.parcelName  = parcel.getName() != null ? parcel.getName() : "";
-//        this.estateName  = parcel.getEstate().getName() != null ? parcel.getEstate().getName() : "";
-//        this.nationName = (parcel instanceof NationalizedParcel np)
-//                ? np.getNationEstate().getName()
-//                : null;
-//        this.ownerName   = resolvedOwnerName != null ? resolvedOwnerName : "";
-//        this.ownerId = parcel.getEstate().getOwnerId();
-//        this.parcelType  = parcel.getType() != null ? parcel.getType() : ParcelType.NONE;
-//        this.relinquished = parcel.getEstate().isRelinquished();
-//        this.minX = parcel.getMinCoords().getX();
-//        this.minY = parcel.getMinCoords().getY();
-//        this.minZ = parcel.getMinCoords().getZ();
-//        this.maxX = parcel.getMaxCoords().getX();
-//        this.maxY = parcel.getMaxCoords().getY();
-//        this.maxZ = parcel.getMaxCoords().getZ();
-//        this.dimension   = parcel.getDimension();
-//        this.borderStoneY = borderStoneY;
-//        this.isPreview = false;
-//        this.isBorderVisible = false;
-//        this.conflictState = 0;
+
     }
 
     public SyncParcelPacket(Parcel parcel, String resolvedOwnerName, int borderStoneY, int conflictState) {
@@ -136,6 +111,7 @@ public class SyncParcelPacket {
         this.isPreview       = false;
         this.isBorderVisible = false;
         this.conflictState   = conflictState;
+        this.placingPlayerId = null;
     }
 
     /**
@@ -152,7 +128,8 @@ public class SyncParcelPacket {
             boolean isBorderVisible,
             int conflictState,
             int borderStoneY,
-            boolean isPreview) {
+            boolean isPreview,
+            UUID placingPlayerId) {
         this.parcelId    = parcelId;
         this.estateId    = estateId;
         this.parcelName  = parcelName;
@@ -166,9 +143,15 @@ public class SyncParcelPacket {
         this.maxX = maxX; this.maxY = maxY; this.maxZ = maxZ;
         this.dimension   = dimension;
         this.isBorderVisible = isBorderVisible;
+        if (isBorderVisible) {
+            ClaimMyLand.LOGGER.debug("SyncParcelPacket constructed with isBorderVisible=true, stack={}",
+                    Thread.currentThread().getStackTrace()[2]);
+        }
         this.conflictState = conflictState;
         this.borderStoneY = borderStoneY;
         this.isPreview = isPreview;
+        this.placingPlayerId = placingPlayerId;
+
     }
 
     // -------------------------------------------------------------------------
@@ -192,6 +175,12 @@ public class SyncParcelPacket {
         buf.writeInt(packet.conflictState);
         buf.writeInt(packet.borderStoneY);
         buf.writeBoolean(packet.isPreview);
+        if (packet.placingPlayerId == null) {
+            buf.writeBoolean(false);
+        } else {
+            buf.writeBoolean(true);
+            buf.writeUUID(packet.placingPlayerId);
+        }
     }
 
     public static SyncParcelPacket decode(FriendlyByteBuf buf) {
@@ -212,6 +201,8 @@ public class SyncParcelPacket {
         int conflictState = buf.readInt();
         int borderStoneY = buf.readInt();
         boolean isPreview = buf.readBoolean();
+        boolean hasPlacingPlayer = buf.readBoolean();
+        UUID placingPlayerId = hasPlacingPlayer ? buf.readUUID() : null;
 
         return new SyncParcelPacket(
                 parcelId, estateId,
@@ -224,7 +215,8 @@ public class SyncParcelPacket {
                 isBorderVisible,
                 conflictState,
                 borderStoneY,
-                isPreview
+                isPreview,
+                placingPlayerId
         );
     }
 
@@ -237,13 +229,15 @@ public class SyncParcelPacket {
             ClientParcel existing = ClientParcelRegistry.findById(packet.parcelId).orElse(null);
             boolean isNewPreview = existing == null && packet.isPreview;
 
-            boolean borderVisible = existing != null ? existing.isBorderVisible() : packet.isBorderVisible;
-            int conflictState = existing != null ? existing.conflictState() : packet.conflictState;
-            int borderStoneY = existing != null && existing.borderStoneY() != 0
-                    ? existing.borderStoneY() : packet.borderStoneY;
+            // Detect preview → committed transition to clear conflict highlights
+            boolean wasPreview = existing != null && existing.isPreview();
+            boolean isNowCommitted = !packet.isPreview;
 
-            UUID placingPlayer = existing != null ? existing.placingPlayer() : null;
+            ClaimMyLand.LOGGER.debug("SyncParcelPacket.handle: parcelId={} isBorderVisible={} isPreview={} wasPreview={} conflictState={}",
+                    packet.parcelId, packet.isBorderVisible, packet.isPreview,
+                    existing != null && existing.isPreview(), packet.conflictState);
 
+            // Server values are always authoritative — no preservation of existing client state.
             ClientParcel clientParcel = new ClientParcel(
                     packet.parcelId, packet.estateId,
                     packet.parcelName, packet.estateName,
@@ -253,30 +247,46 @@ public class SyncParcelPacket {
                     packet.minX, packet.minY, packet.minZ,
                     packet.maxX, packet.maxY, packet.maxZ,
                     packet.dimension,
-                    borderVisible, conflictState, borderStoneY,
-                    packet.isPreview, placingPlayer
+                    packet.isBorderVisible, packet.conflictState, packet.borderStoneY,
+                    packet.isPreview, packet.placingPlayerId
             );
 
             ClientParcelRegistry.register(clientParcel);
+
+            // Clear conflict highlights when a preview transitions to a committed parcel.
+            // The highlights were tied to the Foundation Stone placement and are no longer
+            // relevant once the claim is committed.
+            if (wasPreview && isNowCommitted) {
+                DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
+                    ParcelBorderRenderer.clearConflictHighlights();
+                    if (ModList.get().isLoaded("journeymap")) {
+                        ParcelPolygonOverlayFactory.clearConflictOverlays();
+                    }
+                });
+            }
 
             if (ModList.get().isLoaded("journeymap")) {
                 ParcelPolygonOverlayFactory.notifyParcelAdded(clientParcel);
             }
 
             if (packet.isPreview) {
-                // Emit placement particles only on genuinely new previews (not re-syncs)
                 if (isNewPreview) {
                     DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+
                             ClientSyncParcelHandler.emitFoundationStoneParticles(
-                                    packet.borderStoneY, packet.minX, packet.minZ)
+                                    packet.borderStoneY,
+                                    (packet.minX + packet.maxX) / 2,
+                                    (packet.minZ + packet.maxZ) / 2)
                     );
                 }
 
                 List<ClientParcel> conflicting = ClientParcelRegistry.findConflicting(clientParcel);
-
                 ParcelBorderRenderer.setConflictHighlights(
                         conflicting,
-                        new BlockPos(packet.minX, packet.minY, packet.minZ));
+                        new BlockPos(
+                                (packet.minX + packet.maxX) / 2,
+                                packet.borderStoneY,
+                                (packet.minZ + packet.maxZ) / 2));
 
                 if (ModList.get().isLoaded("journeymap")) {
                     ResourceKey<Level> dimKey = DimensionHelper.dimensionKey(packet.dimension);
@@ -306,7 +316,8 @@ public class SyncParcelPacket {
                 maxX, maxY, maxZ,
                 dimension,
                 isBorderVisible,
-                conflictState, borderStoneY, isPreview, null
+                conflictState, borderStoneY, isPreview,
+                this.placingPlayerId
         );
     }
 
@@ -316,7 +327,7 @@ public class SyncParcelPacket {
      */
     public static SyncParcelPacket forPreview(UUID parcelId, UUID estateId, UUID ownerId, String ownerName,
                                               ParcelType parcelType, Box box,
-                                              int stoneY, String dimension, int conflictState) {
+                                              int stoneY, String dimension, int conflictState, UUID placingPlayerId) {
         return new SyncParcelPacket(
                 parcelId,
                 estateId,
@@ -333,7 +344,62 @@ public class SyncParcelPacket {
                 true,           // isBorderVisible
                 conflictState,
                 stoneY,
-                true            // isPreview
+                true,            // isPreview
+                placingPlayerId
+        );
+    }
+
+    public static SyncParcelPacket forBorderVisible(
+              Parcel parcel, String ownerName,
+              int borderStoneY, int conflictState, UUID placingPlayerId) {
+
+        ClaimMyLand.LOGGER.debug("forBorderVisible: parcelId={} stack={}",
+                parcel.getId(),
+                Thread.currentThread().getStackTrace()[2]);
+
+          return new SyncParcelPacket(
+                                 parcel.getId(), parcel.getEstate().getId(),
+                  parcel.getName() != null ? parcel.getName() : "",
+                  parcel.getEstate().getName() != null ? parcel.getEstate().getName() : "",
+                  (parcel instanceof NationalizedParcel np) ? np.getNationEstate().getName() : null,
+                  ownerName != null ? ownerName : "",
+                  parcel.getEstate().getOwnerId(),
+                  parcel.getType() != null ? parcel.getType() : ParcelType.NONE,
+                  parcel.getEstate().isRelinquished(),
+                  parcel.getMinCoords().getX(), parcel.getMinCoords().getY(), parcel.getMinCoords().getZ(),
+                  parcel.getMaxCoords().getX(), parcel.getMaxCoords().getY(), parcel.getMaxCoords().getZ(),
+                  parcel.getDimension(),
+                  true,            // isBorderVisible
+                  conflictState,
+                  borderStoneY,
+                  false,           // isPreview
+                  placingPlayerId  // nullable
+                         );
+      }
+
+    /**
+     * Creates a SyncParcelPacket that hides the border for a committed parcel.
+     * Sent when a Border Stone is removed, or when a Foundation Stone is removed
+     * after a successful claim commit.
+     */
+    public static SyncParcelPacket forBorderHidden(Parcel parcel, String ownerName) {
+        return new SyncParcelPacket(
+                parcel.getId(), parcel.getEstate().getId(),
+                parcel.getName() != null ? parcel.getName() : "",
+                parcel.getEstate().getName() != null ? parcel.getEstate().getName() : "",
+                (parcel instanceof NationalizedParcel np) ? np.getNationEstate().getName() : null,
+                ownerName != null ? ownerName : "",
+                parcel.getEstate().getOwnerId(),
+                parcel.getType() != null ? parcel.getType() : ParcelType.NONE,
+                parcel.getEstate().isRelinquished(),
+                parcel.getMinCoords().getX(), parcel.getMinCoords().getY(), parcel.getMinCoords().getZ(),
+                parcel.getMaxCoords().getX(), parcel.getMaxCoords().getY(), parcel.getMaxCoords().getZ(),
+                parcel.getDimension(),
+                false,   // isBorderVisible
+                0,       // conflictState — not relevant when hidden
+                0,       // borderStoneY — not relevant when hidden
+                false,   // isPreview
+                null     // placingPlayerId — not relevant when hidden
         );
     }
 }

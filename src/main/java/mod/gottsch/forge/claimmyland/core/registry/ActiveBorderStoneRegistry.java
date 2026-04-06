@@ -19,6 +19,7 @@
  */
 package mod.gottsch.forge.claimmyland.core.registry;
 
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import net.minecraft.world.level.ChunkPos;
 
@@ -41,6 +42,7 @@ public class ActiveBorderStoneRegistry {
     private ActiveBorderStoneRegistry() {}
 
     public static void add(BorderStoneBlockEntity stone) {
+        ClaimMyLand.LOGGER.debug("ActiveBorderStoneRegistry.add: stone.pos={}", stone.getBlockPos().toShortString());
         STONES.add(stone);
         BY_CHUNK.computeIfAbsent(new ChunkPos(stone.getBlockPos()), k -> ConcurrentHashMap.newKeySet()).add(stone);
     }

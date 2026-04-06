@@ -20,7 +20,7 @@
 package mod.gottsch.forge.claimmyland.core.parcel;
 
 /**
- * @author Mark Gottschling on Sep 14, 2024
+ * @author Mark Gottschling on Mar 16, 2024
  */
 public enum ClaimResult {
     SUCCESS,
@@ -28,13 +28,19 @@ public enum ClaimResult {
     INTERSECTS,
     INSUFFICIENT_SIZE,
     FAILURE,
-    STRUCTURE_DENIED;
+    STRUCTURE_DENIED,
+    /**
+     * The parcel being placed (ZONE or CITIZEN) is not fully contained
+     * within a valid parent parcel (NATION or ZONE).
+     * Message key: "deed.claim.not_in_parent"
+     */
+    NOT_IN_PARENT;
 
     public boolean isSuccess() {
         return this == SUCCESS || this == SUCCESS_WITH_WARNINGS;
     }
 
     public boolean isFailure() {
-        return this == FAILURE || this == STRUCTURE_DENIED;
+        return this == FAILURE || this == STRUCTURE_DENIED || this == NOT_IN_PARENT;
     }
 }

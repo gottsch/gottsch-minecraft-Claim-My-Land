@@ -96,11 +96,10 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
                         blockEntity.getParcelId(), parcel.isPresent());
                 if (parcel.isPresent()) {
                     // committed parcel — hide the visual border
-//                    CMLNetwork.syncBorderVisibilityToTrackingPlayers(
-//                            serverLevel, parcel.get(), false, 0, pos.getY());
-                    CMLNetwork.syncBorderVisibilityToDimension(serverLevel, parcel.get(), false, 0, pos.getY());
+                    CMLNetwork.syncBorderHiddenToDimension(serverLevel, parcel.get());
                     ActiveBorderStoneRegistry.remove(blockEntity);
-                } else {
+                }
+                else {
                     // phase 1 preview — parcel never committed; remove from client registries
                     CMLNetwork.removePreviewParcelFromTracking(
                             serverLevel, blockEntity.getParcelId(), pos);

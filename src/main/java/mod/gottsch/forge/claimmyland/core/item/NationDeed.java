@@ -72,9 +72,6 @@ public class NationDeed extends Deed {
             parcel.getEstate().setId(tag.getUUID(Deed.ESTATE_ID));
         }
 
-        // override coords
-        parcel.setCoords(parcel.getCoords().withY(0));
-
         return optionalParcel;
     }
 
@@ -92,6 +89,31 @@ public class NationDeed extends Deed {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Nations always span the full world height. Override to set Y coords
+     * directly from world build limits rather than deriving from the
+     * relative box round-trip.
+     */
+    @Override
+    protected void applyWorldPosition(Parcel parcel, FoundationStoneBlockEntity fbe) {
+        Box parcelBox = fbe.getAbsoluteBox();
+        int minBuildHeight = fbe.getLevel().getMinBuildHeight();
+        int maxBuildHeight = fbe.getLevel().getMaxBuildHeight() - 1;
+
+        parcel.setCoords(Coords.of(
+                parcelBox.getMinCoords().getX(),
+                minBuildHeight,
+                parcelBox.getMinCoords().getZ()));
+        parcel.setSize(new Box(
+                Coords.of(0, 0, 0),
+                Coords.of(
+                        parcelBox.getMaxCoords().getX() - parcelBox.getMinCoords().getX(),
+                        maxBuildHeight - minBuildHeight,
+                        parcelBox.getMaxCoords().getZ() - parcelBox.getMinCoords().getZ()
+                )
+        ));
     }
 
     @Override
