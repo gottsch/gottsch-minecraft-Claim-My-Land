@@ -64,12 +64,6 @@ public class ClientCelebrationHandler {
                     packet.getMaxX(), packet.getMaxZ(),
                     packet.getBorderStoneX(), packet.getBorderStoneY(), packet.getBorderStoneZ());
         }
-
-        ClaimMyLand.LOGGER.debug(
-                "ClaimCelebrationPacket: perimeter={}, mode={}, stone=[{},{},{}]",
-                perimeter,
-                perimeter <= FULL_PERIMETER_THRESHOLD ? "full" : "arc",
-                packet.getBorderStoneX(), packet.getBorderStoneY(), packet.getBorderStoneZ());
     }
 
     // -------------------------------------------------------------------------

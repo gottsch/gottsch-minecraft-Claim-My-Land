@@ -100,15 +100,15 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
 
     @Override
     public boolean grantsAccess(UUID entityId, ItemStack stack) {
-        ClaimMyLand.LOGGER.debug("checking Zone parcel grantsAccess for player -> 0{} with item -> {}", entityId.toString(), stack.getDisplayName().getString());
+//        ClaimMyLand.LOGGER.debug("checking Zone parcel grantsAccess for player -> 0{} with item -> {}", entityId.toString(), stack.getDisplayName().getString());
         if (grantsAccess(entityId)) {
             return true;
         }
-        ClaimMyLand.LOGGER.debug("player does not have uuid access, check item...");
+//        ClaimMyLand.LOGGER.debug("player does not have uuid access, check item...");
 
         // check what stack the player is holding
         boolean hasItemAccess = stack.getItem() instanceof PlayerDeed || stack.getItem() instanceof CitizenDeed;
-        ClaimMyLand.LOGGER.debug("player {} item access", hasItemAccess ? "has" : "does NOT have");
+//        ClaimMyLand.LOGGER.debug("player {} item access", hasItemAccess ? "has" : "does NOT have");
         return hasItemAccess;
     }
 

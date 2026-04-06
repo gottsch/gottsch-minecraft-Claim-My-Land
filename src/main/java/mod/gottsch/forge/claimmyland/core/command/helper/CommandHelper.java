@@ -24,9 +24,11 @@ import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.parcel.Parcel;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 
@@ -34,6 +36,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * coordination utilities for command implementations: player/estate lookup,
@@ -51,6 +54,31 @@ import java.util.UUID;
  * @author Mark Gottschling 9/16/2024
  */
 public class CommandHelper {
+
+	/**
+	 * Removes all tenant parcels (Citizens, Zones) belonging to a Nation estate.
+	 * Removes borders, unregisters parcels from ParcelRegistry, and unregisters
+	 * their estates from EstateRegistry.
+	 * No deeds are returned — tenants are destroyed when the Nation is demolished.
+	 *
+	 * @author Mark Gottschling on Apr 6, 2026
+	 */
+	public static void cleanupNationTenants(ServerLevel level, Estate nationEstate) {
+		if (!nationEstate.isNation()) return;
+
+		Set<Parcel> tenantParcels = ParcelRegistry.findAllByNationEstateId(nationEstate.getId());
+		// collect tenant estates before unregistering parcels
+		Set<Estate> tenantEstates = tenantParcels.stream()
+				.map(Parcel::getEstate)
+				.collect(Collectors.toSet());
+
+		tenantParcels.forEach(parcel -> {
+			ParcelRegistry.unregisterParcel(level, parcel);
+		});
+
+		// unregister tenant estates
+		tenantEstates.forEach(EstateRegistry::unregister);
+	}
 
 	// =====================================================================
 	// SENDING GATEWAY

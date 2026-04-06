@@ -312,8 +312,6 @@ public Box getAbsoluteBox() {
 
     @Override
     public void onLoad() {
-        ClaimMyLand.LOGGER.info("onLoad: getParcelId=" + getParcelId());
-
         super.onLoad();
 
         if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;

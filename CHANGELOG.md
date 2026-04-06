@@ -99,12 +99,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ModEvents.onLivingDestroyBlock()` — fixed missing `event.setCanceled(true)` call. Previously the dimension and intersection checks ran but never actually cancelled the event.
 - `ModEvents.onSpawnEntity()` — `isEntityWhitelisted()` extracted as a private helper method for clarity and reuse.
 - `ClaimMyLand` constructor — `ModLootModifiers.register(modEventBus)` added.
+- Conflict resolution centralized into `ParcelConflictResolver.isConflict()` — single authoritative conflict determination replaces duplicated logic across five code paths (`handleClaim()`, `resolveConflictState()`, `ClientParcelRegistry.findConflicting()`, `FoundationStoneEvents`, and `DemolishParcelSubCommand`). Four-rule priority: hierarchical → foreign owner → same-owner sibling → same-owner cross-type.
+- Buffer conflict checks are now bidirectional — both "does existing parcel's buffer reach proposed box" (Rule 2a) and "does proposed parcel's buffer reach existing parcel box" (Rule 2b) are checked during claim and conflict state resolution.
+- Nation tenant cleanup on demolish centralized into `CommandHelper.cleanupNationTenants()` — `DemolishEstateSubCommand` and `DemolishParcelSubCommand` now use a shared helper that finds tenants via `ParcelRegistry.findAllByNationEstateId()` and properly unregisters both parcels and estates.
 
 ---
 
 ### 🐛 Fixed
 
 - `ModEvents.onLivingDestroyBlock()` — event was never cancelled even when a mob attempted to destroy a block inside a protected parcel. `event.setCanceled(true)` now called correctly.
+- Nation Foundation Stone placement blocked in wilderness — `NationParcel.canPlaceAt()` now checks for empty wilderness directly, bypassing the default embedded placement check that always failed for Nations.
+- Nation parcel not removed from registry on demolish — `DeedFactory.createNationDeed()` mutated the live parcel's size Box in-place, shifting the `PARCELS_BY_COORDS` map key so `unregisterCoords()` silently failed. Fixed by creating a defensive copy of the size Box before modifying Y values.
+- Nation demolish did not remove tenant parcels (Citizens, Zones) — `DemolishEstateSubCommand.demolish()` only iterated the Nation estate's own parcels, leaving orphaned tenants in the registry and NBT.
+- Foundation Stone preview inside foreign Nation/Zone could not be broken by the placing player — `ModEvents.onBlockBreak()` now exempts Foundation Stones when the breaker is the block entity's owner.
 
 ---
 

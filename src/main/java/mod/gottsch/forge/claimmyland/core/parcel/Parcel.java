@@ -307,7 +307,6 @@ public interface Parcel {
     }
 
     default ClaimResult nameAndRegister(Level level) {
-        ClaimMyLand.LOGGER.debug("nameAndRegister() called for parcel -> {}", getId());
         ClaimResult validation = validateClaim((ServerLevel) level);
         if (validation == ClaimResult.STRUCTURE_DENIED) {
             return validation;

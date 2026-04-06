@@ -143,10 +143,10 @@ public class SyncParcelPacket {
         this.maxX = maxX; this.maxY = maxY; this.maxZ = maxZ;
         this.dimension   = dimension;
         this.isBorderVisible = isBorderVisible;
-        if (isBorderVisible) {
-            ClaimMyLand.LOGGER.debug("SyncParcelPacket constructed with isBorderVisible=true, stack={}",
-                    Thread.currentThread().getStackTrace()[2]);
-        }
+//        if (isBorderVisible) {
+//            ClaimMyLand.LOGGER.debug("SyncParcelPacket constructed with isBorderVisible=true, stack={}",
+//                    Thread.currentThread().getStackTrace()[2]);
+//        }
         this.conflictState = conflictState;
         this.borderStoneY = borderStoneY;
         this.isPreview = isPreview;
@@ -233,10 +233,6 @@ public class SyncParcelPacket {
             boolean wasPreview = existing != null && existing.isPreview();
             boolean isNowCommitted = !packet.isPreview;
 
-            ClaimMyLand.LOGGER.debug("SyncParcelPacket.handle: parcelId={} isBorderVisible={} isPreview={} wasPreview={} conflictState={}",
-                    packet.parcelId, packet.isBorderVisible, packet.isPreview,
-                    existing != null && existing.isPreview(), packet.conflictState);
-
             // Server values are always authoritative — no preservation of existing client state.
             ClientParcel clientParcel = new ClientParcel(
                     packet.parcelId, packet.estateId,
@@ -296,8 +292,6 @@ public class SyncParcelPacket {
                 }
             }
 
-            ClaimMyLand.LOGGER.debug("SyncParcelPacket: registered parcel '{}' [{}]",
-                    packet.parcelName, packet.parcelId);
         });
         ctx.get().setPacketHandled(true);
     }

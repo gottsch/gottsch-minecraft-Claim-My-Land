@@ -22,9 +22,7 @@ package mod.gottsch.forge.claimmyland.core.command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
-import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
-import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.item.Deed;
 import mod.gottsch.forge.claimmyland.core.item.DeedFactory;
 import mod.gottsch.forge.claimmyland.core.item.NationDeed;
@@ -35,12 +33,11 @@ import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 
-import java.util.*;
+import java.util.Optional;
+import java.util.UUID;
 
 import static mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper.*;
 
@@ -110,13 +107,10 @@ public class DemolishParcelSubCommand implements SubCommand {
             ServerPlayer player = CommandHelper.getPlayer(source);
             Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
 
-            ClaimMyLand.LOGGER.debug("command player -> {}", player.getName().getString());
             if (ownerUuid.isEmpty()) {
                 sendUnableToLocatePlayerMessage(source, ownerName);
                 return -1;
             }
-            ClaimMyLand.LOGGER.debug("owner player uuid -> {}", ownerUuid.get());
-
             // get the parcel
             Optional<Parcel> optionalParcel = CommandHelper.findParcelByOwnerEstate(source, ownerUuid.get(), estateName, parcelName);
             if (optionalParcel.isEmpty()) {
@@ -166,31 +160,10 @@ public class DemolishParcelSubCommand implements SubCommand {
 
     private void removeParcel(CommandSourceStack source, Parcel parcel) {
 
-        // remove the border
-        removeBorder(source.getLevel(), parcel);
         // unregister the parcel
         ParcelRegistry.unregisterParcel(source.getLevel(), parcel);
 
-        // if a Nation parcel then remove all Zone tenant estates and conver all Citizen tenant estates to Player
-        if (parcel.getType() == ParcelType.NATION) {
-            // find all parcel within the boundary of the parcel
-            List<Parcel> tenantParcels = ParcelRegistry.find(parcel.getBox(), source.getLevel().dimension().location().toString()).stream()
-                    .filter(p -> p instanceof NationalizedParcel).toList();
-            // estate list of tenant parcels
-            Set<Estate> removeEstates = new HashSet<>();
-            tenantParcels.stream()
-                    .map(p -> (NationalizedParcel) p)
-                    .forEach(nationalizedParcel -> {
-                        removeBorder(source.getLevel(), nationalizedParcel);
-                        ParcelRegistry.unregisterParcel(source.getLevel(), nationalizedParcel);
-                    });
-        }
-    }
-
-    private void removeBorder(ServerLevel level, Parcel parcel) {
-//        BlockEntity blockEntity = level.getBlockEntity(parcel.getCoords().toPos());
-//        if (blockEntity instanceof FoundationStoneBlockEntity) {
-//            ((FoundationStoneBlockEntity) blockEntity).removeParcelBorder(level, parcel.getCoords());
-//        }
+        // cleanup nation tenant parcels (Citizens, Zones)
+        CommandHelper.cleanupNationTenants(source.getLevel(), parcel.getEstate());
     }
 }

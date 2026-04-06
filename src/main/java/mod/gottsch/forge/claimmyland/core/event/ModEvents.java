@@ -22,6 +22,7 @@ package mod.gottsch.forge.claimmyland.core.event;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.BorderStoneBlockEntity;
+import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
@@ -237,6 +238,13 @@ public class ModEvents {
             return;
         }
 
+        // allow a player to break their own Foundation Stone preview,
+        // even inside another player's parcel ex. citizen inside zone/nation
+        if (event.getLevel().getBlockEntity(event.getPos()) instanceof FoundationStoneBlockEntity fsbe) {
+            if (fsbe.getOwnerId() != null && fsbe.getOwnerId().equals(event.getPlayer().getUUID())) {
+                return;
+            }
+        }
         // prevent protected blocks from breaking
 //        if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID())) {
         if (!ParcelRegistry.hasAccess(
@@ -261,9 +269,9 @@ public class ModEvents {
             return;
         }
 
-        ClaimMyLand.LOGGER.debug("player is attempting to place block");
-        ClaimMyLand.LOGGER.debug("onBlockPlace — entity={}, block={}, pos={}",
-                event.getEntity(), event.getPlacedBlock().getBlock(), event.getPos());
+//        ClaimMyLand.LOGGER.debug("player is attempting to place block");
+//        ClaimMyLand.LOGGER.debug("onBlockPlace — entity={}, block={}, pos={}",
+//                event.getEntity(), event.getPlacedBlock().getBlock(), event.getPos());
 
         // chunk pre-filter
         BlockPos pos = event.getPos();

@@ -215,8 +215,7 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
                     (BorderStoneBlockEntity) level.getBlockEntity(pos);
             if (blockEntity != null && blockEntity.getParcelId() != null) {
                 Optional<Parcel> parcel = ParcelRegistry.findByParcelId(blockEntity.getParcelId());
-                ClaimMyLand.LOGGER.debug("BorderStone.onRemove: parcelId={}, parcelPresent={}",
-                        blockEntity.getParcelId(), parcel.isPresent());
+
                 if (parcel.isPresent()) {
                     // committed parcel — hide the visual border across the dimension
                     CMLNetwork.syncBorderHiddenToDimension(serverLevel, parcel.get());

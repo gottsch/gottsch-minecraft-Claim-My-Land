@@ -92,8 +92,6 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
                     (FoundationStoneBlockEntity) level.getBlockEntity(pos);
             if (blockEntity != null && blockEntity.getParcelId() != null) {
                 Optional<Parcel> parcel = ParcelRegistry.findByParcelId(blockEntity.getParcelId());
-                ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: parcelId={}, parcelPresent={}",
-                        blockEntity.getParcelId(), parcel.isPresent());
                 if (parcel.isPresent()) {
                     // committed parcel — hide the visual border
                     CMLNetwork.syncBorderHiddenToDimension(serverLevel, parcel.get());
@@ -104,10 +102,6 @@ public abstract class FoundationStone extends BaseEntityBlock implements EntityB
                     CMLNetwork.removePreviewParcelFromTracking(
                             serverLevel, blockEntity.getParcelId(), pos);
                 }
-            } else if (blockEntity == null) {
-                ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: blockEntity is NULL at pos={}", pos);
-            } else {
-                ClaimMyLand.LOGGER.debug("FoundationStone.onRemove: parcelId is null");
             }
         }
         super.onRemove(state, level, pos, state2, b);
