@@ -53,6 +53,22 @@ public enum ParcelType implements StringRepresentable {
         return this == CITIZEN || this == PLAYER;
     }
 
+    public static boolean isAllowedAncestor(ParcelType enclosingType, ParcelType placingType) {
+        return switch (placingType) {
+            case ZONE    -> enclosingType == ParcelType.NATION;
+            case CITIZEN -> enclosingType == ParcelType.NATION || enclosingType == ParcelType.ZONE;
+            default      -> false; // NATION, PLAYER — no allowed ancestors
+        };
+    }
+
+    public static boolean isAllowedDescendant(ParcelType enclosedType, ParcelType placingType) {
+        return switch (placingType) {
+            case NATION -> enclosedType == ParcelType.ZONE || enclosedType == ParcelType.CITIZEN;
+            case ZONE   -> enclosedType == ParcelType.CITIZEN;
+            default     -> false; // CITIZEN, PLAYER — no allowed descendants
+        };
+    }
+
     @Override
     public String toString() {
         return this.name();

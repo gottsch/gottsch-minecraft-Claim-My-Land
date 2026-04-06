@@ -6,7 +6,9 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.config.Config;
+import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
@@ -26,6 +28,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import org.joml.Matrix4f;
 
 import java.util.*;
@@ -128,6 +131,8 @@ public class ParcelBorderRenderer {
      */
     private static long conflictSetTime = 0L;
 
+    private static int conflictClearDistance = CONFLICT_CLEAR_DISTANCE;
+
     // --- Sprites (resolved by ParcelBorderRendererSetup on TextureStitchEvent.Post) ---
 
     static TextureAtlasSprite bufferSprite;
@@ -150,22 +155,29 @@ public class ParcelBorderRenderer {
     public static void setConflictHighlights(List<ClientParcel> conflicting, BlockPos stonePos) {
         CONFLICT_HIGHLIGHT_IDS.clear();
         if (conflicting.isEmpty()) {
-            conflictOrigin  = null;
+            conflictOrigin = null;
             conflictSetTime = 0L;
+            conflictClearDistance = CONFLICT_CLEAR_DISTANCE;
             return;
         }
+        int maxSpan = 0;
         for (ClientParcel parcel : conflicting) {
             CONFLICT_HIGHLIGHT_IDS.add(parcel.parcelId());
+            int spanX = parcel.maxX() - parcel.minX();
+            int spanZ = parcel.maxZ() - parcel.minZ();
+            maxSpan = Math.max(maxSpan, Math.max(spanX, spanZ));
         }
-        conflictOrigin  = stonePos;
+        conflictOrigin = stonePos;
         conflictSetTime = System.currentTimeMillis();
+        conflictClearDistance = Math.max(CONFLICT_CLEAR_DISTANCE, maxSpan + CONFLICT_CLEAR_DISTANCE);
     }
 
     /** Clears all conflict highlights immediately. */
     public static void clearConflictHighlights() {
         CONFLICT_HIGHLIGHT_IDS.clear();
-        conflictOrigin  = null;
+        conflictOrigin = null;
         conflictSetTime = 0L;
+        conflictClearDistance = CONFLICT_CLEAR_DISTANCE;
     }
 
     // -------------------------------------------------------------------------
@@ -188,10 +200,13 @@ public class ParcelBorderRenderer {
         // --- Conflict highlight clear check ---
         if (!CONFLICT_HIGHLIGHT_IDS.isEmpty() && conflictOrigin != null) {
             boolean tooFar = player.blockPosition().distSqr(conflictOrigin)
-                    > (double) CONFLICT_CLEAR_DISTANCE * CONFLICT_CLEAR_DISTANCE;
+                    > (double) conflictClearDistance * conflictClearDistance;
             long timeoutMs = (long) Config.CLIENT.rendering.conflictHighlightTimeoutSeconds.get() * 1000L;
             boolean timedOut = (System.currentTimeMillis() - conflictSetTime) >= timeoutMs;
             if (tooFar || timedOut) {
+                if (ModList.get().isLoaded("journeymap")) {
+                    ParcelPolygonOverlayFactory.clearConflictOverlays();
+                }
                 clearConflictHighlights();
             }
         }
@@ -206,6 +221,16 @@ public class ParcelBorderRenderer {
             if (!isWithinRenderRadius(parcel, player)) continue;
             if (!isVisibleToLocalPlayer(parcel, localPlayerId)) continue;
 
+//            // TEMP DEBUG
+//            if (!CONFLICT_HIGHLIGHT_IDS.isEmpty()) {
+//                ClaimMyLand.LOGGER.info("normal loop: parcel={} estateid={} id={} inConflictSet={}",
+//                        parcel.parcelName(), parcel.estateId(), parcel.parcelId(),
+//                        CONFLICT_HIGHLIGHT_IDS.contains(parcel.parcelId()));
+//            }
+
+            // Skip entirely if conflict highlight will render this parcel in orange
+            if (CONFLICT_HIGHLIGHT_IDS.contains(parcel.parcelId())) continue;
+
             int color = resolveOwnershipColor(parcel, localPlayerId);
             float r = ((color >> 16) & 0xFF) / 255f;
             float g = ((color >> 8)  & 0xFF) / 255f;
@@ -214,25 +239,21 @@ public class ParcelBorderRenderer {
             VertexConsumer lineConsumer = bufferSource.getBuffer(tubeRenderType());
             renderBorderWireframe(poseStack, camera, lineConsumer, parcel, r, g, b);
 
-            // Skip buffer brackets in the normal pass if this parcel is being
-            // rendered by the conflict highlight pass — it will draw them in orange.
-            if (!CONFLICT_HIGHLIGHT_IDS.contains(parcel.parcelId())) {
-                TextureAtlasSprite bufSprite = parcel.isConflict() ? bufferSpriteConflict : bufferSprite;
-                if (bufSprite != null) {
-                    VertexConsumer quadConsumer = bufferSource.getBuffer(
-                            RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
-                    renderBufferBrackets(poseStack, camera, quadConsumer, parcel, bufSprite);
-                }
+            TextureAtlasSprite bufSprite = parcel.isConflict() ? bufferSpriteConflict : bufferSprite;
+            if (bufSprite != null) {
+                VertexConsumer quadConsumer = bufferSource.getBuffer(
+                        RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+                renderBufferBrackets(poseStack, camera, quadConsumer, parcel, bufSprite);
+            }
 
-                TextureAtlasSprite areaSprite = AREA_SPRITES.get(parcel.parcelType());
-                if (areaSprite != null) {
-                    VertexConsumer quadConsumer = bufferSource.getBuffer(
-                            RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
-                    if (parcel.isConflict()) {
-                        renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, bufferSpriteConflict, 1f, 1f, 1f);
-                    } else {
-                        renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, areaSprite, r, g, b);
-                    }
+            TextureAtlasSprite areaSprite = AREA_SPRITES.get(parcel.parcelType());
+            if (areaSprite != null) {
+                VertexConsumer quadConsumer = bufferSource.getBuffer(
+                        RenderType.entityTranslucent(TextureAtlas.LOCATION_BLOCKS));
+                if (parcel.isConflict()) {
+                    renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, bufferSpriteConflict, 1f, 1f, 1f);
+                } else {
+                    renderHorizontalPlane(poseStack, camera, quadConsumer, parcel, areaSprite, r, g, b);
                 }
             }
         }
@@ -241,6 +262,8 @@ public class ParcelBorderRenderer {
         // Rendered for any parcel in CONFLICT_HIGHLIGHT_IDS regardless of isBorderVisible,
         // so parcels the local player doesn't own still show the orange highlight.
         if (!CONFLICT_HIGHLIGHT_IDS.isEmpty()) {
+//            ClaimMyLand.LOGGER.debug("render: CONFLICT_HIGHLIGHT_IDS={}", CONFLICT_HIGHLIGHT_IDS);
+
             for (ClientParcel parcel : ClientParcelRegistry.getAll()) {
                 if (!CONFLICT_HIGHLIGHT_IDS.contains(parcel.parcelId())) continue;
                 if (!isWithinRenderRadius(parcel, player)) continue;
@@ -300,10 +323,15 @@ public class ParcelBorderRenderer {
         double x1 = parcel.maxX() + 1 - camX;
         double z1 = parcel.maxZ() + 1 - camZ;
         double y0 = parcel.parcelType() == ParcelType.NATION
-                ? parcel.borderStoneY() - camY
+                ? (parcel.borderStoneY() != 0 ? parcel.borderStoneY()
+                   : (conflictOrigin != null ? conflictOrigin.getY() : parcel.minY())) - camY
                 : parcel.minY() - camY;
         double y1 = parcel.parcelType() == ParcelType.NATION
-                ? parcel.borderStoneY() + Config.SERVER.borders.nationBorderHeight.get() + 1 - camY
+                ? (parcel.borderStoneY() != 0
+                   ? parcel.borderStoneY() + Config.SERVER.borders.nationBorderHeight.get() + 1
+                   : (conflictOrigin != null
+                      ? conflictOrigin.getY() + Config.SERVER.borders.nationBorderHeight.get() + 1
+                      : parcel.maxY() + 1)) - camY
                 : parcel.maxY() + 1 - camY;
 
         Matrix4f matrix = poseStack.last().pose();
@@ -364,10 +392,15 @@ public class ParcelBorderRenderer {
         int bz1 = parcel.maxZ() + buf;
 
         int yBot = parcel.parcelType() == ParcelType.NATION
-                ? parcel.borderStoneY()
+                ? (parcel.borderStoneY() != 0 ? parcel.borderStoneY()
+                   : (conflictOrigin != null ? conflictOrigin.getY() : parcel.minY() - buf))
                 : parcel.minY() - buf;
         int yTop = parcel.parcelType() == ParcelType.NATION
-                ? parcel.borderStoneY() + Config.SERVER.borders.nationBorderHeight.get()
+                ? (parcel.borderStoneY() != 0
+                   ? parcel.borderStoneY() + Config.SERVER.borders.nationBorderHeight.get()
+                   : (conflictOrigin != null
+                      ? conflictOrigin.getY() + Config.SERVER.borders.nationBorderHeight.get()
+                      : parcel.maxY() + buf))
                 : parcel.maxY() + buf;
 
         Matrix4f matrix = poseStack.last().pose();

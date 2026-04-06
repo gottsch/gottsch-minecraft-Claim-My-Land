@@ -100,15 +100,15 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
 
     @Override
     public boolean grantsAccess(UUID entityId, ItemStack stack) {
-        ClaimMyLand.LOGGER.debug("checking Zone parcel grantsAccess for player -> 0{} with item -> {}", entityId.toString(), stack.getDisplayName().getString());
+//        ClaimMyLand.LOGGER.debug("checking Zone parcel grantsAccess for player -> 0{} with item -> {}", entityId.toString(), stack.getDisplayName().getString());
         if (grantsAccess(entityId)) {
             return true;
         }
-        ClaimMyLand.LOGGER.debug("player does not have uuid access, check item...");
+//        ClaimMyLand.LOGGER.debug("player does not have uuid access, check item...");
 
         // check what stack the player is holding
         boolean hasItemAccess = stack.getItem() instanceof PlayerDeed || stack.getItem() instanceof CitizenDeed;
-        ClaimMyLand.LOGGER.debug("player {} item access", hasItemAccess ? "has" : "does NOT have");
+//        ClaimMyLand.LOGGER.debug("player {} item access", hasItemAccess ? "has" : "does NOT have");
         return hasItemAccess;
     }
 
@@ -123,33 +123,49 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
     }
 
     @Override
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel) {
+        // Zones can only be embedded in a Nation owned by the same player
         if (!parentParcel.isNation() || !getOwnerId().equals(parentParcel.getOwnerId())) {
             return ClaimResult.FAILURE;
         }
 
-        // TODO parcelBox appears 1 block larger on x-axis (and possibly y-axis) — investigate
-        if (!ModUtil.contains(parentParcel.getBox(), parcelBox)) {
-            return ClaimResult.FAILURE;
+        // Zone must be fully contained within the parent Nation
+        if (!ModUtil.contains(parentParcel.getBox(), getBox())) {
+            return ClaimResult.NOT_IN_PARENT;
         }
 
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, level.dimension().location().toString()).stream()
-                .filter(p -> !p.getId().equals(parentParcel.getId()) && !p.isNation())
-                .filter(p -> !p.getOwnerId().equals(getOwnerId()))
+        String dimension = level.dimension().location().toString();
+
+        // Rule 2a: existing parcels whose buffer zones reach into this parcel's box
+        List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(getBox(), dimension).stream()
+                .filter(p -> !p.getId().equals(parentParcel.getId()))
+                .filter(p -> !p.isNation())
                 .toList();
 
-        if (Parcel.hasBoxToBufferedIntersections(parcelBox, getOwnerId(), overlaps)) {
+        // Rule 2b: this parcel's own buffer zone reaches into existing parcel boxes
+        int bufferSize = getBufferSize();
+        List<Parcel> inflatedOverlaps = bufferSize > 0
+                ? ParcelRegistry.find(ModUtil.inflate(getBox(), bufferSize), dimension).stream()
+                  .filter(p -> !p.getId().equals(parentParcel.getId()))
+                  .filter(p -> !p.isNation())
+                  .toList()
+                : List.of();
+
+        boolean bufferConflict =
+                bufferOverlaps.stream().anyMatch(p ->
+                        ParcelConflictResolver.isConflict(getType(), p.getType(),
+                                getOwnerId(), p.getOwnerId()))
+                        || inflatedOverlaps.stream().anyMatch(p ->
+                        ParcelConflictResolver.isConflict(getType(), p.getType(),
+                                getOwnerId(), p.getOwnerId()));
+
+        if (bufferConflict) {
             return ClaimResult.INTERSECTS;
         }
 
-        // TODO isValidParcel()
-        // update nation estate - inherit from parent parcel
+        // Inherit nation estate from parent
         setNationEstate((NationEstate) parentParcel.getEstate());
 
-        // register parcel
-//        ParcelRegistry.register((ServerLevel)level, this);
-//        CommandHelper.save(level);
-//        return ClaimResult.SUCCESS;
         return nameAndRegister(level);
     }
 

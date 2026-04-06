@@ -20,8 +20,11 @@
 package mod.gottsch.forge.claimmyland.core.network;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.integration.journeymap.JourneyMapOverlayHandler;
+import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.ArrayList;
@@ -75,16 +78,23 @@ public class SyncAllParcelsPacket {
 
     public static void handle(SyncAllParcelsPacket packet, Supplier<NetworkEvent.Context> ctx) {
         ctx.get().enqueueWork(() -> {
-            // Clear stale data from previous session or dimension
             ClientParcelRegistry.clear();
-            // Bulk register all parcels
+
+            if (ModList.get().isLoaded("journeymap")) {
+                JourneyMapOverlayHandler.removeAllOverlays();  // removes from JM API
+                ParcelPolygonOverlayFactory.clearCache();       // clears local ACTIVE_OVERLAYS maps
+            }
+
             ClientParcelRegistry.registerAll(
                     packet.parcels.stream()
                             .map(SyncParcelPacket::toClientParcel)
                             .toList()
             );
-            ClaimMyLand.LOGGER.debug("SyncAllParcelsPacket: synced {} parcel(s) to client",
-                    packet.parcels.size());
+
+            if (ModList.get().isLoaded("journeymap")) {
+                ClientParcelRegistry.getAll().forEach(
+                        ParcelPolygonOverlayFactory::notifyParcelAdded);
+            }
         });
         ctx.get().setPacketHandled(true);
     }

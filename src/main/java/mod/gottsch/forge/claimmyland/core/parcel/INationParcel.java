@@ -7,8 +7,6 @@ import java.util.UUID;
  * @author Mark Gottschling on Sep 14, 2024
  */
 public interface INationParcel extends Parcel {
-     @Deprecated(forRemoval = true, since = "2.0")
     List<UUID> getBlacklist();
-    @Deprecated(forRemoval = true, since = "2.0")
     void setBlacklist(List<UUID> blacklist);
 }

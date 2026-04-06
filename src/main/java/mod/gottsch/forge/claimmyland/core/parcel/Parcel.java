@@ -183,82 +183,101 @@ public interface Parcel {
     }
 
     // TODO have 2 variants of this, one that takes the parcelBox (static) and one that doesn't
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox);
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel); //, Box parcelBox);
 
     /**
-     * default behaviour to claim parcel
-     * @param level
-     * @return
+     * Default behaviour to claim a parcel in the open world (no enclosing parent).
+     *
+     * Rule 1  — Direct box overlap:
+     *   1a. If the overlapping parcel is a permitted ancestor/descendant, verify
+     *       full containment. Failing containment → NOT_IN_PARENT.
+     *   1b. Same-owner same-type siblings may touch but not overlap → INTERSECTS.
+     *   1c. All other overlaps (foreign owner, same-owner cross-type) → INTERSECTS.
+     *
+     * Rule 2  — Bidirectional buffer conflict (same-owner same-type siblings skip this):
+     *   2a. Existing parcel's buffer zone reaches into this parcel's box.
+     *   2b. This parcel's own buffer zone reaches into an existing parcel's box.
      */
-    default public ClaimResult handleClaim(Level level, Box parcelBox) {
+    default public ClaimResult handleClaim(Level level) {
         String dimension = ((ServerLevel) level).dimension().location().toString();
 
-        // TODO all this can be replace with hasBoxToBufferedBoxIntersections
-        // find overlaps of the parcel with buffered registry parcels.
-        // this ensure that the parcel boundaries are not overlapping the buffer area of another parcel
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, dimension);
-        if (!overlaps.isEmpty()) {
-            for (Parcel overlapParcel : overlaps) {
-                // if parcel in hand equals parcel in world then fail
-                /*
-                 * NOTE this should be moot as the deed shouldn't exist at this point anymore (survival)
-                 * as this can potentially only happen in creative.
-                 */
-                if (getId().equals(overlapParcel.getId())) {
-                    return ClaimResult.FAILURE;
-                }
+        // ── Rule 1: direct box-to-box overlap ────────────────────────────────
+        List<Parcel> directOverlaps = ParcelRegistry.find(getBox(), dimension);
+        for (Parcel existing : directOverlaps) {
 
-                /*
-                 * if parcel in hand has same owner as parcel in world, ignore buffers,
-                 * but check border overlaps. parcels owned by the same player can be touching.
-                 */
-                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-                    // get the existing owned parcel
-                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
+            // a parcel must never match itself (e.g. during a re-registration)
+            if (getId().equals(existing.getId())) {
+                return ClaimResult.FAILURE;
+            }
 
-                    // test if the non-buffered parcels intersect
-                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
-                        return ClaimResult.INTERSECTS;
-                    }
-                } else {
-                    return ClaimResult.INTERSECTS;
+            boolean hierarchical = ParcelType.isAllowedAncestor(existing.getType(), getType())
+                    || ParcelType.isAllowedDescendant(existing.getType(), getType());
+
+//            if (hierarchical) {
+//                // Rule 1a: hierarchical overlap is only valid when fully contained
+//                if (!ModUtil.contains(existing.getBox(), getBox())) {
+//                    return ClaimResult.NOT_IN_PARENT;
+//                }
+//                // fully contained within a permitted parent/child — not a conflict
+//                continue;
+//            }
+            if (hierarchical) {
+                boolean ancestorContainsPlacing =
+                        ParcelType.isAllowedAncestor(existing.getType(), getType())
+                                && ModUtil.contains(existing.getBox(), getBox());
+                boolean placingContainsDescendant =
+                        ParcelType.isAllowedDescendant(existing.getType(), getType())
+                                && ModUtil.contains(getBox(), existing.getBox());
+                if (!ancestorContainsPlacing && !placingContainsDescendant) {
+                    return ClaimResult.NOT_IN_PARENT;
                 }
+                continue;
+            }
+
+            // Rule 1b/1c: delegate ownership/type decision to the resolver
+            if (ParcelConflictResolver.isConflict(getType(), existing.getType(),
+                    getOwnerId(), existing.getOwnerId())) {
+                return ClaimResult.INTERSECTS;
+            }
+
+            // Rule 1b: same-owner same-type sibling — touching is fine, overlap is not
+            // (isConflict returned false, so we know it is a sibling at this point)
+            if (ModUtil.overlaps(getBox(), existing.getBox())) {
+                return ClaimResult.INTERSECTS;
             }
         }
 
-        // add to the registry
+        // ── Rule 2: bidirectional buffer conflict ─────────────────────────────
+        // Rule 2a: existing parcels whose buffer zones reach into this parcel's box
+        List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(getBox(), dimension).stream()
+                .filter(p -> !getId().equals(p.getId()))
+                .toList();
+
+        // Rule 2b: this parcel's own buffer zone reaches into existing parcel boxes
+        int bufferSize = getBufferSize();
+        List<Parcel> inflatedOverlaps = bufferSize > 0
+                ? ParcelRegistry.find(ModUtil.inflate(getBox(), bufferSize), dimension).stream()
+                  .filter(p -> !getId().equals(p.getId()))
+                  .toList()
+                : List.of();
+
+        // Same-owner same-type siblings are exempt from buffer checks (tiling is allowed).
+        // All other combinations use the resolver.
+        boolean bufferConflict =
+                bufferOverlaps.stream().anyMatch(p ->
+                        ParcelConflictResolver.isConflict(getType(), p.getType(),
+                                getOwnerId(), p.getOwnerId()))
+                        || inflatedOverlaps.stream().anyMatch(p ->
+                        ParcelConflictResolver.isConflict(getType(), p.getType(),
+                                getOwnerId(), p.getOwnerId()));
+
+        if (bufferConflict) {
+            return ClaimResult.INTERSECTS;
+        }
+
         return nameAndRegister(level);
-//        ParcelRegistry.register((ServerLevel)level, this);
-//        CommandHelper.save(level);
-//
-//        return ClaimResult.SUCCESS;
     }
 
-
-    default public ClaimResult handleClaim(Level level, Box parcelBox, ServerPlayer claimingPlayer) {
-        String dimension = ((ServerLevel) level).dimension().location().toString();
-
-        List<Parcel> overlaps = ParcelRegistry.findBuffer(parcelBox, dimension);
-        if (!overlaps.isEmpty()) {
-            for (Parcel overlapParcel : overlaps) {
-                if (getId().equals(overlapParcel.getId())) {
-                    return ClaimResult.FAILURE;
-                }
-                if (getOwnerId().equals(overlapParcel.getOwnerId())) {
-                    Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-                    if (optionalOwnedParcel.isPresent() && ModUtil.touching(getBox(), optionalOwnedParcel.get().getBox())) {
-                        return ClaimResult.INTERSECTS;
-                    }
-                } else {
-                    return ClaimResult.INTERSECTS;
-                }
-            }
-        }
-//        ParcelRegistry.register((ServerLevel) level, this, claimingPlayer.getScoreboardName());
-//        CommandHelper.save(level);
-//        return ClaimResult.SUCCESS;
-        return nameAndRegister(level, claimingPlayer.getScoreboardName());
-    }
 
     /**
      * Validates the proposed parcel against structure intersection rules.
@@ -288,7 +307,6 @@ public interface Parcel {
     }
 
     default ClaimResult nameAndRegister(Level level) {
-        ClaimMyLand.LOGGER.debug("nameAndRegister() called for parcel -> {}", getId());
         ClaimResult validation = validateClaim((ServerLevel) level);
         if (validation == ClaimResult.STRUCTURE_DENIED) {
             return validation;
@@ -315,39 +333,6 @@ public interface Parcel {
         CommandHelper.save(level);
         return validation;  // SUCCESS or SUCCESS_WITH_WARNINGS
     }
-
-    default public boolean hasBufferedIntersections(Parcel parcel, List<Parcel> bufferedParcels) {
-        return hasBoxToBufferedIntersections(parcel.getBox(), parcel.getOwnerId(), bufferedParcels);
-    }
-
-    /**
-     * the intent to to take a non-buffered parcel box and test against the buffered list
-     * if overlaps with a buffered parcel and not owner by the same owner, then fail
-     *
-     * @param bufferedParcels a list of buffered parcels to test against
-     */
-    public static boolean hasBoxToBufferedIntersections(Box box, UUID ownerId, List<Parcel> bufferedParcels) {
-        for (Parcel overlapParcel : bufferedParcels) {
-            /*
-             * if parcel of foundation stone has same owner as parcel in world, ignore buffers,
-             * but check border overlaps. parcels owned by the same player can be touching.
-             */
-            if (ownerId != null && ownerId.equals(overlapParcel.getOwnerId())) {
-                // get the existing owned parcel
-                Optional<Parcel> optionalOwnedParcel = ParcelRegistry.findByParcelId(overlapParcel.getId());
-
-                // test if the parcels intersect
-                if (optionalOwnedParcel.isPresent() && ModUtil.touching(box, optionalOwnedParcel.get().getBox())) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        }
-        return false;
-    }
-
-//    void populateBlockEntity(FoundationStoneBlockEntity entity);
 
     boolean isValidClaim(Estate estate);
 

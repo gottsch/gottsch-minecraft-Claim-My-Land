@@ -16,6 +16,104 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **💡 Recommended:** Since this mod is heavily command-based, we recommend using 🔗 [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
 
 ---
+## [2.5.0] - 2026-03-28
+
+### 🎉 Highlights
+
+- **Backup config hot-reload** — changes to backup settings in `claimmyland-server.toml` now take effect immediately without a server restart.
+- **Claim celebration fireworks** — committing a claim now launches firework rockets at the parcel centre, visible to all nearby players. Rocket count and color scale with parcel type.
+- **Foundation Stone centering** — the Foundation Stone is now placed at the XZ centre of the parcel by default, making claim placement more intuitive.
+- **Farmland trample & chorus fruit protection** — two new protection gaps closed: players and mobs can no longer trample farmland inside foreign parcels, and chorus fruit teleportation into protected parcels is blocked.
+- **CML OpsList** — specific players can now be granted CML ops-level permission via UUID list in config, without requiring server op status.
+- **Deeds as Loot** — Deed items now appear in vanilla dungeon, stronghold, nether, and end loot tables, and in Treasure2 chest tiers, allowing land claiming to emerge organically through gameplay.
+
+---
+
+### ➕ Added
+
+#### Backup Config Hot-Reload
+- `RollingJsonSaver` is now reinitialized when `claimmyland-server.toml` is reloaded at runtime.
+- `ModConfigEvent.Reloading` handler added to `ClaimMyLand` — calls `reinitBackup()` when the CML config is reloaded.
+- If backup is disabled in config the saver is set to null; existing null-guards in `BackupSubCommand` and the tick handler handle this safely.
+
+#### Claim Celebration Fireworks
+- Committing a claim now spawns firework rockets at the parcel centre, visible to all nearby players via standard entity replication.
+- Rocket count scales with parcel type: 1 for CITIZEN/PLAYER, 2 for ZONE, 3 for NATION.
+- Rocket burst color is type-coded: NATION → blue (`0x00AAFF`), CITIZEN → purple (`0xAA55FF`), ZONE → yellow (`0xFFFF55`), PLAYER → green (`0x55FF55`).
+- Rockets spawn at the surface heightmap position above the parcel centre (not at the parcel floor) to ensure visibility.
+- New config toggle: `Config.SERVER.celebration.fireworksEnabled` (default: `true`). Disable on busy servers where fireworks are unwanted.
+- New class: `CelebrationHelper` in `core.util`.
+
+#### Foundation Stone Centering
+- The Foundation Stone is now placed at the XZ centre of the parcel box by default.
+- Odd-sized deeds floor the half-offset (e.g. a 15-wide deed places 7 blocks left of stone, 8 right).
+- Legacy behaviour (stone = min corner) is available via `Config.SERVER.general.foundationStoneCentered = false`.
+- Single change point: `FoundationStoneBlockEntity.getAbsoluteBox()` — all deed types benefit automatically.
+- Existing committed parcels are unaffected — their absolute coords are already stored and are not recalculated.
+- `Deed.useOn()` updated: after `getAbsoluteBox()`, the parcel's coords and size are synced to the centered absolute box via `applyWorldPosition()` before claim validation.
+- `handleClaim()` and `handleEmbeddedClaim()` `Box` parameter removed — callers now use `parcel.getBox()` internally. Call sites simplified.
+
+#### Additional Protection Events
+- **Farmland trample**: `BlockEvent.FarmlandTrampleEvent` handler added to `ModEvents`. Prevents players and mobs from trampling farmland inside protected parcels. Config flag: `enableFarmlandTrampleEvent` (default: `true`).
+- **Chorus fruit teleport**: `EntityTeleportEvent.ChorusFruit` handler added to `ModEvents`. Prevents players from teleporting into protected parcels via chorus fruit. Config flag: `enableChorusFruitTeleport` (default: `true`).
+
+#### CML OpsList
+- New config entry `opsList` in `Config.SERVER.general` — a list of player UUID strings granted CML ops-level permission without requiring server op status.
+- `ModEvents.hasOpsPermission()` updated to check the list.
+- `/cml-ops` Brigadier `requires()` predicate updated to check the list.
+- Management command (`/cml-ops opslist`) deferred to v2.6 — direct config file editing is sufficient for v2.5.
+
+#### Deeds as Loot — Vanilla
+- Deed items now appear in 10 vanilla loot tables via Forge Global Loot Modifier.
+- Loot is gated by `Config.SERVER.general.enableDeedLoot` (default: `true`).
+- Four tiers with tuned chance and deed pool:
+  - **Common** (chance 0.15): simple dungeon, nether bridge, village weaponsmith, fishing treasure → `player_deed_10/16/32`
+  - **Uncommon** (chance 0.12): stronghold corridor, bastion treasure → `player_deed_10/16/32`
+  - **Rare** (chance 0.08): stronghold library, woodland mansion → `player_deed_16/32`, `nation_deed_100`
+  - **Epic** (chance 0.05): end city treasure, ancient city → `player_deed_32`, `nation_deed_100`
+- Higher tier chests have higher deed chances (harder to find = more reliable reward when opened).
+- Loot deeds have no owner set — the using player becomes the owner at claim time.
+- New classes: `DeedLootModifier`, `ModLootModifiers` in `core.loot`.
+- New data files: `deed_loot_common/uncommon/rare/epic.json` under `data/claimmyland/loot_modifiers/`.
+- `DeedFactory.createTieredDeed(RandomSource, String tier)` added.
+- `DeedFactory.createNationDeedForLoot()` added — creates a full world-height nation deed without requiring a `Level` reference.
+
+#### Deeds as Loot — Treasure2 Integration
+- Deed items now inject into Treasure2 chest loot tables for servers running Treasure2.
+- Six tiers mapped to CML deed pools (Treasure2 `common` excluded — too low tier for deeds):
+  - `uncommon` → common pool (chance tuned)
+  - `scarce` → uncommon pool
+  - `rare` → rare pool
+  - `epic` → epic pool
+  - `legendary` → epic pool (higher chance than standard epic)
+  - `mythical` → epic pool (highest chance)
+- Inject files under `data/treasure2/loot_tables/injects/chests/` prefixed with `cml_` (e.g. `cml_uncommon.json`).
+
+---
+
+### ⚙️ Changed
+
+- `@Deprecated(since="2.4")` dimension-blind `ParcelRegistry` overloads removed — all call sites now use dimension-aware signatures. Affected methods: `find()`, `findBuffer()`, `findBoxes()`, `intersectsParcel()`, `resolveConflictState()`, `findLeastSignificant()`, `findMostSignificant()`, `isFireSpreadPrevented()`, `findRaw()`, `findBufferRaw()`, `resolveParcelAt()`.
+- `FoundationStoneBlockEntity.getAbsoluteBox()` — centering logic added, guarded by `Config.SERVER.general.foundationStoneCentered`.
+- `Deed.useOn()` — `applyWorldPosition()` called after `getAbsoluteBox()` to sync parcel coords/size to the centered absolute box before claim validation. `handleClaim()` / `handleEmbeddedClaim()` no longer receive a `Box` parameter.
+- `ModEvents.onLivingDestroyBlock()` — fixed missing `event.setCanceled(true)` call. Previously the dimension and intersection checks ran but never actually cancelled the event.
+- `ModEvents.onSpawnEntity()` — `isEntityWhitelisted()` extracted as a private helper method for clarity and reuse.
+- `ClaimMyLand` constructor — `ModLootModifiers.register(modEventBus)` added.
+- Conflict resolution centralized into `ParcelConflictResolver.isConflict()` — single authoritative conflict determination replaces duplicated logic across five code paths (`handleClaim()`, `resolveConflictState()`, `ClientParcelRegistry.findConflicting()`, `FoundationStoneEvents`, and `DemolishParcelSubCommand`). Four-rule priority: hierarchical → foreign owner → same-owner sibling → same-owner cross-type.
+- Buffer conflict checks are now bidirectional — both "does existing parcel's buffer reach proposed box" (Rule 2a) and "does proposed parcel's buffer reach existing parcel box" (Rule 2b) are checked during claim and conflict state resolution.
+- Nation tenant cleanup on demolish centralized into `CommandHelper.cleanupNationTenants()` — `DemolishEstateSubCommand` and `DemolishParcelSubCommand` now use a shared helper that finds tenants via `ParcelRegistry.findAllByNationEstateId()` and properly unregisters both parcels and estates.
+
+---
+
+### 🐛 Fixed
+
+- `ModEvents.onLivingDestroyBlock()` — event was never cancelled even when a mob attempted to destroy a block inside a protected parcel. `event.setCanceled(true)` now called correctly.
+- Nation Foundation Stone placement blocked in wilderness — `NationParcel.canPlaceAt()` now checks for empty wilderness directly, bypassing the default embedded placement check that always failed for Nations.
+- Nation parcel not removed from registry on demolish — `DeedFactory.createNationDeed()` mutated the live parcel's size Box in-place, shifting the `PARCELS_BY_COORDS` map key so `unregisterCoords()` silently failed. Fixed by creating a defensive copy of the size Box before modifying Y values.
+- Nation demolish did not remove tenant parcels (Citizens, Zones) — `DemolishEstateSubCommand.demolish()` only iterated the Nation estate's own parcels, leaving orphaned tenants in the registry and NBT.
+- Foundation Stone preview inside foreign Nation/Zone could not be broken by the placing player — `ModEvents.onBlockBreak()` now exempts Foundation Stones when the breaker is the block entity's owner.
+
+---
 
 ## [2.4.0] - 2026-03-26
 
@@ -96,7 +194,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Friends Whitelist add/remove icon commands using wrong command path.
 - Fixed cross-dimension parcel false-positives — parcels in the Nether/End could incorrectly match queries in the Overworld due to the dimension-blind BST.
 
-### 🔧 TTechnical Notes
+### 🔧 Technical Notes
 
 - `BlockEvent.EntityPlaceEvent` is server-side only in Forge 1.20.1 — Foundation Stone placement particles are triggered via `SyncParcelPacket.handle()` instead (on new preview arrival).
 - Fluid spread prevention was investigated but no reliable cancellable Forge 1.20.1 event exists for fluid flow — deferred to v2.5.

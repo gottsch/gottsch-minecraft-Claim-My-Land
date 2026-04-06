@@ -47,7 +47,6 @@ public class TagHelper {
         Optional<TagKey<Block>> tagKeyOptional = getBlockTagFromResourceLocation(tagLocation);
         if (tagKeyOptional.isPresent()) {
             TagKey<Block> tagKey = tagKeyOptional.get();
-            ClaimMyLand.LOGGER.debug("testing block -> {} .is()", block.getName().getString());
             return block.builtInRegistryHolder().is(tagKey);
         }
         ClaimMyLand.LOGGER.debug("could not find block tag in registry.");

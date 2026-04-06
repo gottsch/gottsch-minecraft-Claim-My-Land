@@ -96,15 +96,12 @@ public class DemolishEstateSubCommand implements SubCommand {
     public int demolish(CommandSourceStack source, String ownerName, String estateName) {
         try {
             ServerPlayer player = CommandHelper.getPlayer(source);
-            ClaimMyLand.LOGGER.debug("command player -> {}", player.getName().getString());
 
             Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
             if (ownerUuid.isEmpty()) {
                sendUnableToLocatePlayerMessage(source, ownerName);
                 return -1;
             }
-
-            ClaimMyLand.LOGGER.debug("owner player uuid -> {}", ownerUuid.get());
 
             Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid.get(), estateName);
             if (estate.isEmpty()) {
@@ -116,6 +113,10 @@ public class DemolishEstateSubCommand implements SubCommand {
             estate.get().findParcels().forEach(parcel -> {
                 demolishParcel(source, player, parcel);
             });
+            // cleanup nation tenant parcels (Citizens, Zones)
+            CommandHelper.cleanupNationTenants(source.getLevel(), estate.get());
+
+            save(source.getLevel());
 
         } catch (Exception e) {
             ClaimMyLand.LOGGER.error("an error occurred demolishing an estate:", e);

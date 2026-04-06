@@ -44,20 +44,6 @@ public class ModUtil {
         return name;
     }
 
-    public static String getPlayerNameByUUID(UUID uuid) {
-//        MinecraftServer server = MinecraftServer.getServer();
-//        if (server != null) {
-//            PlayerList playerList = server.getPlayerList();
-//            if (playerList != null) {
-//                OfflinePlayer player = playerList.getPlayerByUUID(uuid);
-//                if (player != null) {
-//                    return player.getName();
-//                }
-//            }
-//        }
-        return null;
-    }
-
     /**
      * convenience method until GottschCore is updated to include this in Box
      * @param box
@@ -90,28 +76,14 @@ public class ModUtil {
     }
 
     public static int getVolume(Box box) {
-      ICoords absoluteSize = ModUtil.getSize(box);
-      return absoluteSize.getX() * absoluteSize.getZ() * absoluteSize.getY();
+        ICoords absoluteSize = ModUtil.getSize(box);
+        return absoluteSize.getX() * absoluteSize.getZ() * absoluteSize.getY();
     }
 
     public static boolean intersects(Box box1, Box box2) {
         return toAABB(box1).intersects(toAABB(box2));
     }
 
-    /**
-     * a variant of intersects where result is true is the borders are touching
-     * @param box1
-     * @param box2
-     * @return
-     */
-    public static boolean touching(Box box1, Box box2) {
-        return box1.getMinCoords().getX() <= box2.getMaxCoords().getX()
-                && box1.getMaxCoords().getX() >= box2.getMinCoords().getX()
-                && box1.getMinCoords().getY() <= box2.getMaxCoords().getY()
-                && box1.getMaxCoords().getY() >= box2.getMinCoords().getY()
-                && box1.getMinCoords().getZ() <= box2.getMaxCoords().getZ()
-                && box1.getMaxCoords().getZ() >= box2.getMinCoords().getZ();
-    }
 
     public static boolean contains(Box box1, Box box2) {
         return contains(box1, box2.getMinCoords())
@@ -123,15 +95,6 @@ public class ModUtil {
                 && coords.getY() >= box.getMinCoords().getY() && coords.getY() <= box.getMaxCoords().getY()
                 && coords.getZ() >= box.getMinCoords().getZ() && coords.getZ() <= box.getMaxCoords().getZ();
     }
-    ///////////// from AABB - why >= min, BUT only < max ???
-//    public boolean contains(Vec3 p_82391_) {
-//        return this.contains(p_82391_.x, p_82391_.y, p_82391_.z);
-//    }
-//
-//    public boolean contains(double p_82394_, double p_82395_, double p_82396_) {
-//        return p_82394_ >= this.minX && p_82394_ < this.maxX && p_82395_ >= this.minY && p_82395_ < this.maxY && p_82396_ >= this.minZ && p_82396_ < this.maxZ;
-//    }
-    /////////////////////
 
     public static AABB toAABB(Box box) {
         return new AABB(box.getMinCoords().toPos(), box.getMaxCoords().toPos());
@@ -173,6 +136,26 @@ public class ModUtil {
             e.printStackTrace();
         }
         return minecraftID != null ? Optional.of(UUID.fromString(minecraftID.getId())) : Optional.empty();
+    }
+
+    // Adjacent — shares a face but no block space
+    public static boolean adjacent(Box box1, Box box2) {
+        return box1.getMinCoords().getX() <= box2.getMaxCoords().getX() + 1
+                && box1.getMaxCoords().getX() >= box2.getMinCoords().getX() - 1
+                && box1.getMinCoords().getY() <= box2.getMaxCoords().getY() + 1
+                && box1.getMaxCoords().getY() >= box2.getMinCoords().getY() - 1
+                && box1.getMinCoords().getZ() <= box2.getMaxCoords().getZ() + 1
+                && box1.getMaxCoords().getZ() >= box2.getMinCoords().getZ() - 1;
+    }
+
+    // Overlapping — shares at least one block
+    public static boolean overlaps(Box a, Box b) {
+        return a.getMinCoords().getX() <= b.getMaxCoords().getX()
+                && a.getMaxCoords().getX() >= b.getMinCoords().getX()
+                && a.getMinCoords().getY() <= b.getMaxCoords().getY()
+                && a.getMaxCoords().getY() >= b.getMinCoords().getY()
+                && a.getMinCoords().getZ() <= b.getMaxCoords().getZ()
+                && a.getMaxCoords().getZ() >= b.getMinCoords().getZ();
     }
 
     public static class MinecraftID {

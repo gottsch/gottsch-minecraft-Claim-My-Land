@@ -20,7 +20,10 @@
 package mod.gottsch.forge.claimmyland.core.registry;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
+import mod.gottsch.forge.claimmyland.core.config.ClientServerConfig;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelConflictResolver;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -162,23 +165,152 @@ public class ClientParcelRegistry {
     }
 
     /**
-     * Returns all committed (non-preview) parcels whose bounds overlap
-     * the given preview parcel's bounds.
+     * Returns all registered (non-preview) parcels that conflict with the given
+     * preview parcel. Used to drive the conflict highlight border and JourneyMap
+     * conflict overlay on the client.
      *
-     * Used by SyncParcelPacket.handle() and FoundationStoneEvents to
-     * identify parcels that conflict with a Foundation Stone placement.
+     * Mirrors the rules in Parcel.handleClaim() and ParcelRegistry.resolveConflictState()
+     * so the preview always reflects what the server would decide.
+     *
+     * Rule 1  — Direct box overlap:
+     *   Hierarchical overlaps require full containment; failing containment = conflict.
+     *   Same-owner same-type siblings may touch but not overlap.
+     *   All other overlaps are conflicts.
+     *
+     * Rule 2  — Bidirectional buffer conflict (siblings exempt):
+     *   2a. Existing parcel's buffer zone reaches into the preview box.
+     *   2b. Preview parcel's own buffer zone reaches into an existing parcel's box.
      */
     public static List<ClientParcel> findConflicting(ClientParcel preview) {
-        List<ClientParcel> result = new ArrayList<>();
-        for (ClientParcel parcel : getAll()) {
-            if (parcel.isPreview()) continue;
-            if (parcel.maxX() < preview.minX() || parcel.minX() > preview.maxX()) continue;
-            if (parcel.maxY() < preview.minY() || parcel.minY() > preview.maxY()) continue;
-            if (parcel.maxZ() < preview.minZ() || parcel.minZ() > preview.maxZ()) continue;
-            result.add(parcel);
+        LOGGER.debug("findConflicting: registry contents:");
+        for (ClientParcel p : getAll()) {
+            LOGGER.debug("  {} id={} preview={} borderVisible={}",
+                    p.parcelName(), p.parcelId(), p.isPreview(), p.isBorderVisible());
         }
+        int previewBuffer = switch (preview.parcelType()) {
+            case NATION -> ClientServerConfig.getNationParcelBufferRadius();
+            case PLAYER, CITIZEN -> ClientServerConfig.getParcelBufferRadius();
+            default -> 0;
+        };
+
+        UUID previewOwner = preview.ownerId();
+        List<ClientParcel> result = new ArrayList<>();
+
+        for (ClientParcel existing : getAll()) {
+            LOGGER.debug("findConflicting: considering {} estateId={} id={} isPreview={}",
+                    existing.parcelName(), existing.estateId(), existing.parcelId(), existing.isPreview());
+            if (existing.isPreview()) continue;
+            LOGGER.debug("findConflicting: checking overlap existing=[{},{},{} → {},{},{}] preview=[{},{},{} → {},{},{}]",
+                    existing.minX(), existing.minY(), existing.minZ(),
+                    existing.maxX(), existing.maxY(), existing.maxZ(),
+                    preview.minX(), preview.minY(), preview.minZ(),
+                    preview.maxX(), preview.maxY(), preview.maxZ());
+            boolean hierarchical = ParcelType.isAllowedAncestor(existing.parcelType(), preview.parcelType())
+                    || ParcelType.isAllowedDescendant(existing.parcelType(), preview.parcelType());
+
+            // ── Rule 1: direct box overlap ────────────────────────────────────
+            boolean directOverlap =
+                    existing.maxX() >= preview.minX() && existing.minX() <= preview.maxX() &&
+                            existing.maxY() >= preview.minY() && existing.minY() <= preview.maxY() &&
+                            existing.maxZ() >= preview.minZ() && existing.minZ() <= preview.maxZ();
+
+            if (existing.parcelType() == ParcelType.NATION || preview.parcelType() == ParcelType.NATION) {
+                ClaimMyLand.LOGGER.debug("findConflicting: existing=[{},{},{} → {},{},{}] preview=[{},{},{} → {},{},{}] directOverlap={} hierarchical={}",
+                        existing.minX(), existing.minY(), existing.minZ(),
+                        existing.maxX(), existing.maxY(), existing.maxZ(),
+                        preview.minX(), preview.minY(), preview.minZ(),
+                        preview.maxX(), preview.maxY(), preview.maxZ(),
+                        directOverlap, hierarchical);
+            }
+
+            if (directOverlap) {
+
+//                if (hierarchical) {
+//                    // valid only when the inner box is fully contained within the outer box
+//                    boolean contained =
+//                            existing.minX() <= preview.minX() && existing.maxX() >= preview.maxX() &&
+//                                    existing.minY() <= preview.minY() && existing.maxY() >= preview.maxY() &&
+//                                    existing.minZ() <= preview.minZ() && existing.maxZ() >= preview.maxZ();
+//                    if (!contained) result.add(existing);
+//                    // whether contained or not, move on — no buffer check for hierarchical pairs
+//                    continue;
+//                }
+
+                if (hierarchical) {
+                    boolean isAncestor = ParcelType.isAllowedAncestor(existing.parcelType(), preview.parcelType());
+                    boolean isDescendant = ParcelType.isAllowedDescendant(existing.parcelType(), preview.parcelType());
+
+                    boolean validContainment;
+                    if (isAncestor) {
+                        // ancestor must contain preview
+                        validContainment =
+                                existing.minX() <= preview.minX() && existing.maxX() >= preview.maxX() &&
+                                        existing.minY() <= preview.minY() && existing.maxY() >= preview.maxY() &&
+                                        existing.minZ() <= preview.minZ() && existing.maxZ() >= preview.maxZ();
+                    } else {
+                        // preview must contain descendant
+                        validContainment =
+                                preview.minX() <= existing.minX() && preview.maxX() >= existing.maxX() &&
+                                        preview.minY() <= existing.minY() && preview.maxY() >= existing.maxY() &&
+                                        preview.minZ() <= existing.minZ() && preview.maxZ() >= existing.maxZ();
+                    }
+                    if (!validContainment) result.add(existing);
+                    continue;
+                }
+
+                if (ParcelConflictResolver.isConflict(preview.parcelType(), existing.parcelType(),
+                        previewOwner, existing.ownerId())) {
+                    result.add(existing);
+                    continue;
+                }
+
+                // same-owner same-type sibling with direct overlap — always a conflict
+                result.add(existing);
+                continue;
+            }
+
+            // ── Rule 2: buffer conflict (hierarchical pairs are exempt) ────────
+            if (hierarchical) continue;
+
+            // siblings (same owner, same type) are exempt from buffer checks
+            if (previewOwner != null && previewOwner.equals(existing.ownerId())
+                    && existing.parcelType() == preview.parcelType()) continue;
+
+            int existingBuffer = switch (existing.parcelType()) {
+                case NATION -> ClientServerConfig.getNationParcelBufferRadius();
+                case PLAYER, CITIZEN -> ClientServerConfig.getParcelBufferRadius();
+                default -> 0;
+            };
+
+            // Rule 2a: existing parcel's buffer zone reaches into the preview box
+            boolean existingBufferOverlap = existingBuffer > 0 &&
+                    (existing.maxX() + existingBuffer) >= preview.minX() &&
+                    (existing.minX() - existingBuffer) <= preview.maxX() &&
+                    (existing.maxY() + existingBuffer) >= preview.minY() &&
+                    (existing.minY() - existingBuffer) <= preview.maxY() &&
+                    (existing.maxZ() + existingBuffer) >= preview.minZ() &&
+                    (existing.minZ() - existingBuffer) <= preview.maxZ();
+
+            // Rule 2b: preview parcel's own buffer zone reaches into the existing box
+            boolean previewBufferOverlap = previewBuffer > 0 &&
+                    existing.maxX() >= (preview.minX() - previewBuffer) &&
+                    existing.minX() <= (preview.maxX() + previewBuffer) &&
+                    existing.maxY() >= (preview.minY() - previewBuffer) &&
+                    existing.minY() <= (preview.maxY() + previewBuffer) &&
+                    existing.maxZ() >= (preview.minZ() - previewBuffer) &&
+                    existing.minZ() <= (preview.maxZ() + previewBuffer);
+
+            if (existingBufferOverlap || previewBufferOverlap) {
+                if (ParcelConflictResolver.isConflict(preview.parcelType(), existing.parcelType(),
+                        previewOwner, existing.ownerId())) {
+                    result.add(existing);
+                }
+            }
+        }
+
         return result;
     }
+
 
     /**
      * Returns an unmodifiable snapshot of all registered parcels.

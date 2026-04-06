@@ -142,8 +142,8 @@ public abstract class AbstractParcel implements Parcel {
      */
     @Override
     public boolean grantsAccess(UUID entityId) {
-//        ClaimMyLand.LOGGER.info("this parcel -> {}", this);
-//        ClaimMyLand.LOGGER.info("entityId -> {}, parcel.owner -> {}", entityId, this.getOwnerId());
+//        ClaimMyLand.LOGGER.debug("this parcel -> {}", this);
+//        ClaimMyLand.LOGGER.debug("entityId -> {}, parcel.owner -> {}", entityId, this.getOwnerId());
 
         // if a parcel has no owner, anyone has access to modify
         if (getOwnerId() == null) {
@@ -184,7 +184,7 @@ public abstract class AbstractParcel implements Parcel {
     }
 
     @Override
-    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel, Box parcelBox) {
+    public ClaimResult handleEmbeddedClaim(Level level, Parcel parentParcel) { //}, Box parcelBox) {
         return ClaimResult.FAILURE;
     }
 

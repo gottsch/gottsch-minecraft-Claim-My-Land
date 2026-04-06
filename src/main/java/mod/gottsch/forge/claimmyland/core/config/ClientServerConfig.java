@@ -1,5 +1,7 @@
 package mod.gottsch.forge.claimmyland.core.config;
 
+import ca.weblite.objc.Client;
+
 /**
  * Client-side holder for server config values that the client needs but cannot
  * read directly from {@code Config.SERVER} (which is only populated on the server).
@@ -22,6 +24,16 @@ public class ClientServerConfig {
     /** Default matches {@code Config.SERVER.general.enableParcelEntryTitle} default (true). */
     private static boolean enableParcelEntryTitle = true;
 
+    private static boolean foundationStoneCentered = true; // default matches Config.SERVER default
+
+    public static boolean isFoundationStoneCentered() {
+        return foundationStoneCentered;
+    }
+
+    public static void setFoundationStoneCentered(boolean value) {
+        foundationStoneCentered = value;
+    }
+
     private ClientServerConfig() {}
 
     public static int getParcelBufferRadius() {
@@ -41,9 +53,10 @@ public class ClientServerConfig {
      * received from the server.
      */
     public static void update(int parcelBufferRadius, int nationParcelBufferRadius,
-                              boolean enableParcelEntryTitle) {
+                              boolean enableParcelEntryTitle, boolean foundationStoneCentered) {
         ClientServerConfig.parcelBufferRadius       = parcelBufferRadius;
         ClientServerConfig.nationParcelBufferRadius = nationParcelBufferRadius;
         ClientServerConfig.enableParcelEntryTitle   = enableParcelEntryTitle;
+        ClientServerConfig.foundationStoneCentered = foundationStoneCentered;
     }
 }

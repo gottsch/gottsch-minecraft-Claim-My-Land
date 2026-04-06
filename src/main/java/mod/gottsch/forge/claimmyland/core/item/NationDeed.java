@@ -72,9 +72,6 @@ public class NationDeed extends Deed {
             parcel.getEstate().setId(tag.getUUID(Deed.ESTATE_ID));
         }
 
-        // override coords
-        parcel.setCoords(parcel.getCoords().withY(0));
-
         return optionalParcel;
     }
 
@@ -94,13 +91,54 @@ public class NationDeed extends Deed {
         return true;
     }
 
+    /**
+     * Nations always span the full world height. Override to set Y coords
+     * directly from world build limits rather than deriving from the
+     * relative box round-trip.
+     */
+    @Override
+    protected void applyWorldPosition(Parcel parcel, FoundationStoneBlockEntity fbe) {
+        Box parcelBox = fbe.getAbsoluteBox();
+        int minBuildHeight = fbe.getLevel().getMinBuildHeight();
+        int maxBuildHeight = fbe.getLevel().getMaxBuildHeight() - 1;
+
+        parcel.setCoords(Coords.of(
+                parcelBox.getMinCoords().getX(),
+                minBuildHeight,
+                parcelBox.getMinCoords().getZ()));
+        parcel.setSize(new Box(
+                Coords.of(0, 0, 0),
+                Coords.of(
+                        parcelBox.getMaxCoords().getX() - parcelBox.getMinCoords().getX(),
+                        maxBuildHeight - minBuildHeight,
+                        parcelBox.getMaxCoords().getZ() - parcelBox.getMinCoords().getZ()
+                )
+        ));
+    }
+
     @Override
     protected void populateFoundationStone(FoundationStoneBlockEntity blockEntity, ItemStack deed, BlockPos pos, Player player) {
         super.populateFoundationStone(blockEntity, deed, pos, player);
 
-        // default behaviour
+        blockEntity.setParcelType(ParcelType.NATION.getSerializedName());
+
+        // Nation parcels span full world height. Override the relativeBox so that
+        // getAbsoluteBox() produces a correctly intersectable preview box.
+        // The actual committed parcel uses parcel.getBox() (full height), but the
+        // preview path uses getAbsoluteBox() which derives from relativeBox + coords.
+        int minY = blockEntity.getLevel().getMinBuildHeight();   // -64
+        int maxY = blockEntity.getLevel().getMaxBuildHeight() - 1; // 319
         CompoundTag tag = deed.getOrCreateTag();
-        Box size = getSize(tag);
+        Box deedSize = getSize(tag);
+        blockEntity.setRelativeBox(new Box(
+                Coords.of(deedSize.getMinCoords().getX(), minY - pos.getY(), deedSize.getMinCoords().getZ()),
+                Coords.of(deedSize.getMaxCoords().getX(), maxY - pos.getY(), deedSize.getMaxCoords().getZ())
+        ));
+        //        super.populateFoundationStone(blockEntity, deed, pos, player);
+//
+//        // default behaviour
+//        CompoundTag tag = deed.getOrCreateTag();
+//        Box size = getSize(tag);
 
 //        blockEntity.setNationId(tag.contains(NATION_ID) ? tag.getUUID(NATION_ID) : null);
 

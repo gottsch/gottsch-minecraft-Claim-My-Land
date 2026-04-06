@@ -147,19 +147,43 @@ public class BorderStoneBlockEntity extends BlockEntity {
         return parcel.getBox();
     }
 
-    public Box getAbsoluteBox() {
-        if (getParcelId() != null) {
-            String dimension = level.dimension().location().toString();
-            Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
-            if (parcel.isPresent()) {
-                return parcel.get().getBox();
-            }
-        }
-        // phase 1 preview — foundation stone IS the origin
-        ICoords myCoords = Coords.of(this.worldPosition);
-        return new Box(myCoords.add(getRelativeBox().getMinCoords()),
-                myCoords.add(getRelativeBox().getMaxCoords()));
+//    public Box getAbsoluteBox() {
+//        if (getParcelId() != null) {
+//            String dimension = level.dimension().location().toString();
+//            Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//            if (parcel.isPresent()) {
+//                return parcel.get().getBox();
+//            }
+//        }
+//        // phase 1 preview — foundation stone IS the origin
+//        ICoords myCoords = Coords.of(this.worldPosition);
+//        return new Box(myCoords.add(getRelativeBox().getMinCoords()),
+//                myCoords.add(getRelativeBox().getMaxCoords()));
+//    }
+public Box getAbsoluteBox() {
+    if (relativeBox == null || coords == null) return null;
+    if (Config.SERVER.general.foundationStoneCentered.get()) {
+        int sizeX = relativeBox.getMaxCoords().getX() - relativeBox.getMinCoords().getX() + 1;
+        int sizeZ = relativeBox.getMaxCoords().getZ() - relativeBox.getMinCoords().getZ() + 1;
+        int halfX = sizeX / 2;
+        int halfZ = sizeZ / 2;
+        ICoords min = Coords.of(
+                coords.getX() - halfX,
+                coords.getY() + relativeBox.getMinCoords().getY(),
+                coords.getZ() - halfZ);
+        ICoords max = Coords.of(
+                coords.getX() - halfX + sizeX - 1,
+                coords.getY() + relativeBox.getMaxCoords().getY(),
+                coords.getZ() - halfZ + sizeZ - 1);
+        return new Box(min, max);
     }
+    // legacy: stone is min corner
+    return new Box(
+            coords.withY(coords.getY() + relativeBox.getMinCoords().getY())
+                    .add(relativeBox.getMinCoords().withY(0)),
+            coords.withY(coords.getY() + relativeBox.getMaxCoords().getY())
+                    .add(relativeBox.getMaxCoords().withY(0)));
+}
 
     /**
      * gets an absolute box at a given coords using the parcel box
@@ -167,10 +191,10 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @param coords
      * @return
      */
-    public Box getAbsoluteBox(ICoords coords) {
-        return new Box(coords.add(getRelativeBox().getMinCoords()),
-                coords.add(getRelativeBox().getMaxCoords()));
-    }
+//    public Box getAbsoluteBox(ICoords coords) {
+//        return new Box(coords.add(getRelativeBox().getMinCoords()),
+//                coords.add(getRelativeBox().getMaxCoords()));
+//    }
 
     /**
      * Sends border visibility to clients. All parcels use the visual renderer —
@@ -178,7 +202,7 @@ public class BorderStoneBlockEntity extends BlockEntity {
      * @author Mark Gottschling on Mar 11, 2026
      */
     public void placeParcelBorder(ServerPlayer placingPlayer) {
-//        ClaimMyLand.LOGGER.info("parcel id -> {}", getParcelId());
+//        ClaimMyLand.LOGGER.debug("parcel id -> {}", getParcelId());
         if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;
 
         Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
@@ -195,29 +219,29 @@ public class BorderStoneBlockEntity extends BlockEntity {
                 : parcel.get().getEstate().getOwnerId())
                 : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
 
-//        ClaimMyLand.LOGGER.info("ownerId -> {}", String.valueOf(ownerId));
+//        ClaimMyLand.LOGGER.debug("ownerId -> {}", String.valueOf(ownerId));
 
         String dimension = level.dimension().location().toString();
         int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? getParcelId() : null,
                 parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())), dimension);
 
-        ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
-                getParcelId(), parcel.isPresent(), conflictState, getBlockPos().getY(),
-                placingPlayer != null ? placingPlayer.getName().getString() : "null");
+//        ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
+//                getParcelId(), parcel.isPresent(), conflictState, getBlockPos().getY(),
+//                placingPlayer != null ? placingPlayer.getName().getString() : "null");
 
         if (parcel.isPresent()) {
             if (placingPlayer != null) {
-//                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrakcingPlayersAndSelf...");
+//                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrakcingPlayersAndSelf...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayersAndSelf(
-                        serverLevel, placingPlayer, parcel.get(), true, conflictState, getBlockPos().getY());
+                        serverLevel, placingPlayer, parcel.get(), conflictState, getBlockPos().getY());
             } else {
-//                ClaimMyLand.LOGGER.info("syncBorderVisibilityToTrackingPlayers...");
+//                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrackingPlayers...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayers(
-                        serverLevel, parcel.get(), true, conflictState, getBlockPos().getY());
+                        serverLevel, parcel.get(), conflictState, getBlockPos().getY());
             }
             ActiveBorderStoneRegistry.add(this);
         } else if (placingPlayer != null) {
-//            ClaimMyLand.LOGGER.info("syncPreviewParcelToTrackingPlayersAndSelf...");
+//            ClaimMyLand.LOGGER.debug("syncPreviewParcelToTrackingPlayersAndSelf...");
             // phase 1 preview — parcel not yet registered; register on client first
             CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
                     serverLevel, placingPlayer,
@@ -289,45 +313,44 @@ public class BorderStoneBlockEntity extends BlockEntity {
     @Override
     public void onLoad() {
         super.onLoad();
-        ClaimMyLand.LOGGER.debug("BorderStoneBlockEntity.onLoad: parcelId={} level={}",
-                getParcelId(), level != null ? level.getClass().getSimpleName() : "null");
 
-        if (level instanceof ServerLevel serverLevel && getParcelId() != null) {
-            Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
-            if (parcel.isPresent()) {
-                // TODO get the ownerId / placingPlayer property - add to foundation stone BE if have to
-                // committed parcel — restore border visibility to owner
-                ActiveBorderStoneRegistry.add(this);
+        if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;
+        // Guard: if the block entity is already marked for removal, do nothing.
+        // This prevents a spurious isBorderVisible=true send when the Foundation
+        // Stone is removed immediately after a successful claim commit.
+        if (isRemoved()) return;
 
-                ClaimMyLand.LOGGER.debug("is foundation stone -> {}", (this instanceof FoundationStoneBlockEntity));
-                if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity) {
-                    ClaimMyLand.LOGGER.debug("foundation stone placing player -> {}", foundationStoneBlockEntity.getPlacingPlayerId());
-                }
-                if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity
-                && foundationStoneBlockEntity.getPlacingPlayerId() != null) {
-                    ClaimMyLand.LOGGER.debug("sent to placer");
-                    CMLNetwork.syncBorderVisibleToOwnerAndPlacer(serverLevel, parcel.get(), getBlockPos().getY(),
-                            foundationStoneBlockEntity.getPlacingPlayerId());
-                } else {
-                    ClaimMyLand.LOGGER.debug("just send to owner");
-                    CMLNetwork.syncBorderVisibleToOwner(serverLevel, parcel.get(), getBlockPos().getY());
-                }
-            // TODO this is bad... a parent class referencing a sub class?
-            } else if (this instanceof FoundationStoneBlockEntity fsbe) {
-                // preview Foundation Stone — no committed parcel yet, re-sync preview to owner
-                Box absoluteBox = fsbe.getAbsoluteBox();
-                if (absoluteBox != null && getOwnerId() != null) {
-                    String dimension = serverLevel.dimension().location().toString();
-                    int conflictState = ParcelRegistry.resolveConflictState(
-                            absoluteBox, getOwnerId(), null, ParcelType.fromString(getParcelType()));
-                    CMLNetwork.syncPreviewParcelToOwner(
-                            serverLevel,
-                            getOwnerId(),
-                            getParcelId(), getParcelId(),
-                            ParcelType.fromString(getParcelType()),
-                            absoluteBox, getBlockPos().getY(),
-                            dimension, conflictState);
-                }
+        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+
+        if (parcel.isPresent()) {
+            // Committed parcel — restore border visibility to owner (and placer if different).
+            ActiveBorderStoneRegistry.add(this);
+
+            if (this instanceof FoundationStoneBlockEntity foundationStoneBlockEntity
+                    && foundationStoneBlockEntity.getPlacingPlayerId() != null) {
+                CMLNetwork.syncBorderVisibleToOwnerAndPlacer(
+                        serverLevel, parcel.get(), getBlockPos().getY(), 0,
+                        foundationStoneBlockEntity.getPlacingPlayerId());
+            } else {
+                CMLNetwork.syncBorderVisibleToOwner(
+                        serverLevel, parcel.get(), getBlockPos().getY(), 0);
+            }
+
+        } else if (this instanceof FoundationStoneBlockEntity fsbe) {
+            // Preview Foundation Stone — no committed parcel yet, re-sync preview to owner.
+            Box absoluteBox = fsbe.getAbsoluteBox();
+            if (absoluteBox != null && getOwnerId() != null) {
+                String dimension = serverLevel.dimension().location().toString();
+                int conflictState = ParcelRegistry.resolveConflictState(
+                        absoluteBox, getOwnerId(), null,
+                        ParcelType.fromString(getParcelType()), dimension);
+                CMLNetwork.syncPreviewParcelToOwner(
+                        serverLevel,
+                        getOwnerId(),
+                        getParcelId(), getParcelId(),
+                        ParcelType.fromString(getParcelType()),
+                        absoluteBox, getBlockPos().getY(),
+                        dimension, conflictState);
             }
         }
     }

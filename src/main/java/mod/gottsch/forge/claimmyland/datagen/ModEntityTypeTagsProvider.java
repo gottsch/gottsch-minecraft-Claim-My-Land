@@ -100,7 +100,6 @@ public class ModEntityTypeTagsProvider extends EntityTypeTagsProvider {
                 .add(EntityType.EXPERIENCE_BOTTLE)
                 .add(EntityType.EXPERIENCE_ORB)
                 .add(EntityType.EYE_OF_ENDER)
-                .add(EntityType.FALLING_BLOCK)
                 .add(EntityType.FIREBALL)
                 .add(EntityType.FIREWORK_ROCKET)
                 .add(EntityType.FISHING_BOBBER)

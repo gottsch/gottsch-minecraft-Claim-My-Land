@@ -150,7 +150,7 @@ public class CitizenTool extends BlockItem {
         citizen.setCoords(box.getMinCoords());
         citizen.setSize(new Box(Coords.of(0, 0, 0), box.getSize()));
 
-        ClaimResult claimResult = citizen.handleEmbeddedClaim(context.getLevel(), parentParcel, citizen.getBox());
+        ClaimResult claimResult = citizen.handleEmbeddedClaim(context.getLevel(), parentParcel); //, citizen.getBox());
 
         if (claimResult.isSuccess()) {
             // clean up preview border
@@ -256,7 +256,7 @@ public class CitizenTool extends BlockItem {
         if (level instanceof ServerLevel serverLevel) {
             Box box = new Box(coords1, coords2);
             String dimension = level.dimension().location().toString();
-            int conflictState = ParcelRegistry.resolveConflictState(box, player.getUUID(), null, ParcelType.CITIZEN);
+            int conflictState = ParcelRegistry.resolveConflictState(box, player.getUUID(), null, ParcelType.CITIZEN, dimension);
             CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
                     serverLevel, (ServerPlayer) player,
                     previewId, previewId,

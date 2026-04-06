@@ -4,10 +4,13 @@ import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.FoundationStone;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.forge.claimmyland.client.renderer.ParcelBorderRenderer;
+import mod.gottsch.forge.claimmyland.core.config.ClientServerConfig;
 import mod.gottsch.forge.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.forge.claimmyland.core.parcel.ClientParcel;
+import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.forge.claimmyland.core.registry.ClientParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.DimensionHelper;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -21,6 +24,7 @@ import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Client-side event handler that refreshes conflict highlights when the player
@@ -40,6 +44,7 @@ public class FoundationStoneEvents {
 
     @SubscribeEvent
     public static void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
+        if (!ModList.get().isLoaded("journeymap")) return;
         if (event.getEntity() instanceof FakePlayer) return;
 
         Level level = event.getLevel();
@@ -53,32 +58,24 @@ public class FoundationStoneEvents {
         if (fsbe.getParcelId() == null) return;
         if (fsbe.getAbsoluteBox() == null) return;
 
-        // Find the preview ClientParcel for this stone in the client registry.
-        // If not found (stone placed but not yet synced), nothing to refresh.
         ClientParcel preview = ClientParcelRegistry.findById(fsbe.getParcelId()).orElse(null);
         if (preview == null) return;
 
         List<ClientParcel> conflicting = ClientParcelRegistry.findConflicting(preview);
-        boolean intersects = !conflicting.isEmpty();
 
-        ClaimMyLand.LOGGER.debug("FoundationStoneEvents: right-click refresh — conflicting={}",
-                conflicting.size());
+        int minX = fsbe.getAbsoluteBox().getMinCoords().getX();
+        int minY = fsbe.getAbsoluteBox().getMinCoords().getY();
+        int minZ = fsbe.getAbsoluteBox().getMinCoords().getZ();
+        int maxX = fsbe.getAbsoluteBox().getMaxCoords().getX();
+        int maxY = fsbe.getAbsoluteBox().getMaxCoords().getY();
+        int maxZ = fsbe.getAbsoluteBox().getMaxCoords().getZ();
 
-        // --- In-world orange highlights (Feature 3b) ---
-        ParcelBorderRenderer.setConflictHighlights(conflicting, pos);
-
-        // --- JourneyMap preview + conflict overlays (Feature 3a) ---
-        if (ModList.get().isLoaded("journeymap")) {
-            ResourceKey<Level> dimensionKey = DimensionHelper.dimensionKey(preview.dimension());
-            if (dimensionKey != null) {
-                ParcelPolygonOverlayFactory.showPreviewOverlay(
-                        preview.parcelId(),
-                        preview.minX(), preview.minY(), preview.minZ(),
-                        preview.maxX(), preview.maxY(), preview.maxZ(),
-                        intersects,
-                        dimensionKey);
-                ParcelPolygonOverlayFactory.showConflictOverlays(conflicting, dimensionKey);
-            }
-        }
+        ResourceKey<Level> dimensionKey = level.dimension();
+        ParcelPolygonOverlayFactory.showPreviewOverlay(
+                fsbe.getParcelId(),
+                minX, minY, minZ,
+                maxX, maxY, maxZ,
+                !conflicting.isEmpty(),
+                dimensionKey);
     }
 }

@@ -32,6 +32,7 @@ import mod.gottsch.forge.claimmyland.core.parcel.ParcelTypeRegistry;
 import mod.gottsch.forge.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
+import mod.gottsch.forge.claimmyland.core.util.CelebrationHelper;
 import mod.gottsch.forge.claimmyland.core.util.LangUtil;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.block.BlockContext;
@@ -256,10 +257,15 @@ public abstract class Deed extends Item {
                 }
 
                 Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
-                ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel, parcelBox)).orElseGet(() -> parcel.handleClaim(context.getLevel(), parcelBox));
+                applyWorldPosition(parcel, foundationStoneBlockEntity);
+
+                ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel)).orElseGet(() -> parcel.handleClaim(context.getLevel()));
 
                 if (claimResult.isSuccess()) {
-
+                    if (context.getPlayer() instanceof ServerPlayer serverPlayer
+                            && context.getLevel() instanceof ServerLevel serverLevel) {
+                        CMLNetwork.syncParcelToPlayer(serverLevel, serverPlayer, parcel);
+                    }
                     // register user name
                     PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());
 
@@ -284,6 +290,10 @@ public abstract class Deed extends Item {
                     if (context.getPlayer() instanceof ServerPlayer serverPlayer
                             && context.getLevel() instanceof ServerLevel) {
                         CMLNetwork.sendClaimCelebration(serverPlayer, parcel, context.getClickedPos());
+                    }
+
+                    if (context.getLevel() instanceof ServerLevel serverLevel) {
+                        CelebrationHelper.spawnFireworks(serverLevel, parcel);
                     }
 
                     PlayerMessageHelper.sendSuccess(context.getPlayer(),
@@ -348,12 +358,26 @@ public abstract class Deed extends Item {
 
             BlockPlaceContext placeContext = new BlockPlaceContext(context);
             ICoords placeTargetCoords = Coords.of(placeContext.getClickedPos());
+
             // TODO need some feedback to player that !canPlaceAt() like "Player parcel cannot be placed in CLOSED Nation parcel"
             return parcel.canPlaceAt(context.getLevel(), placeTargetCoords)
                     && this.placeBlock(placeContext, foundationStone.defaultBlockState())
                     ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         }
         return super.useOn(context);
+    }
+
+    protected void applyWorldPosition(Parcel parcel, FoundationStoneBlockEntity fbe) {
+        Box parcelBox = fbe.getAbsoluteBox();
+        parcel.setCoords(parcelBox.getMinCoords());
+        parcel.setSize(new Box(
+                Coords.of(0, 0, 0),
+                Coords.of(
+                        parcelBox.getMaxCoords().getX() - parcelBox.getMinCoords().getX(),
+                        parcelBox.getMaxCoords().getY() - parcelBox.getMinCoords().getY(),
+                        parcelBox.getMaxCoords().getZ() - parcelBox.getMinCoords().getZ()
+                )
+        ));
     }
 
     /**
