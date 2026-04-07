@@ -1,197 +1,117 @@
-# Claim My Land
+<img src="https://raw.githubusercontent.com/wiki/gottsch/gottsch-minecraft-Claim-My-Land/images/curseforge/headings/cml_title.png" width="500px">
+
+[![Minecraft](https://img.shields.io/badge/Minecraft-1.20.1-62B132)](https://www.minecraft.net/)
+[![Forge](https://img.shields.io/badge/Forge-47.2.0%2B-1E2D4F)](https://files.minecraftforge.net/)
+[![License](https://img.shields.io/badge/License-GPL%20v3-blue)](LICENSE)
+[![CurseForge](https://img.shields.io/badge/CurseForge-claim--my--land-F16436)](https://www.curseforge.com/minecraft/mc-mods/claim-my-land)
+[![Modrinth](https://img.shields.io/badge/Modrinth-claim--my--land-00AF5C)](https://modrinth.com/mod/claim-my-land)
 
 ## **Mod ID**: `claimmyland`
 
-**Claim My Land** started out as a simple land claim mod, known as **Protect It!**
-It has been modified and updated to be a more advanced mod, but hopefully retains its simplicity.
-Unlike other land claim mods, there are no restrictions to adhering to a chunk-based sizing system. 
-A claim ( known as a Parcel ) can be any size and can be placed anywhere, ie. it does not need to be 16x16-based and line up exactly with a chunk. Ex. a parcel could be 24x37x101.
-A parcel's y-dimension can also be any size, instead of taking up the entire world height.
+A land-claiming mod for Minecraft 1.20.1 (Forge) that gives players free-form parcel sizing, a Nation/Zone/Citizen hierarchy, and a full protection system — no chunk grid, no compromises.
 
-# Parcels
-A **Parcel** is the name of a claimed 3-dimensional space. A Parcel can be of any size and can be placed at any block position, given that it does not overlap another Parcel's space (currently only the Overworld is supported).
+---
 
-## Creating / Claiming
-A [Deed](#deeds) is used to place a potential Parcel into the world and also to claim it. Ops can add Parcels directly into the world by commands.
+## Features
 
-## Types
-There are 4 types of Parcels:
+- **Free-form parcel sizing** — define any rectangular area, not locked to chunk boundaries
+- **Nation / Zone / Citizen hierarchy** — tiered ownership model for server communities
+- **Deed-based claiming** — deeds drop from vanilla and Treasure2 loot tables, or can be issued by ops
+- **Visual border rendering** — in-world wireframe borders with per-type color coding
+- **JourneyMap integration** — parcel polygon overlays on the full-screen and minimap
+- **Seven whitelist types** — player, block, item, entity, and their respective Forge tags
+- **Dimension-aware** — parcels are scoped to the dimension they are claimed in
+- **Rolling JSON backups** — automatic periodic saves with configurable retention
+- **Interactive chat UI** — clickable icon buttons for rename, demolish, whitelist management
 
-### Player Parcel
-The **Player Parcel** is the default/standard Parcel. It can be placed anywhere in the world, except in Nation Parcels that have Closed borders.
-### Nation Parcel
-A **Nation Parcel** is a special Parcel that allows the Nation Owner to embed Zone and Citizen Parcels within it. These parcels are typically large, but can be any size. 
-Nations can have **Open** or **Closed** Borders. Open borders grant access to any Player or Citizen Deed to claim or place Parcels in the designated Zones. Closed borders restricts access to only Citizen Deeds of the Nation.
-### Zone Parcel
-A **Zone Parcel** is a special Parcel that can only be placed inside a Nation Parcel. It is used to designate areas where Players can claim land within the Nation (using Citizen Deeds, or Player Deeds if the Nation has Open borders). Zone are added to Nation Parcels using Commands or the Zone Placement Tool by the Nation Owner.
-### Citizen Parcel
-A **Citizen Parcel** is a special Parcel that can only be placed inside a Nation or Zone Parcel. Only the Nation owner can add Citizen Parcels directly to a Nation Parcel (ie not inside a Zone) using Commands or the Citizen Placement Tool.
+Full feature details on the [Wiki](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki).
 
-## Ownership
-Parcels can only have **one** owner. Owners have access to all the Parcel Commands, and can perform any action (break, place, etc) within the Parcel space. A Parcel can have a whitelist, in which the whitelisted Players have the same access (break, place etc) in the Parcel space as the Owner.
+---
 
-## Abandoned Parcels
-Owners can abandon their Parcels by using a Command. The Parcel will still exist in the world, but simply will not have an owner. Thus anyone will be able to perform any action (break, place, etc) in that space until it is claimed by a Player. Abandoned Parcels can be claimed by using a Deed of the same type and of equal or greater Parcel size (measured by x * y * z).
+## Installation
 
-- [Player Deed](#player-deed) can claim Player Parcel
-- Player Deed can claim Citizen Parcel (Open borders)
-- Any Citizen Deed can claim Citizen Parcel (Open borders)
-- Citizen Deed can claim Citizen Parcel of the same Nation (Closed borders)
-- Nation Deed can claim Nation Parcel
+1. Install [Minecraft Forge](https://files.minecraftforge.net/) 47.2.0+ for Minecraft 1.20.1
+2. Install [GottschCore](https://www.curseforge.com/minecraft/mc-mods/gottschcore) 2.6.0+ (required dependency)
+3. Download Claim My Land from [CurseForge](https://www.curseforge.com/minecraft/mc-mods/claim-my-land) or [Modrinth](https://modrinth.com/mod/claim-my-land)
+4. Drop the `.jar` file into your `mods/` folder
 
-# Deeds
-Deeds are items that are used to add [Parcels](#parcels) to the world. Using a Deed in an unclaimed space will place a Foundation Stone. The Border outline and Buffer outline will be displayed with the Foundation Stone as the origin. Using the Deed again on the Foundation Stone will accept the location (if it is not overlapping) and create a new Parcel, with the Deed holder as the Owner. The Deed is then consumed.
+**Recommended companions:**
+- [JourneyMap](https://www.curseforge.com/minecraft/mc-mods/journeymap) — enables parcel overlays on the map
+- [Chat Plus](https://www.curseforge.com/minecraft/mc-mods/chat-plus) — scrollable chat for long command output (**requires `"movableChatEnabled": false`** — see [Compatibility](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Compatibility-and-Known-Issues))
 
-## Crafting / Obtaining
-Deeds cannot be crafted. Deeds are meant to be used as rewards, loot, or distributed by mods (ex Custom Starting Gear) or Ops/Admin. Deeds can be generated by Commands by a Nation owner or by Ops.
+---
 
-## Types
-Except for Zone, there is a respective Deed for each Parcel.
+## Documentation
 
-> Zone Parcels are designated spaces within Nations, meant to be set by the Nation owner, and not claimed with a Deed.
-> 
-> Zones be created by a Nation owner using **Commands** or the **Zone Placement Tool**.
+The [GitHub Wiki](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki) is the authoritative documentation.
 
-### Player Deed
-Can be used anywhere, including in a Zone Parcel in a Open border Nation Parcel, or can be used to claim an abandoned Citizen Parcel in an Open border Nation.
-### Citizen Deed
-Can be used in a Zone Parcel or can be used to claim an abandoned Citizen Parcel of the same Nation, or in an Open border Nation.
-### Nation Deed
-Must be a top-level Parcel ie can be used anywhere that doesn't overlap another Parcel.
-### Transfer Deed
-> not implemented yet.
+| Topic | Link |
+|---|---|
+| First claim walkthrough | [Getting Started](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Getting-Started) |
+| Ownership model | [Estates and Parcels](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Estates-and-Parcels) |
+| Parcel hierarchy | [Nation / Zone / Citizen](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Nation-Zone-Citizen) |
+| Full command reference | [Commands Reference](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Commands-Reference) |
+| Protection and whitelists | [Protection System](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Protection-System) |
+| Server and client config | [Configuration](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Configuration) |
+| Known issues | [Compatibility & Known Issues](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/wiki/Compatibility-and-Known-Issues) |
 
+---
 
-## Ownership
-When a Deed is used to place a Foundation Stone, the stone is keyed to the Deed, meaning only the Deed that placed the stone can be used to claim the Parcel the stone represents. This is to prevent someone from "stealing" your Parcel space before you can claim it.
+## Building from Source
 
-## Sizes
-Deed sizes can be completely customized to any size (within world limits. ie can't be bigger than World height).
-Four dimensions are used when generating a Deed - **X**, **Up**, **Down**, **Z**. The Up and Down dimensions are used instead of Y because the vertical dimension is based around the Foundation Stone that is placed into the world.
+Claim My Land uses ForgeGradle. To build the mod jar yourself:
 
-> Ex. size = 10 10 10 10, Foundation Stone pos = 100. 
-> 
-> The Parcel is defined as (100 90 100) -> (110 109 110)
-> 
-> *Why 109? because the range is inclusive, ie pos at 100 is included*.
+```bash
+git clone https://github.com/gottsch/gottsch-minecraft-Claim-My-Land.git
+cd gottsch-minecraft-Claim-My-Land
+./gradlew build
+```
 
-Splitting the vertical dimension into Up and Down also allows the Player to claim space below the placement pos without having to dig down first. However if you wanted to only have Up values, you can do that.
+The output jar will be in `build/libs/`.
 
-> Ex. size = 10 0 20 10.
+**Dependencies:**
+- Java 17
+- GottschCore (fetched from the local Maven repo — see `build.gradle`)
+- JourneyMap API (compile-only, fetched from the JourneyMap Maven)
 
-Nation Deeds ignore the Up and Down values and extend to the World bottom and World top.
+**Development environment:**
 
-## Pre-Made Deeds
-By design, Deeds are meant to be generated by Admin / Ops and Nation owners so that they can be customized, however some pre-made Deeds have been added and are available in the Creative Tabs. They have various sizes:
+```bash
+./gradlew genEclipseRuns     # Eclipse
+./gradlew genIntellijRuns    # IntelliJ IDEA
+```
 
-* Parcel Deeds at 10x10x10x10, 16x16x16x16, 32x32x32x32
-* Nation Deeds at 100x100, 200x200.
+---
 
-> Note - there aren't any pre-made Citizen Deeds because need to be generated from an existing Nation Parcel.
+## Reporting Bugs
 
-# Foundation Stones
-Foundation Stones can only be placed by a [Deed](#deeds). The stone will generate a border to indicate the boundaries of the potential [Parcel](#parcels). 
-Breaking the stone will remove the borders. A stone has a lifespan of 5 minutes (by default) before removing itself and the borders.
+Please file bug reports on the [Issues](https://github.com/gottsch/gottsch-minecraft-Claim-My-Land/issues) page. A good report includes:
 
-To claim a Parcel, use the Deed on the Foundation Stone to claim it. Only the Deed that was used to place the stone will be able to claim the parcel. At this point the stone and borders will be removed. Foundation Stones have a slightly different appearance for each type of Parcel.
+1. Minecraft version and Forge version
+2. CML version and GottschCore version
+3. Steps to reproduce
+4. Server log (`logs/latest.log`) if applicable
+5. Whether JourneyMap and/or Chat Plus are installed
 
-> Foundation Stones are not craftable and do not appear in the creative tabs.
-> 
-> Borders will immediately start to decay like leaves without a trunk. The stone will refresh them every x seconds until it is removed. This is to ensure that the borders do not exist forever causing visual pollution.
+---
 
-# Border Stones
-Border Stones are similar to [Foundation Stones](#foundation-stones), however they cannot be used to claim a Parcel, but simply to display the Parcel borders.
+## Changelog
 
-# Borders and Buffers
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-Border and Buffer blocks are display blocks used to show a [Parcel's](#parcels) space boundaries and buffer boundaries respectively.
+---
 
-## Border Blocks
-> Not to be confused with [Border Stones](#border-stones)
+## License
 
-Border blocks appear as solid lines forming a wireframe box around the space.
+Claim My Land is licensed under the [GNU General Public License v3](LICENSE).
 
-Each Parcel type has its own border color:
-* Player -> Green
-* Nation -> Blue
-* Citizen -> Purple
-* Zone -> Yellow
+---
 
-If a potential Parcel overlaps the buffer or border of another Parcel, the border color will be Red.
-Parcels of the same owner will ignore the buffer restriction and thus can be placed beside each other.
+## Related Projects
 
-## Buffer Blocks
-Buffer blocks extend further out from the borders. They represent the minimum distance between parcels.
-A Parcel's border cannot overlap another Parcel's buffer.
-The Buffer color for all Parcels is white, unless it overlaps a Parcel border, then it will be Red.
+- **[GottschCore](https://github.com/gottsch/gottsch-minecraft-GottschCore)** — required companion library
+- **[Treasure2](https://www.curseforge.com/minecraft/mc-mods/treasure2)** — loot and treasure mod by the same author; CML deeds inject into Treasure2 chests
 
-> Buffers can overlap each other.
+---
 
-# Tools
-There are two tool items provided to help Nation owners place Zone and Citizen [Parcels](#parcels):
-* Zone Placement Tool
-* Citizen Placement Tool
-
-Both work is a similar fashion. Placement Tools can only be used within a Nation, by a Nation owner. 
-Using the tool the first time will place a Zone or Citizen Placement block into the World.
-Using the tool a second time at a different location will place another Placement block and generate the borders between the two blocks.
-This is the boundaries of the Parcel. Using the tool on either of the Placement blocks will create a new Parcel, and the blocks and border
-will be removed.
-
-> Note, a Parcel cannot be less than 2 blocks in any direction.
-
-> Note, Placement Tools will only be available to Nation owners.
-
-# Commands
-There are two sets of Commands:
-* **/cml** - for regular Players
-* **/cml-ops** - for Ops Players
-
-Usage of Commands should be self-explanatory, as Minecraft's built-in structure will lead you through the arguments.
-
-## Player Commands
-
-### Root Command
-Use `/cml` to access the root command.
-
-### First Level Commands
-* `claimed_by` - displays detailed claim info on the specified block (if any)
-* `give` - gives the specified Claim My Land item to the player
-* `deed` - top-level argument of all the **deed** related commands
-* `parcel` - top-level argument of all the **parcel** related commands
-
-#### `parcel` Commands
-* `abandon` - abandons (removes owner) of an owned Parcel
-* `border_type` - changes the border type of a Nation Parcel
-* `demolish` - removes an owned Parcel, and returns a Deed to the player
-* `list` - lists all owned Parcels
-* `rename` - renames an owned Parcel
-* `transfer` - not implemented yet
-
-## Ops Commands
-Ops Commands are restricted to Players with Ops level. Ops Commands share many of the same commands as Player Commands,
-but may have more arguments to select the Player, more Deed Types etc. 
-
-### Root Command
-Use `/cml-ops` to access the root command.
-
-### First Level Commands
-* `deed` - top-level argument of all the **deed** related commands
-* `parcel` - top-level argument of all the **parcel** related commands
-
-#### `deed` Commands
-* `new` - generates a new Deed item
-* `transfer` - generates a Transfer Deed item for an existing Parcel
-
-#### `parcel` Commands
-* `abandon` - abandons (removes owner) of an owned Parcel
-* `add` - registers (ie adds) a new Parcel to the back-end
-* `backup` - writes the Parcel Registry to a json file
-* `border_type` - changes the border type of a Nation Parcel
-* `clear` - removes all Parcels from registry
-* `demolish` - removes an owned Parcel, and returns a Deed to the player
-* `list` - lists all owned Parcels
-* `remove` - unregisters (ie removes) a Parcel from the back-end
-* `rename` - renames an owned Parcel
-* `transfer` - not implemented yet
-* `whitelist`- whitelist (permission list) options
+*By Mark Gottschling — author of [Treasure2](https://www.curseforge.com/minecraft/mc-mods/treasure2).*
