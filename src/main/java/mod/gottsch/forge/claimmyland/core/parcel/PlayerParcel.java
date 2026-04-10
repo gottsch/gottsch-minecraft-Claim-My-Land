@@ -21,7 +21,6 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.EstateTypeRegistry;
@@ -30,12 +29,10 @@ import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  *
@@ -112,6 +109,10 @@ public class PlayerParcel extends AbstractClaimableParcel {
         }
 
         String dimension = level.dimension().location().toString();
+        // Rule 1b: direct sibling overlap — excludeZones=true (zone is a valid parent)
+        Optional<ClaimResult> siblingConflict = ParcelHelper.checkDirectSiblingOverlap(
+                this, parcelBox, parentParcel, dimension);
+        if (siblingConflict.isPresent()) return siblingConflict.get();
 
         // Rule 2a: existing parcels whose buffer zones reach into this parcel's box
         List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(parcelBox, dimension).stream()

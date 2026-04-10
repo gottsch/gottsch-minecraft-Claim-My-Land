@@ -36,6 +36,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -135,6 +136,10 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
         }
 
         String dimension = level.dimension().location().toString();
+        // Rule 1b: direct sibling overlap — excludeZones=false (sibling zones must be checked)
+        Optional<ClaimResult> siblingConflict = ParcelHelper.checkDirectSiblingOverlap(
+                this, getBox(), parentParcel, dimension, false);
+        if (siblingConflict.isPresent()) return siblingConflict.get();
 
         // Rule 2a: existing parcels whose buffer zones reach into this parcel's box
         List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(getBox(), dimension).stream()

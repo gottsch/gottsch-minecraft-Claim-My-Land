@@ -42,25 +42,20 @@ public class BlockStates extends BlockStateProvider {
 		myFoundationStone(name, (FoundationStone)block.get(), polished, stone, "minecraft:cutout");
 	}
 
-	private void myFoundationStone(String name, FoundationStone block, ResourceLocation polished, ResourceLocation stone, String renderType) {
-		ModelFile model = models().withExistingParent(name, modLoc(ModelProvider.BLOCK_FOLDER + "/foundation_stone")).texture("2", polished).texture("9", stone).renderType(renderType);
+	private void myFoundationStone(String name, FoundationStone block, ResourceLocation polished,
+	                               ResourceLocation stone, String renderType) {
+		ModelFile model = models()
+				.withExistingParent(name, modLoc(ModelProvider.BLOCK_FOLDER + "/foundation_stone"))
+				.texture("2", polished)
+				.texture("9", stone)
+				.renderType(renderType);
 
 		getVariantBuilder(block).forAllStates(state -> {
 			Direction facing = state.getValue(FoundationStone.FACING);
-			int yRot = 0;
-			Direction dir = state.getValue(BorderStone.FACING);
-			if (dir == Direction.DOWN) {
-//				model = ringOpen;
-//				xRot = 90;
-			}
-			else if (dir == Direction.UP) {
-//				xRot = -90;
-			} else {
-				yRot = ((int) state.getValue(BorderStone.FACING).toYRot() + 180) % 360;
-			}
+			int yRot = (int) facing.getOpposite().toYRot();
 			return ConfiguredModel.builder()
 					.modelFile(model)
-					.rotationY(yRot)// (int) facing.getOpposite().toYRot())
+					.rotationY(yRot)
 					.uvLock(true)
 					.build();
 		});

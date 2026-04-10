@@ -121,9 +121,12 @@ public class ZoningTool extends BlockItem {
 
         InteractionResult result = tryCreateZoneParcel(context, placeContext, nationParcel, box, coords1, coords2);
 
-        clear(placeContext, coords1, coords2);
-        tag.remove(COORDS1);
-        tag.remove(COORDS2);
+        // only clear placement blocks if the claim succeeded
+        if (result == InteractionResult.CONSUME) {
+            clear(placeContext, coords1, coords2);
+            tag.remove(COORDS1);
+            tag.remove(COORDS2);
+        }
 
         return result;
     }
@@ -149,7 +152,7 @@ public class ZoningTool extends BlockItem {
         zone.setCoords(box.getMinCoords());
         zone.setSize(new Box(Coords.of(0, 0, 0), box.getSize()));
 
-        ClaimResult claimResult = zone.handleEmbeddedClaim(context.getLevel(), nationParcel); //, zone.getBox());
+        ClaimResult claimResult = zone.handleEmbeddedClaim(context.getLevel(), nationParcel);
 
         if (claimResult.isSuccess()) {
             // clean up preview border
@@ -164,9 +167,18 @@ public class ZoningTool extends BlockItem {
                 PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
             }
             CommandHelper.save(context.getLevel());
+            return InteractionResult.CONSUME;  // signals success to handleZoneCreation()
         }
 
-        return InteractionResult.SUCCESS;
+        // claim failed — send appropriate message, leave placement blocks intact
+        if (claimResult == ClaimResult.INTERSECTS) {
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_intersects");
+        } else if (claimResult == ClaimResult.NOT_IN_PARENT) {
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_not_in_parent");
+        } else {
+            PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure");
+        }
+        return InteractionResult.SUCCESS;  // signals failure to handleZoneCreation()
     }
 
     // -------------------------------------------------------------------------

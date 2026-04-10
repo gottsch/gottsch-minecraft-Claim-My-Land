@@ -21,21 +21,19 @@ package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.block.entity.FoundationStoneBlockEntity;
-import mod.gottsch.forge.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
 import mod.gottsch.forge.claimmyland.core.estate.NationEstate;
 import mod.gottsch.forge.claimmyland.core.estate.NationEstateContext;
-import mod.gottsch.forge.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.util.ModUtil;
 import mod.gottsch.forge.gottschcore.spatial.Box;
 import mod.gottsch.forge.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Mark Gottschling on Sep 14, 2024
@@ -146,6 +144,10 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
         }
 
         String dimension = level.dimension().location().toString();
+        // Rule 1b: direct sibling overlap — excludeZones=true (zone is a valid parent)
+        Optional<ClaimResult> siblingConflict = ParcelHelper.checkDirectSiblingOverlap(
+                this, parcelBox, parentParcel, dimension);
+        if (siblingConflict.isPresent()) return siblingConflict.get();
 
         // Rule 2a: existing parcels whose buffer zones reach into this parcel's box
         List<Parcel> bufferOverlaps = ParcelRegistry.findBuffer(parcelBox, dimension).stream()

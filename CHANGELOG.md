@@ -16,6 +16,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > **💡 Recommended:** Since this mod is heavily command-based, we recommend using 🔗 [Chat Plus](https://modrinth.com/mod/chat-plus/version/2.7.0) for a better command history and larger chat window.
 
 ---
+
+## [2.5.1] - 2026-04-09
+
+### 🎉 Highlights
+
+- **Cold-start red borders fixed** — parcel borders no longer render red for the owning
+  player on a fresh server + client start when nested parcels exist inside a Nation.
+- **Overlapping parcel claim prevented** — placement tools (CitizenTool, ZoningTool) now
+  correctly block claiming a parcel that visually shows as conflicting with an existing
+  sibling parcel. Previously the conflict preview was client-side only and the server
+  allowed the claim through.
+- **Placement blocks preserved on failed Zone claim** — Zone placement blocks are no
+  longer removed when a Zone claim fails due to conflict. Players can reposition and
+  retry without replacing the blocks.
+
+---
+
+### 🐛 Fixed
+
+- **Committed parcel borders render red on cold server + client start** — `onChunkWatch`
+  was calling `resolveConflictState()` on already-committed parcels when sending border
+  visibility to joining players. `resolveConflictState()` is designed for Foundation Stone
+  placement preview only; when called on committed parcels with nested children (e.g.
+  Zones and Citizens inside a Nation), it incorrectly returned conflict `1` because the
+  child parcels overlap the parent's box without being the same parcel. Fix: pass
+  `conflictState=0` unconditionally for committed border stone visibility in `onChunkWatch`.
+  Preview parcels (Foundation Stone not yet claimed) still call `resolveConflictState()`
+  correctly since they are handled by `FoundationStoneBlockEntity` events, not
+  `onChunkWatch`. Likely also present in Forge 1.20.1 branch.
+
+- **Overlapping sibling parcel claim allowed via CitizenTool and ZoningTool** —
+  `claimWithinZone()` in `CitizenParcel` and `PlayerParcel`, and `handleEmbeddedClaim()`
+  in `ZoneParcel`, were missing a direct box overlap check against sibling parcels. Only
+  buffer zone checks were performed, so a directly overlapping same-owner same-type
+  sibling was never caught — `ParcelConflictResolver.isConflict()` returns `false` for
+  same-owner same-type pairs, and the buffer check alone does not cover direct overlap.
+  Fix: added `ParcelHelper.checkDirectSiblingOverlap()` and called it from all three
+  claim paths before the buffer checks. The helper takes an `excludeZones` parameter —
+  `true` for Citizen/Player (zone is a valid parent, not a conflict), `false` for Zone
+  (sibling zones inside a Nation must be checked against each other). Likely also present
+  in Forge 1.20.1 branch.
+
+- **Zone placement blocks removed on failed claim** — `ZoningTool.handleZoneCreation()`
+  called `clear()` unconditionally after `tryCreateZoneParcel()` regardless of whether
+  the claim succeeded or failed. Fix: `tryCreateZoneParcel()` now returns
+  `InteractionResult.CONSUME` on success and `InteractionResult.SUCCESS` on failure;
+  `handleZoneCreation()` only calls `clear()` and removes item tag coords on `CONSUME`.
+  Players whose Zone claim fails due to conflict now retain their placement blocks and
+  receive an appropriate failure message.
+
+- **Citizen placement blocks removed on failed claim** — `CitizenTool.tryCreateCitizenParcel()`
+  always returned `InteractionResult.SUCCESS` regardless of `ClaimResult`, and
+  `handleParcelCreation()` cleared placement blocks and item tag coords unconditionally
+  after the call. With the v2.5.1 `checkDirectSiblingOverlap()` fix now surfacing real
+  failure results from `claimWithinZone()`, this caused players to lose both Citizen
+  placement blocks on a failed claim. Fix: `tryCreateCitizenParcel()` now returns
+  `InteractionResult.CONSUME` on success and `InteractionResult.SUCCESS` on failure;
+  `handleParcelCreation()` only calls `clear()` and removes `COORDS1`/`COORDS2` on
+  `CONSUME`. Mirrors the v2.5.1 ZoningTool fix. Likely also present in Forge 1.20.1 branch.
+
+---
+
+### 🔧 Technical Notes
+
+- `onChunkWatch` iterates `ActiveBorderStoneRegistry` which tracks Border Stones only —
+  Foundation Stone preview parcels never appear here, so the unconditional
+  `conflictState=0` is safe for all parcels reached via this path.
+- `ParcelHelper.checkDirectSiblingOverlap()` mirrors the direct overlap logic in
+  `Parcel.handleClaim()` for top-level parcels, closing the parity gap between top-level
+  and embedded claim validation.
+- `excludeZones=true` is the safe default for the convenience overload — Citizen and
+  Player parcels should never treat a containing Zone as a sibling conflict.
+- `ZoningTool.tryCreateZoneParcel()` previously always returned `InteractionResult.SUCCESS`
+  regardless of `ClaimResult` — the distinction between success and failure now relies on
+  `CONSUME` vs `SUCCESS` so callers can guard cleanup correctly.
+
+---
+
+*Requires GottschCore v2.6 or later.*
+
+---
 ## [2.5.0] - 2026-03-28
 
 ### 🎉 Highlights

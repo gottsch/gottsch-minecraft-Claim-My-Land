@@ -189,15 +189,14 @@ public class ModEvents {
                 // Send the full parcel data first so the client has it registered
                 CMLNetwork.syncParcelToPlayer(serverLevel, player, parcel);
 
-                // Then send border visibility as a second SyncParcelPacket with
-                // isBorderVisible=true and fresh server-computed conflictState
-                String dimension = serverLevel.dimension().location().toString();
-                int conflictState = ParcelRegistry.resolveConflictState(
-                        stone.getAbsoluteBox(), parcel.getEstate().getOwnerId(),
-                        parcel.getId(), parcel.getType(), dimension);
-
+                // Committed parcels always get conflictState=0.
+                // resolveConflictState() is for Foundation Stone placement preview only —
+                // calling it on a committed parcel with nested children (e.g. Zones/Citizens
+                // inside a Nation) incorrectly returns 1 because the children overlap the
+                // parent box. ActiveBorderStoneRegistry tracks Border Stones only, so all
+                // parcels reached here are committed.
                 CMLNetwork.syncBorderVisibilityToPlayer(
-                        player, parcel.getId(), conflictState, stone.getBlockPos().getY());
+                        player, parcel.getId(), 0, stone.getBlockPos().getY());
             });
         }
     }

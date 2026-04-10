@@ -173,6 +173,8 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.add.failure_too_small"), "Unable to add the parcel. The dimension(s) are too small (< 2).");
         add(LangUtil.chat("parcel.add.structure_warning"), "Claim registered — warning: parcel overlaps a shared vanilla structure.");
         add(LangUtil.chat("parcel.add.structure_denied"), "Claim denied — parcel overlaps a protected vanilla structure.");
+        add(LangUtil.chat("parcel.add.failure_intersects"), "Claim failed — parcel conflicts with an existing parcel.");
+        add(LangUtil.chat("parcel.add.failure_not_in_parent"), "Claim failed — parcel must be fully within the Nation.");
 
 
         add(LangUtil.chat("parcel.demolish.success"), "The parcel has been demolished.");

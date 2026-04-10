@@ -115,9 +115,12 @@ public class CitizenTool extends BlockItem {
 
         InteractionResult result = tryCreateCitizenParcel(context, parentParcel, box, coords1, coords2);
 
-        clear(placeContext, coords1, coords2);
-        tag.remove(COORDS1);
-        tag.remove(COORDS2);
+        // only clear placement blocks if the claim succeeded
+        if (result == InteractionResult.CONSUME) {
+            clear(placeContext, coords1, coords2);
+            tag.remove(COORDS1);
+            tag.remove(COORDS2);
+        }
 
         return result;
     }
@@ -139,7 +142,7 @@ public class CitizenTool extends BlockItem {
                 parentParcel.isNation()
                         ? parentParcel.getEstate()
                         : ((NationalizedParcel)parentParcel).getNationEstate()
-                );
+        );
         if (created.isEmpty()) {
             PlayerMessageHelper.sendFailure(context.getPlayer(), "unexpected_error");
             return InteractionResult.SUCCESS;
@@ -150,7 +153,7 @@ public class CitizenTool extends BlockItem {
         citizen.setCoords(box.getMinCoords());
         citizen.setSize(new Box(Coords.of(0, 0, 0), box.getSize()));
 
-        ClaimResult claimResult = citizen.handleEmbeddedClaim(context.getLevel(), parentParcel); //, citizen.getBox());
+        ClaimResult claimResult = citizen.handleEmbeddedClaim(context.getLevel(), parentParcel);
 
         if (claimResult.isSuccess()) {
             // clean up preview border
@@ -165,14 +168,15 @@ public class CitizenTool extends BlockItem {
                 PlayerMessageHelper.sendSuccess(context.getPlayer(), "parcel.add.success");
             }
             CommandHelper.save(context.getLevel());
-        } else {
-            switch (claimResult) {
-                case STRUCTURE_DENIED -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.structure_denied");
-                default -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
-            }
+            return InteractionResult.CONSUME;  // signals success to handleParcelCreation()
         }
 
-        return InteractionResult.SUCCESS;
+        // claim failed — leave placement blocks intact
+        switch (claimResult) {
+            case STRUCTURE_DENIED -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.structure_denied");
+            default -> PlayerMessageHelper.sendFailure(context.getPlayer(), "parcel.add.failure_with_overlaps");
+        }
+        return InteractionResult.SUCCESS;  // signals failure to handleParcelCreation()
     }
 
     // -------------------------------------------------------------------------

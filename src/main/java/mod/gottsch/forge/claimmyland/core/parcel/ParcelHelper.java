@@ -20,12 +20,15 @@
 package mod.gottsch.forge.claimmyland.core.parcel;
 
 import mod.gottsch.forge.claimmyland.core.estate.Estate;
+import mod.gottsch.forge.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.forge.claimmyland.core.registry.PlayerRegistry;
+import mod.gottsch.forge.claimmyland.core.util.ModUtil;
+import mod.gottsch.forge.gottschcore.spatial.Box;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * @author by Mark Gottschling on 3/5/2026
@@ -45,6 +48,64 @@ public class ParcelHelper {
             }
             i++;
         }
+    }
+
+    /**
+     * Direct box overlap check against sibling parcels within a parent parcel.
+     * Mirrors the direct overlap logic in Parcel.handleClaim() for top-level parcels,
+     * closing the parity gap between top-level and embedded claim validation.
+     *
+     * @param placing      the parcel being claimed
+     * @param parcelBox    the box of the parcel being claimed
+     * @param parentParcel the enclosing parent parcel (filtered out of results)
+     * @param dimension    the dimension string
+     * @param excludeZones if true, zone parcels are excluded from the sibling check —
+     *                     use true for Citizen/Player (zone is a valid parent, not a
+     *                     conflict), false for Zone (sibling zones inside a Nation must
+     *                     be checked against each other)
+     * @return INTERSECTS or NOT_IN_PARENT if a conflict is found, empty if clear
+     */
+    public static Optional<ClaimResult> checkDirectSiblingOverlap(
+            Parcel placing, Box parcelBox, Parcel parentParcel,
+            String dimension, boolean excludeZones) {
+
+        List<Parcel> directOverlaps = ParcelRegistry.find(parcelBox, dimension).stream()
+                .filter(p -> !p.getId().equals(parentParcel.getId()))
+                .filter(p -> !p.isNation())
+                .filter(p -> !excludeZones || !p.isZone())
+                .toList();
+
+        for (Parcel existing : directOverlaps) {
+            boolean hierarchical = ParcelType.isAllowedAncestor(existing.getType(), placing.getType())
+                    || ParcelType.isAllowedDescendant(existing.getType(), placing.getType());
+            if (hierarchical) {
+                boolean ancestorContains = ParcelType.isAllowedAncestor(existing.getType(), placing.getType())
+                        && ModUtil.contains(existing.getBox(), parcelBox);
+                boolean placingContains = ParcelType.isAllowedDescendant(existing.getType(), placing.getType())
+                        && ModUtil.contains(parcelBox, existing.getBox());
+                if (!ancestorContains && !placingContains) return Optional.of(ClaimResult.NOT_IN_PARENT);
+                continue;
+            }
+            if (ParcelConflictResolver.isConflict(placing.getType(), existing.getType(),
+                    placing.getOwnerId(), existing.getOwnerId())) {
+                return Optional.of(ClaimResult.INTERSECTS);
+            }
+            // same-owner same-type sibling: touching is fine, direct overlap is a conflict
+            if (ModUtil.overlaps(parcelBox, existing.getBox())) {
+                return Optional.of(ClaimResult.INTERSECTS);
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Convenience overload with excludeZones=true — correct default for Citizen and
+     * Player parcels whose containing Zone is a valid parent, not a sibling conflict.
+     */
+    public static Optional<ClaimResult> checkDirectSiblingOverlap(
+            Parcel placing, Box parcelBox, Parcel parentParcel,
+            String dimension) {
+        return checkDirectSiblingOverlap(placing, parcelBox, parentParcel, dimension, true);
     }
 
     private ParcelHelper() {}

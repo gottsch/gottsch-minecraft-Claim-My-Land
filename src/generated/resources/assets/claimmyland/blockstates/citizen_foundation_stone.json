@@ -2,7 +2,8 @@
   "variants": {
     "facing=down": {
       "model": "claimmyland:block/citizen_foundation_stone",
-      "uvlock": true
+      "uvlock": true,
+      "y": 270
     },
     "facing=east": {
       "model": "claimmyland:block/citizen_foundation_stone",
@@ -20,7 +21,8 @@
     },
     "facing=up": {
       "model": "claimmyland:block/citizen_foundation_stone",
-      "uvlock": true
+      "uvlock": true,
+      "y": 270
     },
     "facing=west": {
       "model": "claimmyland:block/citizen_foundation_stone",
