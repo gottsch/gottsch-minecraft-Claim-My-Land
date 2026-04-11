@@ -10,6 +10,7 @@
   "chat.claimmyland.backup.success": "Backup saved:",
   "chat.claimmyland.citizen_placement.not_same_parent": "That block is not within the same nation or zone parcel as the start block.",
   "chat.claimmyland.citizen_placement.not_valid_parent": "That block is not within a valid parent parcel (nation | zone) or it is claimed.",
+  "chat.claimmyland.deed.cannot_place_here": "You cannot place a deed here.",
   "chat.claimmyland.deed.claim.access_denied": "You do not have permission to claim land here.",
   "chat.claimmyland.deed.claim.insufficient_size": "Unable to claim.",
   "chat.claimmyland.deed.claim.insufficient_size.detail": "The deed's size [%s] is insufficient to claim parcel of size [%s].",

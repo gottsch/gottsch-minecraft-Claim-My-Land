@@ -1,4 +1,4 @@
-// 1.20.1	2026-03-27T09:43:39.9859606	Tags for minecraft:entity_type mod id claimmyland
-fd7d4e3e87f58092d6cbab5b975b01ff89e125af data/claimmyland/tags/entity_types/entity_spawn_whitelist.json
-9d61ca649dbc0055c2052819fd5d3e5396640294 data/claimmyland/tags/entity_types/farm_entities.json
-765c9b5976541a868c7910b2b36c6c903bc0f665 data/claimmyland/tags/entity_types/neutral_entities.json
+// 1.21.1	2026-04-10T10:47:08.8717457	Tags for minecraft:entity_type mod id claimmyland
+fd7d4e3e87f58092d6cbab5b975b01ff89e125af data/claimmyland/tags/entity_type/entity_spawn_whitelist.json
+9d61ca649dbc0055c2052819fd5d3e5396640294 data/claimmyland/tags/entity_type/farm_entities.json
+765c9b5976541a868c7910b2b36c6c903bc0f665 data/claimmyland/tags/entity_type/neutral_entities.json
