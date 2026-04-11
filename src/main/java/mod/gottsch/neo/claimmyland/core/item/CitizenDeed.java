@@ -149,6 +149,11 @@ public class CitizenDeed extends Deed {
     public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+        if (tag.contains(NationDeed.NATION_ESTATE_NAME)) {
+            String nationName = tag.getString(NationDeed.NATION_ESTATE_NAME);
+            tooltip.add(Component.translatable("tooltip.claimmyland.deed.nation", nationName)
+                    .withStyle(ChatFormatting.GOLD));
+        }
         if (tag.contains(Deed.NATION_ESTATE_ID)) {
             UUID nationEstateId = tag.getUUID(Deed.NATION_ESTATE_ID);
             EstateRegistry.get(nationEstateId).ifPresent(estate ->

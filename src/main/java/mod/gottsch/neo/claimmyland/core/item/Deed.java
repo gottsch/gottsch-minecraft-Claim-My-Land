@@ -81,6 +81,7 @@ public abstract class Deed extends Item {
 
     public static final String ESTATE_ID = "estate_id";
     public static final String NATION_ESTATE_ID = "nation_state_id";
+    public static final String NATION_ESTATE_NAME = "nationEstateName";
 
     // default size = 1 chunk (16x16), but it is not necessarily aligned with a chunk
     public static final Box DEFAULT_SIZE = new Box(Coords.of(0, -15, 0), Coords.of(16, 16, 16));
@@ -266,10 +267,22 @@ public abstract class Deed extends Item {
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel)).orElseGet(() -> parcel.handleClaim(context.getLevel()));
 
                 if (claimResult.isSuccess()) {
-                    if (context.getPlayer() instanceof ServerPlayer serverPlayer
-                            && context.getLevel() instanceof ServerLevel serverLevel) {
-                        CMLNetwork.syncParcelToPlayer(serverLevel, serverPlayer, parcel);
-                    }
+//                    if (context.getPlayer() instanceof ServerPlayer serverPlayer
+//                            && context.getLevel() instanceof ServerLevel serverLevel) {
+//                        CMLNetwork.syncParcelToPlayer(serverLevel, serverPlayer, parcel);
+//                    }
+                    // Removed: explicit syncParcelToPlayer(parcel) here.
+                    // The post-claim parcel is already broadcast to all tracking players
+                    // (including the placing player) by nameAndRegister() →
+                    // ParcelRegistry.register(ServerLevel, Parcel) → syncParcelToTrackingPlayers,
+                    // and by transferParcelOwnership() in the relinquished-Citizen reclaim path.
+                    //
+                    // Syncing the local `parcel` variable here was a duplicate in normal claims
+                    // and a bug in the reclaim and PlayerParcel→CitizenParcel conversion paths,
+                    // where the registered parcel is a different object than `parcel` and the
+                    // pre-claim transient PlayerParcel was getting added to the placing player's
+                    // ClientParcelRegistry as a phantom green overlay.
+
                     // register user name
                     PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());
 

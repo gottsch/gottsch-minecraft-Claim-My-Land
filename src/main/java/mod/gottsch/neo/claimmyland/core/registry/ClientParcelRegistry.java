@@ -154,6 +154,25 @@ public class ClientParcelRegistry {
     }
 
     /**
+     * 2D point-in-footprint lookup for the JourneyMap fullscreen tooltip.
+     * Ignores Y entirely — the fullscreen map is a top-down view, so the
+     * cursor's "depth" coordinate (the topmost block at that X/Z) must not
+     * influence which parcel is picked.
+     *
+     * <p>When multiple parcels' 2D footprints contain the point, the smallest
+     * by area wins — same "smallest containing parcel" rule used by the in-world
+     * HUD lookup.</p>
+     */
+    public static Optional<ClientParcel> findAt(int x, int z, String dimension) {
+        return getAll().stream()
+                .filter(p -> p.dimension().equals(dimension))
+                .filter(p -> x >= p.minX() && x <= p.maxX()
+                        && z >= p.minZ() && z <= p.maxZ())
+                .min(Comparator.comparingLong(p ->
+                        (long) (p.maxX() - p.minX() + 1) * (p.maxZ() - p.minZ() + 1)));
+    }
+
+    /**
      * Returns a parcel by ID, or empty if not found.
      */
     public static Optional<ClientParcel> findById(UUID parcelId) {

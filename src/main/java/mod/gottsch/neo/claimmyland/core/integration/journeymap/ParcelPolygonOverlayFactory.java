@@ -99,6 +99,16 @@ public class ParcelPolygonOverlayFactory {
     private static final Map<UUID, PolygonOverlay> CONFLICT_OVERLAYS = new HashMap<>();
     private static final Map<UUID, PolygonOverlay> CONFLICT_BUFFER_OVERLAYS = new HashMap<>();
 
+    /**
+     * JM overlay Z-ordering — higher renders on top, controls which overlay
+     * wins the fullscreen tooltip when parcels are nested.
+      *Citizen and Player are peers (a Player parcel will never overlap a Citizen).
+     */
+    private static final int Z_NATION  = 1000;
+    private static final int Z_ZONE    = 1010;
+    private static final int Z_CITIZEN = 1020;
+    private static final int Z_PLAYER  = 1020;
+
     /** Current Foundation Stone preview overlay — stored separately from ACTIVE_OVERLAYS. */
     private static PolygonOverlay previewOverlay = null;
     private static PolygonOverlay previewBufferOverlay = null;
@@ -326,10 +336,14 @@ public class ParcelPolygonOverlayFactory {
                 .setFontShadow(true)
                 .setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
 
+        int z = zIndexForType(parcel.parcelType());
+
         String fullDisplayId = ClaimMyLand.MOD_ID + ":parcel:full:" + parcel.parcelId();
         PolygonOverlay fullOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, dimKey, shapeProps, polygon);
-        fullOverlay.setLabel(buildFullLabel(parcel))
+        fullOverlay.setLabel(parcel.estateName())              // short label drawn on the polygon
                 .setTextProperties(fullscreenTextProps);
+        fullOverlay.setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
+        fullOverlay.setDisplayOrder(z);
 
         TextProperties minimapTextProps = new TextProperties()
                 .setColor(colors[1].getRGB() & 0x00FFFFFF)
@@ -338,6 +352,8 @@ public class ParcelPolygonOverlayFactory {
         PolygonOverlay miniOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, dimKey, shapeProps, polygon);
         miniOverlay.setLabel(parcel.estateName())
                 .setTextProperties(minimapTextProps);
+        miniOverlay.setActiveUIs(Context.UI.Minimap);
+        miniOverlay.setDisplayOrder(z);
 
         return new PolygonOverlay[]{ fullOverlay, miniOverlay };
     }
@@ -593,6 +609,16 @@ public class ParcelPolygonOverlayFactory {
     private static String buildFullLabel(ClientParcel parcel) {
         String typeName = parcel.parcelType() != null ? parcel.parcelType().name() : "PARCEL";
         return parcel.estateName() + " (" + typeName + ")\nOwner: " + parcel.ownerName();
+    }
+
+    private static int zIndexForType(ParcelType type) {
+        return switch (type) {
+            case NATION  -> Z_NATION;
+            case ZONE    -> Z_ZONE;
+            case CITIZEN -> Z_CITIZEN;
+            case PLAYER  -> Z_PLAYER;
+            default      -> Z_PLAYER;
+        };
     }
 
     private static ResourceKey<Level> dimensionKey(String dimension) {

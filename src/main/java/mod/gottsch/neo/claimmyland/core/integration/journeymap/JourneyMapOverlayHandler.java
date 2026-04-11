@@ -102,7 +102,7 @@ public class JourneyMapOverlayHandler implements IClientPlugin {
         String dimension = event.getLevel().location().toString();
 
         ClientParcel parcel = ClientParcelRegistry
-                .findAt(pos.getX(), pos.getY(), pos.getZ(), dimension)
+                .findAt(pos.getX(), pos.getZ(), dimension)
                 .orElse(null);
 
         ClientParcelRegistry.setHoveredParcel(parcel);
