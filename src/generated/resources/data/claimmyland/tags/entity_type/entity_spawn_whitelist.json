@@ -1,0 +1,31 @@
+{
+  "values": [
+    "#claimmyland:farm_entities",
+    "#claimmyland:neutral_entities",
+    "minecraft:boat",
+    "minecraft:chest_boat",
+    "minecraft:chest_minecart",
+    "minecraft:command_block_minecart",
+    "minecraft:end_crystal",
+    "minecraft:ender_pearl",
+    "minecraft:experience_bottle",
+    "minecraft:experience_orb",
+    "minecraft:eye_of_ender",
+    "minecraft:fireball",
+    "minecraft:firework_rocket",
+    "minecraft:fishing_bobber",
+    "minecraft:furnace_minecart",
+    "minecraft:glow_item_frame",
+    "minecraft:item_display",
+    "minecraft:item_frame",
+    "minecraft:item",
+    "minecraft:llama_spit",
+    "minecraft:leash_knot",
+    "minecraft:minecart",
+    "minecraft:painting",
+    "minecraft:player",
+    "minecraft:potion",
+    "minecraft:spawner_minecart",
+    "minecraft:spectral_arrow"
+  ]
+}

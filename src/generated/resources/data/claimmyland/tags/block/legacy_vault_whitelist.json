@@ -1,0 +1,8 @@
+{
+  "values": [
+    {
+      "id": "legacyvault:community_vault",
+      "required": false
+    }
+  ]
+}
