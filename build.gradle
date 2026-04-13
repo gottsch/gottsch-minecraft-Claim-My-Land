@@ -141,9 +141,9 @@ dependencies {
     // JourneyMap mod — runtime only for dev testing
     localRuntime "curse.maven:journeymap-${project.jm_project_id}:${project.jm_file_id}"
 
-    localRuntime "maven.modrinth:kotlin-for-forge:5.4.0"
-    localRuntime "maven.modrinth:architectury-api:13.0.8+neoforge"
-    implementation "maven.modrinth:chat-plus:${chatplus_version}"
+//    localRuntime "maven.modrinth:kotlin-for-forge:5.4.0"
+//    localRuntime "maven.modrinth:architectury-api:13.0.8+neoforge"
+//    implementation "maven.modrinth:chat-plus:${chatplus_version}"
 
 }
 

@@ -191,22 +191,7 @@ public class CMLNetwork {
                 SyncParcelPacket.forBorderVisible(parcel, ownerName, borderStoneY, conflictState, player.getUUID()));
     }
 
-    public static void syncBorderVisibleToOwner(ServerLevel level, Parcel parcel,
-                                                int borderStoneY) {
-        UUID ownerId = parcel.getEstate().getOwnerId();
-        if (ownerId == null) return;
-        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
-        if (owner == null) return;
 
-        String dimension = parcel.getDimension() != null
-                ? parcel.getDimension()
-                : level.dimension().location().toString();
-        int conflictState = ParcelRegistry.resolveConflictState(
-                parcel.getBox(), ownerId, parcel.getId(), parcel.getType(), dimension);
-        String ownerName = resolveOwnerName(level, ownerId);
-        PacketDistributor.sendToPlayer(owner,
-                SyncParcelPacket.forBorderVisible(parcel, ownerName, borderStoneY, conflictState, null));
-    }
 
     public static void syncBorderVisibleToOwner(ServerLevel level, Parcel parcel,
                                                 int borderStoneY, int conflictState) {
@@ -218,28 +203,6 @@ public class CMLNetwork {
         String ownerName = resolveOwnerName(level, ownerId);
         PacketDistributor.sendToPlayer(owner,
                 SyncParcelPacket.forBorderVisible(parcel, ownerName, borderStoneY, conflictState, null));
-    }
-
-    public static void syncBorderVisibleToOwnerAndPlacer(ServerLevel level, Parcel parcel,
-                                                         int borderStoneY, UUID placingPlayerId) {
-        UUID ownerId = parcel.getEstate().getOwnerId();
-        if (ownerId == null) return;
-        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(ownerId);
-        if (owner == null) return;
-
-        String dimension = parcel.getDimension() != null
-                ? parcel.getDimension()
-                : level.dimension().location().toString();
-        int conflictState = ParcelRegistry.resolveConflictState(
-                parcel.getBox(), ownerId, parcel.getId(), parcel.getType(), dimension);
-        String ownerName = resolveOwnerName(level, ownerId);
-        SyncParcelPacket packet = SyncParcelPacket.forBorderVisible(
-                parcel, ownerName, borderStoneY, conflictState, placingPlayerId);
-
-        PacketDistributor.sendToPlayer(owner, packet);
-        ServerPlayer placingPlayer = level.getServer().getPlayerList().getPlayer(placingPlayerId);
-        if (placingPlayer == null) return;
-        PacketDistributor.sendToPlayer(placingPlayer, packet);
     }
 
     public static void syncBorderVisibleToOwnerAndPlacer(ServerLevel level, Parcel parcel,
@@ -365,26 +328,53 @@ public class CMLNetwork {
                             ? parcel.getDimension()
                             : player.serverLevel().dimension().location().toString();
 
+                    /*
+                     * Committed parcels always get conflictState=0 in resync packets.
+                     * resolveConflictState() is for Foundation Stone placement preview only —
+                     * calling it on a committed parcel with nested children (e.g. Zones or
+                     * Citizens inside a Nation) incorrectly returns 1 because the children
+                     * overlap the parent box. ParcelRegistry.getParcels() yields committed
+                     * parcels only, so the unconditional 0 is safe for both branches below.
+                     * Mirrors the v2.5.1 onChunkWatch fix — same bug, different code path.
+                     */
                     BorderStoneBlockEntity stone = visibleStones.get(parcel.getId());
                     if (stone != null) {
                         UUID placingPlayerId = resolvePlacingPlayerId(stone);
-                        int conflictState = ParcelRegistry.resolveConflictState(
-                                parcel.getBox(), parcel.getEstate().getOwnerId(),
-                                parcel.getId(), parcel.getType(), parcelDimension);
                         return SyncParcelPacket.forBorderVisible(
                                 parcel, ownerName,
-                                stone.getBlockPos().getY(), conflictState, placingPlayerId);
+                                stone.getBlockPos().getY(), 0, placingPlayerId);
                     } else {
-                        int conflictState = ParcelRegistry.resolveConflictState(
-                                parcel.getBox(),
-                                parcel.getEstate().getOwnerId(),
-                                parcel.getId(),
-                                parcel.getType(),
-                                parcelDimension);
-                        return new SyncParcelPacket(parcel, ownerName, 0, conflictState);
+                        return new SyncParcelPacket(parcel, ownerName, 0, 0);
                     }
                 })
                 .toList();
+//        List<SyncParcelPacket> packets = ParcelRegistry.getParcels().stream()
+//                .map(parcel -> {
+//                    String ownerName = resolveOwnerName(player.serverLevel(), parcel.getEstate().getOwnerId());
+//                    String parcelDimension = parcel.getDimension() != null
+//                            ? parcel.getDimension()
+//                            : player.serverLevel().dimension().location().toString();
+//
+//                    BorderStoneBlockEntity stone = visibleStones.get(parcel.getId());
+//                    if (stone != null) {
+//                        UUID placingPlayerId = resolvePlacingPlayerId(stone);
+//                        int conflictState = ParcelRegistry.resolveConflictState(
+//                                parcel.getBox(), parcel.getEstate().getOwnerId(),
+//                                parcel.getId(), parcel.getType(), parcelDimension);
+//                        return SyncParcelPacket.forBorderVisible(
+//                                parcel, ownerName,
+//                                stone.getBlockPos().getY(), conflictState, placingPlayerId);
+//                    } else {
+//                        int conflictState = ParcelRegistry.resolveConflictState(
+//                                parcel.getBox(),
+//                                parcel.getEstate().getOwnerId(),
+//                                parcel.getId(),
+//                                parcel.getType(),
+//                                parcelDimension);
+//                        return new SyncParcelPacket(parcel, ownerName, 0, conflictState);
+//                    }
+//                })
+//                .toList();
 
         PacketDistributor.sendToPlayer(player, new SyncAllParcelsPacket(packets));
     }

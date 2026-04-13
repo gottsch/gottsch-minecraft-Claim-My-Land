@@ -65,24 +65,6 @@ public class ClaimMyLand {
         modEventBus.addListener(CommonSetup::init);
         modEventBus.addListener(ClientSetup::init);
         modEventBus.addListener(this::onConfigReload);
-//        File saveDir = new File("world/data/claimmyland"); // TODO config option
-//        Type listType = new TypeToken<List<Parcel>>(){}.getType();
-//
-//        // save every 5 minutes, keep 20 most recent files
-//        parcelSaver = new RollingJsonSaver<>(
-//                saveDir,
-//                "parcels",  // TODO config option
-//                20,                                // TODO config option
-//                10,                                 // TODO config option
-//                ParcelRegistry::getParcels,  // supplier that returns current parcel list
-//                listType
-//        );
-
-//        // Load latest on startup
-//        List<Parcel> loaded = parcelSaver.loadLatest();
-//        if (loaded != null) {
-//            parcelList = loaded;
-//        }
 
         // register FORGE bus events separately
         NeoForge.EVENT_BUS.register(new ForgeEventHandler());
@@ -90,10 +72,8 @@ public class ClaimMyLand {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             modEventBus.register(ParcelBorderRendererSetup.class);
         }
-
     }
 
-    // In ClaimMyLand.java ForgeEventHandler — add a new handler:
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         ClaimMyLand.reinitBackup();

@@ -956,7 +956,13 @@ public class ParcelRegistry {
         // create new estate and update parcel
         Estate estate = EstateTypeRegistry.create(parcel.isNation() ? EstateTypeRegistry.NATION_ESTATE_TYPE : EstateTypeRegistry.ESTATE_TYPE);
         estate.setOwnerId(newOwnerUuid);
-        estate.setName(oldEstate.getName());
+//        estate.setName(oldEstate.getName());
+        // NOTE do NOT setName() to the oldEstate name. that can cause duplicates in the EstateRegistry.
+        // generate a unique name for the split-off estate. Suggestion providers key on
+        // estate name, so reusing the old name causes two estates to collapse to one
+        // entry in command suggestions. defaultName(ownerId) uses the authoritative
+        // PlayerRegistry counter and is collision-free by construction.
+        estate.setName(estate.defaultName(level, estate.getOwnerId()));
         estate.setParcelType(oldEstate.getParcelType());
         estate.setRelinquished(false);
 

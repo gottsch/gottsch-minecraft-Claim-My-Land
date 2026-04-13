@@ -28,6 +28,7 @@ import mod.gottsch.neo.claimmyland.core.item.CitizenDeed;
 import mod.gottsch.neo.claimmyland.core.item.PlayerDeed;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.neo.claimmyland.core.util.ModUtil;
+import mod.gottsch.neo.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -118,6 +119,38 @@ public class ZoneParcel extends AbstractParcel implements NationalizedParcel {
     @Override
     public boolean hasAccessTo(FoundationStoneBlockEntity blockEntity) {
         return blockEntity.getParcelType().equalsIgnoreCase(ParcelType.NATION.getSerializedName());
+    }
+
+    @Override
+    public PlacementResult canPlaceAt(Level level, ICoords coords) {
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> enclosing = ParcelRegistry.findLeastSignificant(coords, dimension);
+
+        if (enclosing.isEmpty()) {
+            return PlacementResult.INVALID_PARENT_TYPE;
+        }
+
+        Parcel parent = enclosing.get();
+        if (!parent.isNation()) {
+            return PlacementResult.INVALID_PARENT_TYPE;
+        }
+
+        if (!parent.getOwnerId().equals(getOwnerId())) {
+            // wrong-owner Nation: not strictly a blacklist, but the player has
+            // no authority to place a Zone here.
+            return PlacementResult.INVALID_PARENT_TYPE;
+        }
+
+        // Same-owner Nation: check the Nation's own access policy for completeness.
+        NationParcel nation = (NationParcel) parent;
+        if (nation.getAccessType() == NationAccessType.CLOSED) {
+            return PlacementResult.NATION_CLOSED;
+        }
+        if (nation.getBlacklist() != null && nation.getBlacklist().contains(getOwnerId())) {
+            return PlacementResult.NATION_BLACKLISTED;
+        }
+
+        return PlacementResult.SUCCESS;
     }
 
     @Override

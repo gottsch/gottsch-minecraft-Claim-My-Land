@@ -115,9 +115,21 @@ public class JoinSubCommand implements SubCommand {
         Optional<Estate> estate = estates.stream().filter(est -> est.getName().equalsIgnoreCase(mainEstateName)).findFirst();
         Optional<Estate> otherEstate = estates.stream().filter(est2 -> est2.getName().equalsIgnoreCase(otherEstateName)).findFirst();
 
-        if (estate.isEmpty() || otherEstate.isEmpty()) {
-            // TODO could not locate
-            failure(source, "estate.join.failure");
+//        if (estate.isEmpty() || otherEstate.isEmpty()) {
+//            // TODO could not locate
+//            failure(source, "estate.join.failure");
+//            return -1;
+//        }
+
+        /*
+         * Explicit relinquished guard — fires before the generic canJoin() check so
+         * the player sees a dedicated reason rather than the generic "invalid join"
+         * message. canJoin() also rejects relinquished estates, but its failure path
+         * is shared with "different owners" / "different parcel types" and doesn't
+         * name the cause. Either side being relinquished is a hard stop.
+         */
+        if (estate.get().isRelinquished() || otherEstate.get().isRelinquished()) {
+            failure(source, "estate.join.relinquished.failure");
             return -1;
         }
 

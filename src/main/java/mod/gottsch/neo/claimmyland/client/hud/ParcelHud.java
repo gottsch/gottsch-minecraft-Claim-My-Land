@@ -20,9 +20,11 @@ package mod.gottsch.neo.claimmyland.client.hud;
 import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.cache.ClientParcelCache;
 import mod.gottsch.neo.claimmyland.core.parcel.ParcelType;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -97,6 +99,7 @@ public class ParcelHud {
     private static final int COLOR_NATION_LINE = 0x55FFFF;
     private static final int COLOR_BG          = 0x60000000;
     private static final int COLOR_TITLE_BG    = 0x90000000;
+    private static final int COLOR_RELINQUISHED = 0xFF5555;
 
     // -----------------------------------------------------------------------
     // Render event handler
@@ -147,7 +150,8 @@ public class ParcelHud {
         int typeColor    = typeColor(entry.getParcelType());
 
         // --- Build display strings ---
-        String titleText  = " Land Claim ";
+        Component titleText = Component.literal("- Claim My Land -")
+                .withStyle(ChatFormatting.BOLD);
         String estateName = notEmpty(entry.getEstateName(), "(unnamed estate)");
         String typeSuffix = " (" + typeLabel(entry.getParcelType()) + ")";
         String parcelName = notEmpty(entry.getParcelName(), "(unnamed parcel)");
@@ -163,15 +167,44 @@ public class ParcelHud {
             }
         }
 
-        int lineCount = (nationLine != null) ? 3 : 2;
+        /*
+         * Relinquished indicator — only Citizen parcels can be relinquished. Shown as
+         * a trailing red line so the player sees the state at a glance without
+         * /cml parcel list.
+         */
+        String relinquishedLine = null;
+        if (entry.getParcelType() == ParcelType.CITIZEN && entry.isRelinquished()) {
+            relinquishedLine = "RELINQUISHED";
+        }
+
+        int lineCount = 2
+                + (nationLine != null ? 1 : 0)
+                + (relinquishedLine != null ? 1 : 0);
+
+//        String nationLine = null;
+//        if (entry.getParcelType() == ParcelType.CITIZEN || entry.getParcelType() == ParcelType.ZONE) {
+//            String nationName = notEmpty(entry.getNationName(), null);
+//            if (nationName != null) {
+//                nationLine = "Nation: " + nationName;
+//            }
+//        }
+//
+//        int lineCount = (nationLine != null) ? 3 : 2;
 
         // --- Measure widths ---
         int titleWidth   = font.width(titleText);
         int line1Width   = font.width(estateName) + font.width(typeSuffix);
         int line2Width   = font.width(parcelLine);
+//        int contentWidth = Math.max(line1Width, line2Width);
+//        if (nationLine != null) {
+//            contentWidth = Math.max(contentWidth, font.width(nationLine));
+//        }
         int contentWidth = Math.max(line1Width, line2Width);
         if (nationLine != null) {
             contentWidth = Math.max(contentWidth, font.width(nationLine));
+        }
+        if (relinquishedLine != null) {
+            contentWidth = Math.max(contentWidth, font.width(relinquishedLine));
         }
         int panelWidth = Math.max(titleWidth, contentWidth);
 
@@ -207,8 +240,16 @@ public class ParcelHud {
         y += LINE_HEIGHT;
 
         // Line 3 (CITIZEN/ZONE only): Nation: <name>
+//        if (nationLine != null) {
+//            graphics.drawString(font, nationLine, x, y, COLOR_NATION_LINE, false);
+//        }
         if (nationLine != null) {
             graphics.drawString(font, nationLine, x, y, COLOR_NATION_LINE, false);
+            y += LINE_HEIGHT;
+        }
+
+        if (relinquishedLine != null) {
+            graphics.drawString(font, relinquishedLine, x, y, COLOR_RELINQUISHED, false);
         }
     }
 

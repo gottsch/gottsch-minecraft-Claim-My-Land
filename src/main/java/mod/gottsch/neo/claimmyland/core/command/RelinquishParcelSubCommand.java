@@ -136,7 +136,13 @@ public class RelinquishParcelSubCommand implements SubCommand {
 //            Estate newEstate = new EstateContext(estate.getOwnerId());
             Estate newEstate = EstateTypeRegistry.create(estate.getType());
             newEstate.setOwnerId(estate.getOwnerId());
-            newEstate.setName(oldEstate.getName());
+            // NOTE do NOT setName() to the oldEstate name. that can cause duplicates in the EstateRegistry.
+            // generate a unique name for the split-off estate. Suggestion providers key on
+            // estate name, so reusing the old name causes two estates to collapse to one
+            // entry in command suggestions. defaultName(ownerId) uses the authoritative
+            // PlayerRegistry counter and is collision-free by construction.
+            newEstate.setName(newEstate.defaultName(source.getLevel(), estate.getOwnerId()));
+//            newEstate.setName(oldEstate.getName());
             newEstate.setParcelType(oldEstate.getParcelType());
 
             // mark as relinquished
