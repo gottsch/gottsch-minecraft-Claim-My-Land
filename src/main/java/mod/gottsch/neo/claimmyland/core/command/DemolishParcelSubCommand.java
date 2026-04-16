@@ -130,7 +130,7 @@ public class DemolishParcelSubCommand implements SubCommand {
                 case NATION -> DeedFactory.createNationDeed(source.getLevel(), parcel.getSize());
                 // requires the NATION_ID
                 case CITIZEN ->
-                        DeedFactory.createCitizenDeed(parcel.getSize(), ((NationalizedParcel)parcel).getNationEstate().getId());
+                        DeedFactory.createCitizenDeed(parcel.getSize(), ((NationalizedParcel)parcel).getNationEstate().getId(), ((NationalizedParcel)parcel).getNationEstate().getName());
                 case ZONE -> ItemStack.EMPTY;
                 default -> ItemStack.EMPTY;
             };

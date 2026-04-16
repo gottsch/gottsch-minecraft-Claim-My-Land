@@ -110,7 +110,6 @@ public abstract class AbstractEstate implements Estate {
 
     @Override
     public String defaultName() {
-//        return getId().toString() + "-estate-1";
         return "Estate-" + getId().toString().substring(0, 8);
     }
 

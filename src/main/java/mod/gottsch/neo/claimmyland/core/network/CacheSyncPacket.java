@@ -50,6 +50,7 @@ import java.util.UUID;
  *   <li>estateName — String</li>
  *   <li>ownerName — String (display name, for HUD)</li>
  *   <li>parcelType — ParcelType enum</li>
+ *   <li>relinquished — boolean (Citizen parcels only)</li>   <!-- new -->
  *   <li>minX/Y/Z, maxX/Y/Z — int (absolute world coords)</li>
  *   <li>dimension — String</li>
  * </ul>
@@ -218,7 +219,6 @@ public class CacheSyncPacket implements CustomPacketPayload {
             if (packet.parcelId == null) {
                 ClientParcelCache.setWilderness();
                 ParcelEntryTitleRenderer.onParcelChanged(null);
-                ClaimMyLand.LOGGER.debug("CacheSyncPacket: client cache set to wilderness");
             } else {
                 ClientParcelCache.update(
                         packet.parcelId,
@@ -231,14 +231,14 @@ public class CacheSyncPacket implements CustomPacketPayload {
                         packet.parcelType,
                         packet.minX, packet.minY, packet.minZ,
                         packet.maxX, packet.maxY, packet.maxZ,
-                        packet.dimension
+                        packet.dimension,
+                        packet.relinquished
                 );
 
                 ClientParcel existing = ClientParcelRegistry.findById(packet.parcelId).orElse(null);
 
                 if (existing != null && existing.isPreview()) {
-                    ClaimMyLand.LOGGER.debug("CacheSyncPacket.handle: skipping registry update for preview parcel {}", packet.parcelId);
-                    return;
+                     return;
                 }
 
                 boolean borderVisible = existing != null && existing.isBorderVisible();

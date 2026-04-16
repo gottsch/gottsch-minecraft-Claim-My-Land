@@ -19,6 +19,7 @@
 package mod.gottsch.neo.claimmyland.core.network;
 
 import mod.gottsch.neo.claimmyland.ClaimMyLand;
+import mod.gottsch.neo.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.neo.claimmyland.core.cache.ClientParcelCache;
 import mod.gottsch.neo.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
 import mod.gottsch.neo.claimmyland.core.registry.ClientParcelRegistry;
@@ -75,8 +76,6 @@ public class RemoveParcelPacket implements CustomPacketPayload {
             if (ModList.get().isLoaded("journeymap")) {
                 ParcelPolygonOverlayFactory.notifyParcelRemoved(packet.parcelId);
             }
-
-//            ClaimMyLand.LOGGER.debug("RemoveParcelPacket: removed parcel [{}]", packet.parcelId);
         });
     }
 

@@ -72,8 +72,8 @@ public class ClientParcelRegistry {
         // Remove existing entry with same ID (re-sync / update case)
         PARCELS.removeIf(p -> p.parcelId().equals(parcel.parcelId()));
         PARCELS.add(parcel);
-        LOGGER.debug("ClientParcelRegistry: registered parcel '{}' [{}]",
-                parcel.parcelName(), parcel.parcelId());
+//        LOGGER.debug("ClientParcelRegistry: registered parcel '{}' [{}]",
+//                parcel.parcelName(), parcel.parcelId());
     }
 
     /**
@@ -82,7 +82,7 @@ public class ClientParcelRegistry {
      */
     public static void registerAll(List<ClientParcel> parcels) {
         parcels.forEach(ClientParcelRegistry::register);
-        LOGGER.debug("ClientParcelRegistry: bulk registered {} parcel(s)", parcels.size());
+//        LOGGER.debug("ClientParcelRegistry: bulk registered {} parcel(s)", parcels.size());
     }
 
     /**
@@ -90,9 +90,9 @@ public class ClientParcelRegistry {
      */
     public static void unregister(UUID parcelId) {
         boolean removed = PARCELS.removeIf(p -> p.parcelId().equals(parcelId));
-        if (removed) {
-            LOGGER.debug("ClientParcelRegistry: unregistered parcel [{}]", parcelId);
-        }
+//        if (removed) {
+//            LOGGER.debug("ClientParcelRegistry: unregistered parcel [{}]", parcelId);
+//        }
     }
 
     /**
@@ -151,6 +151,25 @@ public class ClientParcelRegistry {
             }
         }
         return results;
+    }
+
+    /**
+     * 2D point-in-footprint lookup for the JourneyMap fullscreen tooltip.
+     * Ignores Y entirely — the fullscreen map is a top-down view, so the
+     * cursor's "depth" coordinate (the topmost block at that X/Z) must not
+     * influence which parcel is picked.
+     *
+     * <p>When multiple parcels' 2D footprints contain the point, the smallest
+     * by area wins — same "smallest containing parcel" rule used by the in-world
+     * HUD lookup.</p>
+     */
+    public static Optional<ClientParcel> findAt(int x, int z, String dimension) {
+        return getAll().stream()
+                .filter(p -> p.dimension().equals(dimension))
+                .filter(p -> x >= p.minX() && x <= p.maxX()
+                        && z >= p.minZ() && z <= p.maxZ())
+                .min(Comparator.comparingLong(p ->
+                        (long) (p.maxX() - p.minX() + 1) * (p.maxZ() - p.minZ() + 1)));
     }
 
     /**

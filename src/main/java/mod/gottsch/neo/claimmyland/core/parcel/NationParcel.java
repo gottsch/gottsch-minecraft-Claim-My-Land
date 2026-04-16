@@ -28,6 +28,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -37,7 +38,6 @@ import java.util.UUID;
  */
 public class NationParcel extends AbstractParcel implements INationParcel {
 
-    @Deprecated(forRemoval = true, since = "2.0")
     private List<UUID> blacklist;
 
     /**
@@ -91,12 +91,24 @@ public class NationParcel extends AbstractParcel implements INationParcel {
         return getDeedId().equals(blockEntity.getDeedId());
     }
 
+    /**
+     * Nations may only be placed in wilderness — any enclosing parcel disqualifies.
+     *
+     * @author Mark Gottschling — PlacementResult refactor on Apr 12, 2026
+     */
+    /**
+     * Nations may only be placed in wilderness — any enclosing parcel disqualifies.
+     *
+     * @author Mark Gottschling — PlacementResult refactor on Apr 12, 2026
+     */
     @Override
-    public boolean canPlaceAt(Level level, ICoords coords) {
-        // Nations can only be placed in open wilderness — not inside any existing parcel.
-        // Buffer zone proximity is validated at claim commit time, not here.
+    public PlacementResult canPlaceAt(Level level, ICoords coords) {
         String dimension = level.dimension().location().toString();
-        return ParcelRegistry.findLeastSignificant(coords, dimension).isEmpty();
+        Optional<Parcel> enclosing = ParcelRegistry.findLeastSignificant(coords, dimension);
+        if (enclosing.isPresent()) {
+            return PlacementResult.INVALID_PARENT_TYPE;
+        }
+        return PlacementResult.SUCCESS;
     }
 
     @Override

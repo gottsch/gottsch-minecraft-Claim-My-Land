@@ -105,12 +105,14 @@ public class DeedFactory {
         return deed;
     }
 
-    public static ItemStack createCitizenDeed(Box size, UUID nationId) {
+    public static ItemStack createCitizenDeed(Box size, UUID nationId, String nationName) {
         ItemStack deed = createItemStack(ParcelType.CITIZEN);
         CompoundTag tag = deed.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 
         // add the ids
-        tag.putUUID(NationDeed.NATION_ESTATE_ID, nationId);
+        tag.putUUID(Deed.NATION_ESTATE_ID, nationId);
+        tag.putString(Deed.NATION_ESTATE_NAME, nationName);
+
         // add the size
         CompoundTag sizeTag = new CompoundTag();
         size.save(sizeTag);

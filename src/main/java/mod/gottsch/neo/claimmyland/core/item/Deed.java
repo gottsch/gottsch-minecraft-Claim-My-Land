@@ -25,10 +25,7 @@ import mod.gottsch.neo.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.neo.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.neo.claimmyland.core.config.Config;
 import mod.gottsch.neo.claimmyland.core.network.CMLNetwork;
-import mod.gottsch.neo.claimmyland.core.parcel.ClaimResult;
-import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
-import mod.gottsch.neo.claimmyland.core.parcel.ParcelType;
-import mod.gottsch.neo.claimmyland.core.parcel.ParcelTypeRegistry;
+import mod.gottsch.neo.claimmyland.core.parcel.*;
 import mod.gottsch.neo.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.neo.claimmyland.core.registry.PlayerRegistry;
@@ -81,6 +78,7 @@ public abstract class Deed extends Item {
 
     public static final String ESTATE_ID = "estate_id";
     public static final String NATION_ESTATE_ID = "nation_state_id";
+    public static final String NATION_ESTATE_NAME = "nationEstateName";
 
     // default size = 1 chunk (16x16), but it is not necessarily aligned with a chunk
     public static final Box DEFAULT_SIZE = new Box(Coords.of(0, -15, 0), Coords.of(16, 16, 16));
@@ -263,18 +261,42 @@ public abstract class Deed extends Item {
                 Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
                 applyWorldPosition(parcel, foundationStoneBlockEntity);
 
+                // Pre-assign a stable UUID before the claim. The pre-claim parcel object
+                // built by createParcel() has no UUID — it is normally assigned inside
+                // nameAndRegister(). In the PlayerParcel→CitizenParcel conversion path,
+                // claimWithinZone() copies this ID via citizenParcel.setId(getId()), so
+                // nameAndRegister() on the CitizenParcel sees a non-null ID and uses it
+                // rather than generating a fresh one. findByParcelId() in the success
+                // branch below can then resolve the registered CitizenParcel correctly
+                // for fireworks color and celebration type.
+                if (parcel.getId() == null) {
+                    parcel.setId(UUID.randomUUID());
+                }
+
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel)).orElseGet(() -> parcel.handleClaim(context.getLevel()));
 
                 if (claimResult.isSuccess()) {
-                    if (context.getPlayer() instanceof ServerPlayer serverPlayer
-                            && context.getLevel() instanceof ServerLevel serverLevel) {
-                        CMLNetwork.syncParcelToPlayer(serverLevel, serverPlayer, parcel);
-                    }
+                    /*
+                     * Re-resolve the registered parcel by ID. The local `parcel` variable is the
+                     * transient pre-claim object built from the deed item; in the normal claim path
+                     * it matches the registered parcel, but in the PlayerParcel→CitizenParcel
+                     * conversion (PlayerParcel.claimWithinZone) and the relinquished-Citizen reclaim
+                     * (transferParcelOwnership) paths, the registered parcel is a different object
+                     * with a different type and estate. Reading celebration data off the stale local
+                     * caused PlayerDeed→Citizen conversions to fire green Player fireworks instead
+                     * of purple Citizen fireworks. The parcel UUID is stable across both conversion
+                     * paths, so findByParcelId() is the right key.
+                     */
+//                         Parcel registeredParcel = ParcelRegistry.findByParcelId(parcel.getId()).orElse(parcel);
+                    Parcel registeredParcel = ParcelRegistry.findByParcelId(parcel.getId())
+                            .or(() -> Optional.ofNullable(foundationStoneBlockEntity.getParcelId())
+                                    .flatMap(ParcelRegistry::findByParcelId))
+                            .orElse(parcel);
+
                     // register user name
                     PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());
 
                     PersistedData savedData = PersistedData.get(context.getLevel());
-                    // mark data as dirty
                     if (savedData != null) {
                         savedData.setDirty();
                     }
@@ -283,7 +305,6 @@ public abstract class Deed extends Item {
                     if (context.getPlayer().isCreative()) {
                         context.getPlayer().setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
                     } else {
-                        // consume item
                         context.getItemInHand().shrink(1);
                     }
 
@@ -293,26 +314,24 @@ public abstract class Deed extends Item {
                     // Celebrate the claim — perimeter particle wave on the claiming player's client only
                     if (context.getPlayer() instanceof ServerPlayer serverPlayer
                             && context.getLevel() instanceof ServerLevel) {
-                        CMLNetwork.sendClaimCelebration(serverPlayer, parcel, context.getClickedPos());
+                        CMLNetwork.sendClaimCelebration(serverPlayer, registeredParcel, context.getClickedPos());
                     }
 
                     if (context.getLevel() instanceof ServerLevel serverLevel) {
-                        CelebrationHelper.spawnFireworks(serverLevel, parcel);
+                        CelebrationHelper.spawnFireworks(serverLevel, registeredParcel);
                     }
 
                     PlayerMessageHelper.sendSuccess(context.getPlayer(),
                             "deed.claim.success",
                             "deed.claim.success.detail",
-                            parcel.getMinCoords().toShortString(),
-                            ModUtil.getSize(parcel.getBox()).toShortString());
-
+                            registeredParcel.getMinCoords().toShortString(),
+                            ModUtil.getSize(registeredParcel.getBox()).toShortString());
 
                     if (claimResult == ClaimResult.SUCCESS_WITH_WARNINGS) {
-                        PlayerMessageHelper.sendWarning(context.getPlayer(),
-                                "deed.claim.structure_warning");
+                        PlayerMessageHelper.sendWarning(context.getPlayer(), "deed.claim.structure_warning");
                     }
-
-                } else {
+                }
+                else {
                     switch (claimResult) {
                         case STRUCTURE_DENIED -> {
                             PlayerMessageHelper.sendFailure(context.getPlayer(),
@@ -341,14 +360,15 @@ public abstract class Deed extends Item {
                 }
                 return claimResult.isSuccess()  ? InteractionResult.CONSUME : InteractionResult.FAIL;
             }
-        } else {
+        }
+        else {
             /*
              * place foundation stone
              */
             Block foundationStone = getFoundationStone();
             if (foundationStone == null) {
                 PlayerMessageHelper.sendFailure(context.getPlayer(), "foundation_stone.unable_to_locate");
-//                ClaimMyLand.LOGGER.warn("unable to location foundation stone for deed -> {}", parcel.getDeedId());
+                ClaimMyLand.LOGGER.warn("unable to location foundation stone for deed -> {}", parcel.getDeedId());
                 return InteractionResult.FAIL;
             }
 
@@ -363,20 +383,34 @@ public abstract class Deed extends Item {
             BlockPlaceContext placeContext = new BlockPlaceContext(context);
             ICoords placeTargetCoords = Coords.of(placeContext.getClickedPos());
 
-            // TODO need some feedback to player that !canPlaceAt() like "Player parcel cannot be placed in CLOSED Nation parcel"
-//            return parcel.canPlaceAt(context.getLevel(), placeTargetCoords)
-//                    && this.placeBlock(placeContext, foundationStone.defaultBlockState())
-//                    ? InteractionResult.SUCCESS : InteractionResult.FAIL;
-            if (!parcel.canPlaceAt(context.getLevel(), placeTargetCoords)) {
-//                ClaimMyLand.LOGGER.debug("canPlaceAt() returned false for {} at {}",
-//                        parcel.getClass().getSimpleName(), placeTargetCoords);
-                PlayerMessageHelper.sendFailure(context.getPlayer(), "deed.cannot_place_here");
+            PlacementResult placement = parcel.canPlaceAt(context.getLevel(), placeTargetCoords);
+            if (!placement.isSuccess()) {
+                PlayerMessageHelper.sendFailure(context.getPlayer(), placementLangKey(placement));
                 return InteractionResult.FAIL;
             }
-            return this.placeBlock(placeContext, foundationStone.defaultBlockState())
-                    ? InteractionResult.SUCCESS : InteractionResult.FAIL;
+
+            boolean placed = placeBlock(placeContext, foundationStone.defaultBlockState());
+            return placed ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         }
         return super.useOn(context);
+    }
+
+    /**
+     * Maps a {@link PlacementResult} failure value to its lang key. SUCCESS is
+     * not handled — callers must check {@code result.isSuccess()} first.
+     */
+    private static String placementLangKey(PlacementResult result) {
+        return switch (result) {
+            case OUTSIDE_WORLD        -> "deed.place.outside_world";
+            case NATION_CLOSED        -> "deed.place.nation_closed";
+            case NATION_BLACKLISTED   -> "deed.place.nation_blacklisted";
+            case OUTSIDE_VALID_PARENT -> "deed.place.outside_valid_parent";
+            case INVALID_PARENT_TYPE  -> "deed.place.invalid_parent_type";
+            case ACCESS_DENIED        -> "deed.place.access_denied";
+            case UNKNOWN_FAILURE      -> "deed.place.failure";
+            case SUCCESS              -> throw new IllegalArgumentException(
+                    "placementLangKey called with SUCCESS");
+        };
     }
 
     protected void applyWorldPosition(Parcel parcel, FoundationStoneBlockEntity fbe) {

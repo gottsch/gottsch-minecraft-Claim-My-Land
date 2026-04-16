@@ -117,13 +117,6 @@ public class ParcelDisplayFormatter {
 //                .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
 //                .append(Component.literal(parcel.getId().toString()).withStyle(ChatFormatting.WHITE))
 //                .append(Component.literal("]").withStyle(ChatFormatting.GRAY)));
-        lines.add(Component.literal(prefix + branch)
-                .append(Component.literal(parcel.getName()).withStyle(color, ChatFormatting.BOLD))
-                .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(parcel.getId().toString()).withStyle(ChatFormatting.WHITE))
-                .append(Component.literal("]").withStyle(ChatFormatting.GRAY))
-                .append(parcelDemolishIcon(parcel.getEstate().getName(), parcel.getName()))
-                .append(parcelTeleportIcon(parcel.getMinCoords())));
 
         // indent for detail lines
         String indent = prefix + (isLast ? SPACE : VERTICAL);
@@ -131,6 +124,27 @@ public class ParcelDisplayFormatter {
         Optional<String> optionalOwnerName = PlayerRegistry.getPlayerName(level, parcel.getEstate().getOwnerId());
 
         // clickable estate name
+        MutableComponent parcelHeader = Component.literal(prefix + branch)
+                .append(Component.literal(parcel.getName()).withStyle(color, ChatFormatting.BOLD))
+                .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
+//                .append(Component.literal(parcel.getId().toString()).withStyle(ChatFormatting.WHITE))
+                .append(hoverableUuid(parcel.getId()))
+                .append(Component.literal("]").withStyle(ChatFormatting.GRAY));
+
+        if (isOps && optionalOwnerName.isPresent()) {
+            parcelHeader = parcelHeader
+                    .append(estateInfoIconOps(optionalOwnerName.get(), parcel.getEstate().getName()))
+                    .append(parcelRenameIconOps(optionalOwnerName.get(), parcel.getEstate().getName(), parcel.getName()))
+                    .append(parcelDemolishIconOps(optionalOwnerName.get(), parcel.getEstate().getName(), parcel.getName()));
+        } else {
+            parcelHeader = parcelHeader
+                    .append(estateInfoIcon(parcel.getEstate().getName()))
+                    .append(parcelRenameIcon(parcel.getEstate().getName(), parcel.getName()))
+                    .append(parcelDemolishIcon(parcel.getEstate().getName(), parcel.getName()));
+        }
+        parcelHeader = parcelHeader.append(parcelTeleportIcon(parcel.getMinCoords()));
+        lines.add(parcelHeader);
+
         MutableComponent clickableName = Component.literal(parcel.getEstate().getName())
                 .withStyle(color, ChatFormatting.BOLD);
         if (isOps && optionalOwnerName.isPresent()) {
@@ -162,11 +176,7 @@ public class ParcelDisplayFormatter {
         lines.add(Component.literal(indent)
                 .append(Component.literal("Dimension: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(parcel.getDimension()).withStyle(ChatFormatting.WHITE)));
-//        lines.add(Component.literal(indent)
-//                .append(Component.literal("Min Pos: ").withStyle(ChatFormatting.GRAY))
-//                .append(Component.literal(formatLocation(parcel.getMinCoords()))
-//                        .withStyle(ChatFormatting.GREEN)
-//                        .withStyle(tpStyle(parcel.getMinCoords()))));
+
         lines.add(Component.literal(indent)
                 .append(Component.literal("Min Pos: ").withStyle(ChatFormatting.GRAY))
                 .append(Component.literal(formatLocation(parcel.getMinCoords()))

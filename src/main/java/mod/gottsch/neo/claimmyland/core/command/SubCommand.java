@@ -22,6 +22,7 @@ package mod.gottsch.neo.claimmyland.core.command;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.neo.claimmyland.core.estate.Estate;
 import mod.gottsch.neo.claimmyland.core.estate.NationEstate;
@@ -214,7 +215,15 @@ public interface SubCommand {
         String estateName = StringArgumentType.getString(source, CITIZEN_ESTATE_NAME);
         Set<String> names = new HashSet<>();
 
+        // TEMP log the entire parcel registry
+//        for (Parcel p : ParcelRegistry.getParcels()) {
+//            ClaimMyLand.LOGGER.debug("estate.name {} parcel.id {} .name {} .ownerId {}", p.getEstate().getName(), p.getId(), p.getName(), p.getOwnerId());
+//        }
+
         Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        // TEMP
+//        ClaimMyLand.LOGGER.debug("ownerUuid {}", ownerUuid.map(UUID::toString).orElseGet(() -> "null"));
+
         if (ownerUuid.isPresent()) {
             Optional<Estate> estate = CommandHelper.getEstateByOwner(source.getSource(), ownerUuid.get(), estateName);
 

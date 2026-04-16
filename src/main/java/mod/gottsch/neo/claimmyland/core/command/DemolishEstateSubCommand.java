@@ -153,7 +153,7 @@ public class DemolishEstateSubCommand implements SubCommand {
         return switch (parcel.getType()) {
             case PLAYER -> DeedFactory.createPlayerDeed(parcel.getSize());
             case NATION -> DeedFactory.createNationDeed(level, parcel.getSize());
-            case CITIZEN -> DeedFactory.createCitizenDeed(parcel.getSize(), parcel.getEstate().getId());
+            case CITIZEN -> DeedFactory.createCitizenDeed(parcel.getSize(), parcel.getEstate().getId(), parcel.getEstate().getName());
             case ZONE, NONE -> ItemStack.EMPTY;
         };
     }

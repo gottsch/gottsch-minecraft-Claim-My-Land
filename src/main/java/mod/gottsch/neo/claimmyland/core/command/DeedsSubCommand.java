@@ -113,7 +113,7 @@ public abstract class DeedsSubCommand implements ArgumentSubCommand {
             ItemStack deed = switch (type) {
                 case PLAYER -> DeedFactory.createPlayerDeed(size);
                 case NATION -> DeedFactory.createNationDeed(source.getLevel(), size);
-                case CITIZEN -> DeedFactory.createCitizenDeed(size, nationResult.getValue().getId());
+                case CITIZEN -> DeedFactory.createCitizenDeed(size, nationResult.getValue().getId(), nationResult.getValue().getName());
                 case ZONE -> ItemStack.EMPTY;
                 default -> ItemStack.EMPTY;
             };

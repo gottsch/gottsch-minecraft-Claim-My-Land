@@ -956,7 +956,13 @@ public class ParcelRegistry {
         // create new estate and update parcel
         Estate estate = EstateTypeRegistry.create(parcel.isNation() ? EstateTypeRegistry.NATION_ESTATE_TYPE : EstateTypeRegistry.ESTATE_TYPE);
         estate.setOwnerId(newOwnerUuid);
-        estate.setName(oldEstate.getName());
+//        estate.setName(oldEstate.getName());
+        // NOTE do NOT setName() to the oldEstate name. that can cause duplicates in the EstateRegistry.
+        // generate a unique name for the split-off estate. Suggestion providers key on
+        // estate name, so reusing the old name causes two estates to collapse to one
+        // entry in command suggestions. defaultName(ownerId) uses the authoritative
+        // PlayerRegistry counter and is collision-free by construction.
+        estate.setName(estate.defaultName(level, estate.getOwnerId()));
         estate.setParcelType(oldEstate.getParcelType());
         estate.setRelinquished(false);
 
@@ -1057,6 +1063,30 @@ public class ParcelRegistry {
     public static int resolveConflictState(Box proposedBox, UUID ownerId,
                                            UUID excludeParcelId, ParcelType placingType,
                                            String dimension) {
+
+        // Reclaim exemption: if the proposed box exactly matches an existing
+        // relinquished Citizen, this is a reclaim — not a new claim. The reclaim
+        // re-uses the existing geometry verbatim via transferParcelOwnership(),
+        // which means no overlap or buffer state can change. canPlaceAt has
+        // already validated the placing player's eligibility at Foundation Stone
+        // placement time, so we can return 0 (no conflict) unconditionally.
+        //
+        // Without this exemption, the buffer/inflated checks below would
+        // incorrectly flag adjacent same-owner siblings of the relinquished
+        // Citizen as conflicts (because the placing player is now a different
+        // owner, breaking the same-owner sibling exception). The result was a
+        // red preview followed by a successful commit — a misleading lie.
+        if (excludeParcelId != null) {
+            Optional<Parcel> excluded = findByParcelId(excludeParcelId);
+            if (excluded.isPresent()
+                    && excluded.get().isCitizen()
+                    && excluded.get().getEstate().isRelinquished()
+                    && excluded.get().getMinCoords().equals(proposedBox.getMinCoords())
+                    && excluded.get().getMaxCoords().equals(proposedBox.getMaxCoords())) {
+                return 0;
+            }
+        }
+
         // ── Rule 1: direct box overlap ────────────────────────────────────────
         List<Parcel> directOverlaps = find(proposedBox, dimension).stream()
                 .filter(p -> !p.getId().equals(excludeParcelId))

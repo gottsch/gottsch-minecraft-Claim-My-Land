@@ -21,6 +21,7 @@ package mod.gottsch.neo.claimmyland.core.integration.journeymap;
 import mod.gottsch.neo.claimmyland.core.parcel.ClientParcel;
 import mod.gottsch.neo.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.neo.claimmyland.core.registry.ClientParcelRegistry;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
@@ -120,12 +121,18 @@ public class ParcelMapTooltipRenderer {
                     .withStyle(style -> style.withColor(0x00AAFF)));
         }
 
-        // Line 5 — size
+        // line 5 — size
         int width = parcel.maxX() - parcel.minX() + 1;
         int height = parcel.maxY() - parcel.minY() + 1;
         int depth = parcel.maxZ() - parcel.minZ() + 1;
         lines.add(Component.literal(width + " \u00d7 " + height + " \u00d7 " + depth + " blocks")
                 .withStyle(style -> style.withColor(0x888888)));
+
+        // line 6 - relinquished
+        if (parcel.parcelType() == ParcelType.CITIZEN && parcel.isRelinquished()) {
+            lines.add(Component.literal("RELINQUISHED")
+                    .withStyle(ChatFormatting.RED));
+        }
 
         return lines;
     }

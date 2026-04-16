@@ -30,6 +30,7 @@ import mod.gottsch.neo.claimmyland.core.parcel.ParcelType;
 import mod.gottsch.neo.claimmyland.core.registry.ClientParcelRegistry;
 import mod.gottsch.neo.claimmyland.core.util.DimensionHelper;
 import mod.gottsch.neo.gottschcore.spatial.Box;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -267,6 +268,7 @@ public class SyncParcelPacket implements CustomPacketPayload {
                                 (packet.minX + packet.maxX) / 2,
                                 packet.borderStoneY,
                                 (packet.minZ + packet.maxZ) / 2));
+
 
                 if (ModList.get().isLoaded("journeymap")) {
                     ResourceKey<Level> dimKey = DimensionHelper.dimensionKey(packet.dimension);

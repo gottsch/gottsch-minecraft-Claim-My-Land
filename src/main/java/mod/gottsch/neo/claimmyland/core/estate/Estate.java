@@ -3,9 +3,12 @@ package mod.gottsch.neo.claimmyland.core.estate;
 import mod.gottsch.neo.claimmyland.core.parcel.NationalizedParcel;
 import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
 import mod.gottsch.neo.claimmyland.core.parcel.ParcelType;
+import mod.gottsch.neo.claimmyland.core.registry.PlayerRegistry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -63,6 +66,12 @@ public interface Estate {
     String defaultName(UUID ownerId);
 
     String defaultName(Estate estate);
+
+    default String defaultName(ServerLevel server, UUID ownerId) {
+        Optional<String> name = PlayerRegistry.getPlayerName(server, ownerId);
+        int index = PlayerRegistry.nextEstateNameIndex(ownerId);
+        return name.orElseGet(() -> defaultName(ownerId)) + "-estate-" + index;
+    }
 
     CompoundTag save(CompoundTag tag);
 

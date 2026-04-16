@@ -90,6 +90,8 @@ public class EstateDetailsSubCommand implements SubCommand {
 
     // common version
     public static int details(CommandSourceStack source, UUID ownerUuid, String estateName) {
+//        ClaimMyLand.LOGGER.debug("EstateDetailsSubCommand.details: estateName=[{}]", estateName);
+
         Optional<Estate> optionalEstate = getEstateByOwner(source, ownerUuid, estateName);
         if (optionalEstate.isEmpty()) {
             failure(source, "estate.details.failure");

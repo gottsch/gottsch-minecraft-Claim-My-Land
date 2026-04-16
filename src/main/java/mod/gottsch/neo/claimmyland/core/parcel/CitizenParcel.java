@@ -128,17 +128,85 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
         return getDeedId().equals(blockEntity.getDeedId());
     }
 
+    /**
+     * @author Mark Gottschling — PlacementResult refactor on Apr 12, 2026
+     */
+    /**
+     * @author Mark Gottschling — PlacementResult refactor on Apr 12, 2026
+     */
     @Override
-    public boolean canPlaceAt(Level level, ICoords coords) {
+    public PlacementResult canPlaceAt(Level level, ICoords coords) {
         String dimension = level.dimension().location().toString();
         Optional<Parcel> found = ParcelRegistry.findLeastSignificant(coords, dimension);
-//        ClaimMyLand.LOGGER.debug("CitizenParcel.canPlaceAt() coords={} found={}",
-//                coords, found.map(p -> p.getClass().getSimpleName() + " " + p.getId()).orElse("none"));
-//        found.ifPresent(p -> {
-//            ClaimMyLand.LOGGER.debug("  hasAccessTo={} grantsAccess={}",
-//                    hasAccessTo(p), p.grantsAccess(this));
-//        });
-        return found.filter(parcel -> hasAccessTo(parcel) && parcel.grantsAccess(this)).isPresent();
+
+        if (found.isEmpty()) {
+            // wilderness — Citizens require a Zone host
+            return PlacementResult.INVALID_PARENT_TYPE;
+        }
+
+        Parcel parent = found.get();
+
+        if (parent.isNation()) {
+            // inside a Nation directly — must be inside a Zone instead.
+            // Surface closed/blacklist as the more specific reason if applicable,
+            // since those would also block any subsequent attempt via a Zone.
+            NationParcel nation = (NationParcel) parent;
+            if (nation.getAccessType() == NationAccessType.CLOSED) {
+                return PlacementResult.NATION_CLOSED;
+            }
+            if (nation.getBlacklist() != null && nation.getBlacklist().contains(getOwnerId())) {
+                return PlacementResult.NATION_BLACKLISTED;
+            }
+            return PlacementResult.OUTSIDE_VALID_PARENT;
+        }
+
+        if (parent.isZone()) {
+            // inside a Zone — check the enclosing Nation's policy via the
+            // NationalizedParcel contract on the Zone itself.
+            NationalizedParcel nationalized = (NationalizedParcel) parent;
+            if (nationalized.getAccessType() == NationAccessType.CLOSED) {
+                return PlacementResult.NATION_CLOSED;
+            }
+            // Nation blacklist check requires walking from Zone → Nation. The
+            // Zone's NationEstate carries the Nation's ID; resolve via the
+            // multi-result findAllByEstateId and pick the first match. There
+            // should only be one Nation per Nation estate, but the registry
+            // method is multi-valued for general-purpose use.
+            NationEstate ne = nationalized.getNationEstate();
+            if (ne != null) {
+                Optional<NationParcel> nationOpt = ParcelRegistry.findAllByEstateId(ne.getId()).stream()
+                        .filter(NationParcel.class::isInstance)
+                        .map(NationParcel.class::cast)
+                        .findFirst();
+                if (nationOpt.isPresent()) {
+                    NationParcel nation = nationOpt.get();
+                    if (nation.getBlacklist() != null
+                            && nation.getBlacklist().contains(getOwnerId())) {
+                        return PlacementResult.NATION_BLACKLISTED;
+                    }
+                }
+            }
+            // Defer to the existing handshake for any other access policy.
+            if (!hasAccessTo(parent) || !parent.grantsAccess(this)) {
+                return PlacementResult.ACCESS_DENIED;
+            }
+            return PlacementResult.SUCCESS;
+        }
+
+        if (parent.isCitizen() && parent.getEstate().isRelinquished()) {
+            /*
+             * Reclaiming a relinquished Citizen — placement is allowed at this
+             * gate. The actual reclaim eligibility (geometry match, owner rules,
+             * estate validity) is checked downstream in
+             * claimRelinquishedCitizenParcel / transferParcelOwnership. Returning
+             * SUCCESS here lets the Foundation Stone preview and the deed click
+             * proceed; downstream still has the final say.
+             */
+            return PlacementResult.SUCCESS;
+        }
+
+        // enclosing parcel is a Citizen or Player
+        return PlacementResult.INVALID_PARENT_TYPE;
     }
 
     @Override

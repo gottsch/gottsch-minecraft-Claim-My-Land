@@ -30,8 +30,10 @@ import mod.gottsch.neo.claimmyland.core.util.ModUtil;
 import mod.gottsch.neo.gottschcore.spatial.ICoords;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerLevel;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -402,7 +404,7 @@ public class EstateDisplayFormatter {
         MutableComponent estateLine = Component.literal(prefix + branch)
                 .append(Component.literal(estate.getName()).withStyle(color, ChatFormatting.BOLD))
                 .append(Component.literal(" [ID: ").withStyle(ChatFormatting.GRAY))
-                .append(Component.literal(estate.getId().toString()).withStyle(ChatFormatting.WHITE))
+                .append(hoverableUuid(estate.getId()))
                 .append(Component.literal("]").withStyle(ChatFormatting.GRAY));
 
         Set<Parcel> parcels = estate.findParcels();
@@ -413,17 +415,17 @@ public class EstateDisplayFormatter {
             String ownerName = optionalOwnerName.get();
             estateLine.append(estateInfoIconOps(ownerName, estate.getName()));
             estateLine.append(estateRenameIconOps(ownerName, estate.getName()));
-            if (isZone(estate)) {
-                String nationName = parcels.stream()
-                        .filter(p -> p instanceof NationalizedParcel)
-                        .map(p -> ((NationalizedParcel) p).getNationEstate().getName())
-                        .findFirst().orElse("");
-                if (!nationName.isEmpty()) {
-                    estateLine.append(estateRemoveIconOps(ownerName, nationName, estate.getName()));
-                }
-            } else {
+//            if (isZone(estate)) {
+//                String nationName = parcels.stream()
+//                        .filter(p -> p instanceof NationalizedParcel)
+//                        .map(p -> ((NationalizedParcel) p).getNationEstate().getName())
+//                        .findFirst().orElse("");
+//                if (!nationName.isEmpty()) {
+//                    estateLine.append(estateRemoveIconOps(ownerName, nationName, estate.getName()));
+//                }
+//            } else {
                 estateLine.append(estateDemolishIconOps(ownerName, estate.getName()));
-            }
+//            }
             estateLine.append(estateTransferIconOps(ownerName, estate.getName()));
         } else {
             // non-ops — existing icons unchanged

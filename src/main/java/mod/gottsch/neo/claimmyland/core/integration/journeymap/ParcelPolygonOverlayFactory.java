@@ -51,6 +51,18 @@ public class ParcelPolygonOverlayFactory {
     private static final Color ZONE_STROKE    = new Color(0xCCFFFF55, true);
     private static final Color PLAYER_FILL    = new Color(0x3355FF55, true);
     private static final Color PLAYER_STROKE  = new Color(0xCC55FF55, true);
+    /*
+     * Relinquished Citizen parcels keep their normal CITIZEN stroke (light
+     * purple) so the parcel type is still visually identifiable — only the
+     * fill grays out. This signals "inactive/abandoned Citizen" without losing
+     * the type cue. Fixed gray rather than a luminance conversion of the
+     * active fill: mid-value hues like magenta-purple produce mid-gray
+     * luminance that vanishes into most biomes.
+     *
+     * 0x66 = 40% alpha, 0x555555 = 33% gray — dark enough to read against
+     * light biomes, bright enough against dark biomes.
+     */
+    private static final Color RELINQUISHED_FILL = new Color(0x66555555, true);
 
     // -------------------------------------------------------------------------
     // Committed parcel colors — conflict (conflictState > 0)
@@ -98,6 +110,16 @@ public class ParcelPolygonOverlayFactory {
     /** Orange conflict highlight overlays — shown on parcels that conflict with the current preview. */
     private static final Map<UUID, PolygonOverlay> CONFLICT_OVERLAYS = new HashMap<>();
     private static final Map<UUID, PolygonOverlay> CONFLICT_BUFFER_OVERLAYS = new HashMap<>();
+
+    /**
+     * JM overlay Z-ordering — higher renders on top, controls which overlay
+     * wins the fullscreen tooltip when parcels are nested.
+      *Citizen and Player are peers (a Player parcel will never overlap a Citizen).
+     */
+    private static final int Z_NATION  = 1000;
+    private static final int Z_ZONE    = 1010;
+    private static final int Z_CITIZEN = 1020;
+    private static final int Z_PLAYER  = 1020;
 
     /** Current Foundation Stone preview overlay — stored separately from ACTIVE_OVERLAYS. */
     private static PolygonOverlay previewOverlay = null;
@@ -149,7 +171,12 @@ public class ParcelPolygonOverlayFactory {
         List<PolygonOverlay> result = new ArrayList<>();
 
         if (!conflictParcelIds.isEmpty()) {
+            // Remove old overlays from JM BEFORE clearing the maps.
+            // A raw clear() without removal orphans the old overlay objects in JM —
+            // they remain visible and can never be removed because no reference survives.
+            CONFLICT_OVERLAYS.values().forEach(JourneyMapOverlayHandler::removeOverlay);
             CONFLICT_OVERLAYS.clear();
+            CONFLICT_BUFFER_OVERLAYS.values().forEach(JourneyMapOverlayHandler::removeOverlay);
             CONFLICT_BUFFER_OVERLAYS.clear();
 
             for (UUID parcelId : conflictParcelIds) {
@@ -188,18 +215,18 @@ public class ParcelPolygonOverlayFactory {
                 new BlockPos(parcel.minX(),     y, parcel.maxZ() + 1)
         );
         ShapeProperties innerShape = new ShapeProperties()
-                .setFillColor(CONFLICT_TARGET_FILL.getRGB())
+                .setFillColor(CONFLICT_TARGET_FILL.getRGB() & 0x00FFFFFF)
                 .setFillOpacity(CONFLICT_TARGET_FILL.getAlpha() / 255f)
-                .setStrokeColor(CONFLICT_TARGET_STROKE.getRGB())
+                .setStrokeColor(CONFLICT_TARGET_STROKE.getRGB() & 0x00FFFFFF)
                 .setStrokeOpacity(CONFLICT_TARGET_STROKE.getAlpha() / 255f)
                 .setStrokeWidth(2f);
         String innerDisplayId = ClaimMyLand.MOD_ID + ":conflict:" + parcel.parcelId();
         PolygonOverlay innerOverlay = new PolygonOverlay(
-                ClaimMyLand.MOD_ID, dimKey, innerShape, new MapPolygon(corners), null);
+                ClaimMyLand.MOD_ID, dimKey, innerShape, new MapPolygon(corners));
 
         // Label — keeps parcel identified on fullscreen map even during conflict highlight
         TextProperties textProps = new TextProperties()
-                .setColor(CONFLICT_TARGET_STROKE.getRGB())
+                .setColor(CONFLICT_TARGET_STROKE.getRGB() & 0x00FFFFFF)
                 .setFontShadow(true)
                 .setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
         innerOverlay.setLabel(buildFullLabel(parcel))
@@ -220,7 +247,7 @@ public class ParcelPolygonOverlayFactory {
         );
         ShapeProperties bufShape = new ShapeProperties()
                 .setFillColor(0xFFFFFF).setFillOpacity(0f)
-                .setStrokeColor(CONFLICT_TARGET_BUFFER_STROKE.getRGB())
+                .setStrokeColor(CONFLICT_TARGET_BUFFER_STROKE.getRGB() & 0x00FFFFFF)
                 .setStrokeOpacity(CONFLICT_TARGET_BUFFER_STROKE.getAlpha() / 255f)
                 .setStrokeWidth(1f);
         String bufDisplayId = ClaimMyLand.MOD_ID + ":conflict:buffer:" + parcel.parcelId();
@@ -308,36 +335,61 @@ public class ParcelPolygonOverlayFactory {
                     ? activeColorsForType(parcel.parcelType())
                     : mutedColorsForType(parcel.parcelType());
         }
-        LOGGER.debug("buildOverlay: id={} type={} owner={} fill={}",
-                parcel.parcelName(), parcel.parcelType(), parcel.ownerId(), colors[0]);
+//        LOGGER.debug("buildOverlay: id={} type={} owner={} fill={}",
+//                parcel.parcelName(), parcel.parcelType(), parcel.ownerId(), colors[0]);
 
-        float strokeWidth = isPreviewStroke ? 1f
-                : (parcel.parcelType() == ParcelType.NATION ? 4f : 2f);
+        float strokeWidth = strokeWidthFor(parcel, isPreviewStroke);
+//                isPreviewStroke ? 1f
+//                : (parcel.parcelType() == ParcelType.NATION ? 4f : 2f);
+
+//        LOGGER.info("buildOverlay: id={} parcelName={} type={} owner={} isPreview={} conflictState={} inConflictSet={} conflictSetSize={}",
+//                parcel.parcelId(), parcel.parcelName(), parcel.parcelType(), parcel.ownerName(),
+//                parcel.isPreview(), parcel.conflictState(),
+//                conflictParcelIds.contains(parcel.parcelId()),
+//                conflictParcelIds.size());
+
+        // ... existing color resolution (vivid vs. muted) produces Color[] colors
+// where colors[0] is fill and colors[1] is stroke.
+
+        if (parcel.parcelType() == ParcelType.CITIZEN && parcel.isRelinquished()) {
+            colors[0] = RELINQUISHED_FILL;
+            // colors[1] (stroke) intentionally unchanged — keeps CITIZEN purple
+        }
 
         ShapeProperties shapeProps = new ShapeProperties()
                 .setFillColor(colors[0].getRGB() & 0x00FFFFFF)       // mask alpha
                 .setFillOpacity(colors[0].getAlpha() / 255f)
                 .setStrokeColor(colors[1].getRGB() & 0x00FFFFFF)     // mask alpha
                 .setStrokeOpacity(colors[1].getAlpha() / 255f)
-                .setStrokeWidth(parcel.parcelType() == ParcelType.NATION ? 4f : 2f);
+                .setStrokeWidth(strokeWidth);
 
         TextProperties fullscreenTextProps = new TextProperties()
                 .setColor(colors[1].getRGB() & 0x00FFFFFF)           // mask alpha
                 .setFontShadow(true)
                 .setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
 
+        String label = parcel.estateName();
+        if (parcel.parcelType() == ParcelType.CITIZEN && parcel.isRelinquished()) {
+            label = label + " (RELINQUISHED)";
+        }
+        int z = zIndexForType(parcel.parcelType());
+
         String fullDisplayId = ClaimMyLand.MOD_ID + ":parcel:full:" + parcel.parcelId();
         PolygonOverlay fullOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, dimKey, shapeProps, polygon);
-        fullOverlay.setLabel(buildFullLabel(parcel))
+        fullOverlay.setLabel(label)              // short label drawn on the polygon
                 .setTextProperties(fullscreenTextProps);
+        fullOverlay.setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
+        fullOverlay.setDisplayOrder(z);
 
         TextProperties minimapTextProps = new TextProperties()
                 .setColor(colors[1].getRGB() & 0x00FFFFFF)
                 .setActiveUIs(Context.UI.Minimap);
 
         PolygonOverlay miniOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, dimKey, shapeProps, polygon);
-        miniOverlay.setLabel(parcel.estateName())
+        miniOverlay.setLabel(label)
                 .setTextProperties(minimapTextProps);
+        miniOverlay.setActiveUIs(Context.UI.Minimap);
+        miniOverlay.setDisplayOrder(z);
 
         return new PolygonOverlay[]{ fullOverlay, miniOverlay };
     }
@@ -386,7 +438,7 @@ public class ParcelPolygonOverlayFactory {
     }
 
     /**
-     * Removes any existing overlay for the parcel ID first, then builds and shows fresh overlays.
+     * removes any existing overlay for the parcel ID first, then builds and shows fresh overlays.
      */
     public static void notifyParcelAdded(ClientParcel parcel) {
         notifyParcelRemoved(parcel.parcelId());
@@ -422,7 +474,7 @@ public class ParcelPolygonOverlayFactory {
         }
     }
 
-    /** Clears the ACTIVE_OVERLAYS and BUFFER_OVERLAYS caches without removing overlays from JourneyMap. */
+    /** clears the ACTIVE_OVERLAYS and BUFFER_OVERLAYS caches without removing overlays from JourneyMap. */
     public static void clearCache() {
         ACTIVE_OVERLAYS.clear();
         BUFFER_OVERLAYS.clear();
@@ -471,7 +523,7 @@ public class ParcelPolygonOverlayFactory {
         previewParcelId = parcelId;
         JourneyMapOverlayHandler.showOverlay(previewOverlay);
 
-        // Buffer zone overlay for the preview
+        // buffer zone overlay for the preview
         int buf = ClientServerConfig.getParcelBufferRadius();
         Color bufStroke = intersects ? BUFFER_CONFLICT_STROKE : BUFFER_STROKE;
         ShapeProperties bufferShape = new ShapeProperties()
@@ -490,7 +542,7 @@ public class ParcelPolygonOverlayFactory {
         JourneyMapOverlayHandler.showOverlay(previewBufferOverlay);
     }
 
-    /** Removes the current Foundation Stone preview overlay from the JourneyMap. */
+    /** removes the current Foundation Stone preview overlay from the JourneyMap. */
     public static void clearPreviewOverlay() {
         if (previewOverlay != null) {
             JourneyMapOverlayHandler.removeOverlay(previewOverlay);
@@ -540,7 +592,7 @@ public class ParcelPolygonOverlayFactory {
         BUFFER_OVERLAYS.clear();
     }
 
-    /** Removes all orange conflict highlight overlays from the JourneyMap and clears the caches. */
+    /** removes all orange conflict highlight overlays from the JourneyMap and clears the caches. */
     public static void clearConflictOverlays() {
         CONFLICT_OVERLAYS.values().forEach(JourneyMapOverlayHandler::removeOverlay);
         CONFLICT_OVERLAYS.clear();
@@ -585,6 +637,13 @@ public class ParcelPolygonOverlayFactory {
         return new Color((rgb & 0x00FFFFFF) | (alpha << 24), true);
     }
 
+    private static float strokeWidthFor(ClientParcel parcel, boolean isPreviewStroke) {
+        if (isPreviewStroke) return 1f;
+        if (parcel.parcelType() == ParcelType.NATION) return 4f;
+        if (parcel.parcelType() == ParcelType.CITIZEN && parcel.isRelinquished()) return 3f;
+        return 2f;
+    }
+
     private static UUID localPlayerId() {
         Minecraft mc = Minecraft.getInstance();
         return (mc != null && mc.player != null) ? mc.player.getUUID() : null;
@@ -593,6 +652,16 @@ public class ParcelPolygonOverlayFactory {
     private static String buildFullLabel(ClientParcel parcel) {
         String typeName = parcel.parcelType() != null ? parcel.parcelType().name() : "PARCEL";
         return parcel.estateName() + " (" + typeName + ")\nOwner: " + parcel.ownerName();
+    }
+
+    private static int zIndexForType(ParcelType type) {
+        return switch (type) {
+            case NATION  -> Z_NATION;
+            case ZONE    -> Z_ZONE;
+            case CITIZEN -> Z_CITIZEN;
+            case PLAYER  -> Z_PLAYER;
+            default      -> Z_PLAYER;
+        };
     }
 
     private static ResourceKey<Level> dimensionKey(String dimension) {

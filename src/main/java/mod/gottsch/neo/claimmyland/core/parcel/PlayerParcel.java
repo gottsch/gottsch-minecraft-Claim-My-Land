@@ -24,10 +24,12 @@ import mod.gottsch.neo.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.neo.claimmyland.core.config.Config;
 import mod.gottsch.neo.claimmyland.core.estate.Estate;
 import mod.gottsch.neo.claimmyland.core.estate.EstateTypeRegistry;
+import mod.gottsch.neo.claimmyland.core.estate.NationEstate;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.neo.claimmyland.core.registry.PlayerRegistry;
 import mod.gottsch.neo.claimmyland.core.util.ModUtil;
 import mod.gottsch.neo.gottschcore.spatial.Box;
+import mod.gottsch.neo.gottschcore.spatial.ICoords;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 
@@ -101,6 +103,69 @@ public class PlayerParcel extends AbstractClaimableParcel {
         return false;
     }
 
+    /**
+     * @author Mark Gottschling — PlacementResult refactor on Apr 12, 2026
+     */
+    @Override
+    public PlacementResult canPlaceAt(Level level, ICoords coords) {
+        String dimension = level.dimension().location().toString();
+        Optional<Parcel> found = ParcelRegistry.findLeastSignificant(coords, dimension);
+
+        if (found.isEmpty()) {
+            // wilderness — fine
+            return PlacementResult.SUCCESS;
+        }
+
+        Parcel parent = found.get();
+
+        if (parent.isNation()) {
+            NationParcel nation = (NationParcel) parent;
+            if (nation.getAccessType() == NationAccessType.CLOSED) {
+                return PlacementResult.NATION_CLOSED;
+            }
+            if (nation.getBlacklist() != null && nation.getBlacklist().contains(getOwnerId())) {
+                return PlacementResult.NATION_BLACKLISTED;
+            }
+            // Player deeds cannot be placed directly in a Nation under any policy
+            return PlacementResult.OUTSIDE_VALID_PARENT;
+        }
+
+        if (parent.isZone()) {
+            NationalizedParcel nationalized = (NationalizedParcel) parent;
+            if (nationalized.getAccessType() == NationAccessType.CLOSED) {
+                return PlacementResult.NATION_CLOSED;
+            }
+            NationEstate ne = nationalized.getNationEstate();
+            if (ne != null) {
+                Optional<NationParcel> nationOpt = ParcelRegistry.findAllByEstateId(ne.getId()).stream()
+                        .filter(NationParcel.class::isInstance)
+                        .map(NationParcel.class::cast)
+                        .findFirst();
+                if (nationOpt.isPresent()) {
+                    NationParcel nation = nationOpt.get();
+                    if (nation.getBlacklist() != null
+                            && nation.getBlacklist().contains(getOwnerId())) {
+                        return PlacementResult.NATION_BLACKLISTED;
+                    }
+                }
+            }
+            if (!hasAccessTo(parent) || !parent.grantsAccess(this)) {
+                return PlacementResult.ACCESS_DENIED;
+            }
+            return PlacementResult.SUCCESS;
+        }
+
+        // Reclaiming a relinquished Citizen — placement is allowed at this gate.
+        // The actual reclaim eligibility (geometry match, owner rules) is checked
+        // downstream in claimRelinquishedCitizenParcel / transferParcelOwnership.
+        if (parent.isCitizen() && parent.getEstate().isRelinquished()) {
+            return PlacementResult.SUCCESS;
+        }
+
+        // enclosing parcel is a Citizen or Player — invalid host
+        return PlacementResult.INVALID_PARENT_TYPE;
+    }
+
     @Override
     protected ClaimResult claimWithinZone(Level level, Parcel parentParcel, Box parcelBox) {
         // Rule 1: parcel must be fully within the parent
@@ -156,7 +221,7 @@ public class PlayerParcel extends AbstractClaimableParcel {
         citizenParcel.setOwnerId(getOwnerId());
 
         // register the player before the parcel to save a network call to Mojang API
-        PlayerRegistry.register(level, getOwnerId());
+        ClaimResult result = citizenParcel.nameAndRegister(level);
 
         return citizenParcel.nameAndRegister(level);
     }

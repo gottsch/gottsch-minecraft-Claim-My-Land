@@ -19,6 +19,7 @@
  */
 package mod.gottsch.neo.claimmyland.core.parcel;
 
+import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.neo.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.neo.claimmyland.core.config.Config;
@@ -154,14 +155,16 @@ public interface Parcel {
      * @param coords
      * @return
      */
-    default boolean canPlaceAt(Level level, ICoords coords) {
-        /*
-         * check if parcel is within another existing parcel
-         */
-        String dimension = level.dimension().location().toString();
-        Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords, dimension);
-        return registryParcel.map(this::handleEmbeddedPlacementRules).orElseGet(this::handlePlacementRules);
-    }
+     default PlacementResult canPlaceAt(Level level, ICoords coords) {
+         String dimension = level.dimension().location().toString();
+         Optional<Parcel> registryParcel = ParcelRegistry.findLeastSignificant(coords, dimension);
+         if (registryParcel.isEmpty()) {
+             return handlePlacementRules() ? PlacementResult.SUCCESS : PlacementResult.INVALID_PARENT_TYPE;
+         }
+         return handleEmbeddedPlacementRules(registryParcel.get())
+                 ? PlacementResult.SUCCESS
+                 : PlacementResult.ACCESS_DENIED;
+     }
 
     /**
      * handles situations where this deed DOES NOT overlap with any other parcels

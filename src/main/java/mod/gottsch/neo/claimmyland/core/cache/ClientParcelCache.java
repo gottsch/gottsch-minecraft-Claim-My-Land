@@ -66,6 +66,7 @@ public class ClientParcelCache {
         private final int maxX, maxY, maxZ;
         private final String dimension;
         private final String nationName;
+        private final boolean relinquished;
 
         private Entry(
                 UUID parcelId, UUID estateId,
@@ -74,7 +75,8 @@ public class ClientParcelCache {
                 UUID ownerId, ParcelType parcelType,
                 int minX, int minY, int minZ,
                 int maxX, int maxY, int maxZ,
-                String dimension) {
+                String dimension,
+                boolean relinquished) {
             this.parcelId   = parcelId;
             this.estateId   = estateId;
             this.parcelName = parcelName;
@@ -86,6 +88,7 @@ public class ClientParcelCache {
             this.minX = minX; this.minY = minY; this.minZ = minZ;
             this.maxX = maxX; this.maxY = maxY; this.maxZ = maxZ;
             this.dimension  = dimension;
+            this.relinquished = relinquished;
         }
 
         /**
@@ -115,11 +118,12 @@ public class ClientParcelCache {
         public int getMaxZ()            { return maxZ; }
         public String getDimension()    { return dimension; }
         public String getNationName() { return nationName; }
+        public boolean isRelinquished() { return relinquished; }
 
         @Override
         public String toString() {
-            return String.format("ClientParcelCache.Entry{parcel='%s' [%s], estate='%s', owner='%s', type=%s, dim=%s}",
-                    parcelName, parcelId, estateName, ownerName, parcelType, dimension);
+            return String.format("ClientParcelCache.Entry{parcel='%s' [%s], estate='%s', owner='%s', type=%s, dim=%s, relinquished=%s}",
+                    parcelName, parcelId, estateName, ownerName, parcelType, dimension, relinquished);
         }
     }
 
@@ -145,7 +149,8 @@ public class ClientParcelCache {
             UUID ownerId, ParcelType parcelType,
             int minX, int minY, int minZ,
             int maxX, int maxY, int maxZ,
-            String dimension) {
+            String dimension,
+            boolean relinquished) {
         current = new Entry(
                 parcelId, estateId,
                 parcelName, estateName,
@@ -153,7 +158,8 @@ public class ClientParcelCache {
                 ownerId, parcelType,
                 minX, minY, minZ,
                 maxX, maxY, maxZ,
-                dimension
+                dimension,
+                relinquished
         );
 //        LOGGER.debug("ClientParcelCache updated -> {}", current);
     }

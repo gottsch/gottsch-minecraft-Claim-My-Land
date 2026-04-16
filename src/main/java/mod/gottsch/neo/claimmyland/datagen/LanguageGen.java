@@ -78,6 +78,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.join.invalid.failure"), "Cannot join estates:");
         add(LangUtil.chat("estate.join.invalid.reasons"), "Same estate~Not the same type.~One or more estates are relinquished.~Not the same owner.");
         add(LangUtil.chat("estate.join.different.zone.failure"), "Cannot join estates that have different parent zone/nations.");
+        add(LangUtil.chat("estate.join.relinquished.failure"), "That estate has been relinquished and cannot be joined.");
 
         add(LangUtil.chat("estate.split.success"), "Estate has been split.");
         add(LangUtil.chat("estate.split.failure"), "Unable to split estate.");
@@ -249,6 +250,12 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("deed.invalid"), "Invalid deed.");
         add(LangUtil.chat("citizen_deed.invalid"), "Invalid deed.");
         add(LangUtil.chat("deed.nation"), "Nation: %s");
+        add(LangUtil.chat("deed.place.nation_closed"),  "This Nation is not accepting foreign claims.");
+        add(LangUtil.chat("deed.place.nation_blacklisted"),  "You are not permitted to claim land in this Nation.");
+        add(LangUtil.chat("deed.place.outside_valid_parent"),  "Citizen claims must be placed inside a Zone, not directly in a Nation.");
+        add(LangUtil.chat("deed.place.invalid_parent_type"),  "You cannot place this deed here — wrong parent parcel type.");
+        add(LangUtil.chat("deed.place.access_denied"),  "You are not permitted to claim land here.");
+        add(LangUtil.chat("deed.place.failure"),  "You cannot place a parcel here.");
 
         add(LangUtil.chat("deed.claim.access_denied"), "You do not have permission to claim land here.");
         add(LangUtil.chat("deed.cannot_place_here"), "You cannot place a deed here.");
@@ -307,6 +314,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.tooltip("deed.type"), "Type: %s");
         add(LangUtil.tooltip("deed.size"), "Size: (%s)");
         add(LangUtil.tooltip("deed.id"), "ID: %s");
+        add(LangUtil.tooltip("deed.nation"), "Nation: %s");
         add(LangUtil.tooltip("deed.nation_id"), "Nation ID: %s");
 
         add(LangUtil.tooltip("player_deed.usage"), "Can be used on any unclaimed land and within nations with OPEN borders.");
