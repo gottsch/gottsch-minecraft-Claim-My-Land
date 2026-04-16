@@ -17,6 +17,268 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.6.0] - 2026-04-16
+
+### 🎉 Highlights
+
+- **JM fullscreen tooltip picks the correct nested parcel** — was Y-coordinate
+  dependent, now uses 2D point-in-footprint with smallest-volume tiebreaker.
+- **Citizen deeds carry the bound Nation name in their tooltip** — players can
+  see at a glance which Nation a Citizen deed will join.
+- **Phantom Player parcel after relinquished-Citizen reclaim no longer appears**
+  on the placing player's JM.
+- **Reclaim preview no longer falsely renders red** when the relinquished Citizen
+  has an adjacent same-owner sibling.
+- **JM tooltip ghost text cleaned up** — no more floating "No Ow…" fragments
+  near the cursor on the fullscreen map.
+- **Relinquished parcels no longer disappear from `/cml-ops parcel relinquish`
+  suggestions** — duplicate estate names produced by the relinquish split now
+  use `defaultName(ownerId)` for guaranteed uniqueness.
+- **Red conflict borders no longer appear on committed parcels after periodic
+  resync or relog** — `syncAllParcelsToPlayer` was calling `resolveConflictState`
+  on committed parcels (same root cause as the v2.5.1 `onChunkWatch` fix in a
+  different code path).
+- **Red conflict borders no longer appear on a neighbor's committed parcel when
+  placing a border stone** — `placeParcelBorder()` was calling
+  `resolveConflictState` unconditionally and passing the result to the committed-
+  parcel broadcast path. Third `resolveConflictState` call-site fix.
+- **PlayerDeed → Citizen conversions now fire purple Citizen fireworks** instead
+  of green Player fireworks. The celebration code in `Deed.useOn` was reading
+  off the transient pre-claim parcel reference; post-claim re-resolve now uses
+  a chained lookup strategy that handles both conversion paths.
+- **Conflict preview overlays no longer broadcast to all players** — only the
+  placing player sees red/orange conflict highlights in JM and in-world.
+- **JM orange conflict overlays now clear correctly** on distance timeout after
+  the foundation stone is removed.
+- **Foundation stone repositioning now works correctly** — old border stones are
+  removed from the client when a new position is selected.
+- **Deed placement now gives informative failure messages** — `canPlaceAt()`
+  returns a rich `PlacementResult` enum so players know exactly why a deed
+  cannot be placed (closed Nation, blacklisted, wrong parent type, etc.).
+---
+
+### ➕ Added
+
+#### `PlacementResult` enum
+- New enum `PlacementResult` with values `SUCCESS`, `OUTSIDE_WORLD`,
+  `NATION_CLOSED`, `NATION_BLACKLISTED`, `OUTSIDE_VALID_PARENT`,
+  `INVALID_PARENT_TYPE`, `ACCESS_DENIED`, `UNKNOWN_FAILURE`.
+- `Parcel.canPlaceAt()` default changed from `boolean` to `PlacementResult`.
+- `NationParcel`, `ZoneParcel`, `CitizenParcel`, `PlayerParcel` each override
+  `canPlaceAt()` to return the appropriate specific value.
+- `Deed.useOn()` maps the result to a lang key via `placementLangKey(PlacementResult)`.
+- Exhaustive `switch` in `placementLangKey` — adding a new enum value produces
+  a compile error, not a silent fallthrough.
+#### Citizen deed Nation name tooltip
+- `DeedFactory.createCitizenDeed(Box size, UUID nationId, String nationName)` —
+  added `nationName` parameter, persisted to `CustomData` alongside the existing
+  `NATION_ESTATE_ID` via the read-modify-writeback pattern.
+- New `Deed.NATION_ESTATE_NAME = "nationEstateName"` constant.
+- `CitizenDeed.appendHoverText` reads `NATION_ESTATE_NAME` and renders a gold
+  `Nation: <name>` line. No-op when absent (old deeds without the bound name).
+- New lang key `tooltip.claimmyland.deed.nation`.
+#### `ClientParcelRegistry.findAt(int x, int z, String dimension)` overload
+- 2D point-in-footprint lookup for the JourneyMap fullscreen tooltip. Ignores Y
+  entirely — the fullscreen map is a top-down view. When multiple parcels'
+  footprints contain the point, the smallest by area wins (same "smallest
+  containing parcel" rule used by the in-world HUD).
+---
+
+### 🐛 Fixed
+
+#### JM fullscreen tooltip showed Zone instead of nested Citizen depending on cursor Y
+- **Root cause:** `JourneyMapOverlayHandler.onMapMouseMoved()` was calling
+  `ClientParcelRegistry.findAt(x, y, z, dimension)` with the cursor's full 3D
+  BlockPos. JM provides the Y of the topmost block under the cursor (surface
+  block, tree leaf, tower top — whichever is highest). The 3D containment check
+  was therefore inconsistent: cursor on a tall block inside a Citizen's Y range
+  picked Citizen, cursor on bare ground below the Citizen's Y range picked the
+  enclosing Nation.
+- **Fix:** added 2D `findAt(int x, int z, String dimension)` overload to
+  `ClientParcelRegistry` that ignores Y. `onMapMouseMoved` now calls the 2D
+  overload.
+#### Phantom Player parcel after relinquished-Citizen reclaim
+- **Root cause:** `Deed.useOn()` was explicitly calling
+  `CMLNetwork.syncParcelToPlayer(serverLevel, serverPlayer, parcel)` after a
+  successful claim, where `parcel` is the *transient* pre-claim object created
+  from the deed item. In the normal claim path this was a redundant duplicate of
+  the broadcast already performed by `nameAndRegister()` →
+  `ParcelRegistry.register(ServerLevel, Parcel)` → `syncParcelToTrackingPlayers`.
+  In the relinquished-Citizen reclaim path
+  (`AbstractClaimableParcel.claimRelinquishedCitizenParcel` →
+  `ParcelRegistry.transferParcelOwnership`) and the
+  `PlayerParcel.claimWithinZone` → fresh `CitizenParcel` conversion path, the
+  registered parcel is a *different object* than `parcel`. The explicit sync
+  added the transient pre-claim object to the placing player's
+  `ClientParcelRegistry` as a phantom green overlay that persisted until the
+  next periodic resync (~5 minutes).
+- **Fix:** deleted the explicit `syncParcelToPlayer(parcel)` block from the
+  `if (claimResult.isSuccess())` branch in `Deed.useOn()`. The placing player is
+  always within `TRACKING_CHUNK` range of their own claim, so the existing
+  `syncParcelToTrackingPlayers` broadcast inside `nameAndRegister`/
+  `transferParcelOwnership` already reaches them.
+#### Reclaim preview shows red conflict against adjacent same-owner sibling
+- **Root cause:** when reclaiming a relinquished Citizen adjacent to a
+  non-relinquished sibling Citizen owned by the original (relinquishing) player,
+  the Foundation Stone preview rendered red even though the commit succeeded.
+  `resolveConflictState()` correctly excluded the relinquished Citizen itself
+  from the direct-overlap check via `excludeParcelId`, but the buffer/inflated
+  checks still found the adjacent sibling and evaluated
+  `isConflict(citizen, citizen, reclaimer, originalOwner)` — which returned true
+  because the same-owner sibling exception that allowed the original adjacency
+  no longer applied (the reclaimer is a different owner).
+- **Fix:** added a reclaim exemption at the top of `resolveConflictState()` that
+  returns `0` immediately when `excludeParcelId` resolves to a relinquished
+  Citizen whose geometry exactly matches the proposed box. The exemption is
+  narrow — geometric equality is required — so it never fires for non-reclaim
+  placements.
+#### JM tooltip ghost text and polygon label cleanup
+- **Root cause:** During earlier debugging we added
+  `setTitle(buildFullLabel(parcel))` to JM polygon overlays. JM's
+  `Overlay.setTitle()` is a rollover text JM renders independently of our
+  `ParcelMapTooltipRenderer`. With both active, they competed and clipped each
+  other, producing a small floating "No Ow…" fragment near the cursor.
+- **Fix:** removed `.setTitle(...)` from `buildOverlay()`. Also changed
+  `setLabel(parcel.estateName())` to `setLabel("")` on the fullscreen overlay
+  since the rich custom tooltip already shows the estate name on hover. Minimap
+  overlay unchanged — it has no hover tooltip and the label is the only way to
+  identify parcels at a glance.
+#### Relinquished parcels disappear from `/cml-ops parcel relinquish` suggestions
+- **Root cause:** `RelinquishParcelSubCommand.relinquishParcel()` peels the
+  relinquished parcel off its shared estate by creating a new `Estate` object,
+  but copied the old name verbatim via `newEstate.setName(oldEstate.getName())`.
+  When two Citizens shared an estate and one was relinquished, the result was
+  two estates with identical names but different UUIDs. The suggestion providers
+  (`OPS_OWNER_CITIZEN_ESTATE_NAMES`, `OWNER_CITIZEN_ESTATE_NAMES`) collect names
+  into a `Set<String>` keyed on `Estate::getName`, collapsing duplicates to a
+  single entry. The user-visible symptom was that one of the two estates became
+  unreachable from the relinquish command suggestions, even though the parcel
+  data was intact in the registry. `transferParcelOwnership()` had the same bug
+  on the reclaim side and was patched in parallel.
+- **Fix:** both `RelinquishParcelSubCommand.relinquishParcel()` and
+  `ParcelRegistry.transferParcelOwnership()` now call
+  `newEstate.defaultName(ownerId)`, which uses the authoritative
+  `PlayerRegistry.nextEstateNameIndex(ownerId)` counter and is collision-free
+  by construction. Relinquished and reclaimed estates are now indistinguishable
+  in form from any other freshly-created estate.
+#### Red conflict borders on committed parcels after periodic resync or relog
+- **Root cause:** `CMLNetwork.syncAllParcelsToPlayer()` called
+  `ParcelRegistry.resolveConflictState()` on every committed parcel before
+  building the resync packets. `resolveConflictState()` is designed for
+  Foundation Stone placement preview only — when called on a committed Nation
+  parcel whose box contains nested Zones or Citizens, the children overlap the
+  parent box and the method returns `1`, which the client renders as red
+  borders. This is the same bug the v2.5.1 fix patched in `onChunkWatch`,
+  reproduced in a different code path.
+- **Fix:** both branches of the per-parcel `map(...)` in
+  `syncAllParcelsToPlayer()` now pass `0` literally for `conflictState` instead
+  of calling `resolveConflictState()`. Mirrors the v2.5.1 `onChunkWatch` fix.
+#### Committed parcel border stone placement broadcasts wrong conflictState to tracking players
+- **Root cause:** `BorderStoneBlockEntity.placeParcelBorder()` called
+  `resolveConflictState()` unconditionally at the top of the method and passed
+  the result into both the committed-parcel branch and the preview branch.
+  `resolveConflictState()` is valid only for Foundation Stone placement preview —
+  when called for a committed parcel with an adjacent different-owner sibling,
+  it returns `1`, which `syncBorderVisibilityToTrackingPlayersAndSelf` broadcast
+  to all tracking players. The affected player saw the adjacent committed parcel
+  render red in JM. Self-healed on the ~5-minute periodic resync. Same root
+  cause as the v2.5.1 `onChunkWatch` fix and the v2.6 `syncAllParcelsToPlayer`
+  fix — the third `resolveConflictState` call-site on committed parcels.
+- **Fix:** `resolveConflictState()` moved into the preview (`else if`) branch
+  only. Both committed-parcel send paths (`placingPlayer != null` and
+  `placingPlayer == null`) now pass `0` literally for `conflictState`.
+#### PlayerDeed → Citizen fireworks render green instead of purple
+- **Root cause:** `Deed.useOn()`'s success branch re-resolved the registered
+  parcel via `ParcelRegistry.findByParcelId(parcel.getId())`, but this missed
+  in both conversion paths. In the `PlayerParcel.claimWithinZone()` →
+  `CitizenParcel` path, the pre-claim `PlayerParcel` built from the deed item
+  has no UUID (`getId()` returns `null`), so `findByParcelId(null)` returned
+  empty. In the relinquished-Citizen reclaim path (`transferParcelOwnership`),
+  the registered parcel retains the relinquished parcel's UUID — the UUID of
+  the foundation stone's existing block entity — not the freshly pre-assigned
+  UUID on the transient `PlayerParcel`. Both cases fell back to the stale
+  `PlayerParcel` via `.orElse(parcel)` and fired green fireworks.
+- **Fix:** `Deed.useOn()` pre-assigns `UUID.randomUUID()` to the pre-claim
+  parcel when `getId() == null`, before `handleClaim()` is called. The
+  re-resolve in the success branch then chains two lookups: first
+  `findByParcelId(parcel.getId())` (finds the registered `CitizenParcel` in
+  the `claimWithinZone` path), then `findByParcelId(foundationStoneBlockEntity
+  .getParcelId())` (finds the transferred parcel in the relinquished reclaim
+  path, whose UUID is the foundation stone's pre-existing parcel ID). The
+  `orElse(parcel)` defensive fallback is retained as last resort.
+#### Conflict preview overlays broadcast to all tracking-chunk players
+- **Root cause:** `BorderStoneBlockEntity.placeParcelBorder()` called
+  `CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(...)` with the real
+  `conflictState` for all players. Every client receiving a preview packet with
+  `conflictState > 0` ran `showConflictOverlays()`, so all nearby players saw
+  the red/orange conflict highlights in JM — not just the placing player.
+- **Fix:** split the preview send into two calls. Tracking players (excluding
+  the placer) receive `conflictState=0` so they see the JM preview outline but
+  never conflict highlighting. The placing player receives a separate
+  player-targeted send with the real `conflictState`. Both
+  `syncPreviewParcelToTrackingPlayers` and `syncPreviewParcelToOwner` are used;
+  the former excludes the placing player from the tracking broadcast.
+#### JM orange conflict overlays persist after foundation stone removal and distance clear
+- **Root cause:** `rebuildTransientOverlays()` (called from `pushAllOverlays()`
+  when the JM map is opened) did a raw `CONFLICT_OVERLAYS.clear()` and
+  `CONFLICT_BUFFER_OVERLAYS.clear()` without first calling `jmApi.remove()` on
+  the old overlay objects. This orphaned the original overlay objects in JM —
+  they remained visible and could never be removed because no reference to them
+  survived. When `clearConflictOverlays()` later fired (on distance/timeout), it
+  removed the replacement objects but the originals persisted as orange fills.
+- **Fix:** `rebuildTransientOverlays()` now calls `jmApi.remove()` on all
+  entries in both conflict maps before clearing them, matching the pattern used
+  by `removeAllPermanentOverlays()`. Same remove-before-clear discipline now
+  applies consistently across all overlay lifecycle paths.
+#### Foundation stone not removed from client when repositioning with deed
+- **Root cause:** `Deed.useOn()` fell through to `return super.useOn(context)`
+  (which returns `InteractionResult.PASS`) after a successful foundation stone
+  placement. `PASS` tells NeoForge the interaction was not handled, suppressing
+  the block-change sync to the client. The server correctly placed the new stone
+  and removed the old one (including border stones), but the client never
+  received the updates and continued to show the old border stones. They
+  appeared unbreakable (mod protection active on preview parcels) and
+  disappeared on relog when the client received fresh chunk data. This matched
+  the v2.4 code which returned `InteractionResult.SUCCESS` explicitly.
+- **Fix:** the foundation stone placement branch now returns
+  `InteractionResult.SUCCESS` on success and `InteractionResult.FAIL` on
+  failure, never falling through to `super.useOn(context)`.
+#### Deed placement fails silently with no player message
+- **Root cause:** `canPlaceAt()` returned `boolean` — callers knew placement
+  was denied but not why. Players using a Citizen deed directly inside a Nation
+  (outside any Zone), inside a closed Nation, or while blacklisted received
+  no feedback.
+- **Fix:** `canPlaceAt()` now returns `PlacementResult`. Each concrete parcel
+  type's override returns the specific failure reason. `Deed.useOn()` maps the
+  result to a lang key and sends an informative failure message.
+---
+
+### Removed
+
+#### Dead-code overloads in `CMLNetwork`
+
+Two `CMLNetwork` overloads were latent traps with no live callers:
+
+- `syncBorderVisibleToOwner(ServerLevel, Parcel, int borderStoneY)` — 3-arg
+  version that resolved `conflictState` internally via
+  `resolveConflictState()`.
+- `syncBorderVisibleToOwnerAndPlacer(ServerLevel, Parcel, int borderStoneY, UUID placingPlayerId)`
+  — 4-arg version that resolved `conflictState` internally.
+  Both methods called `resolveConflictState()` on what would have been committed
+  parcels (any caller would have been a Border Stone toggle path), reproducing
+  the same bug as the v2.5.1 `onChunkWatch` and v2.6 `syncAllParcelsToPlayer`
+  fixes. With no callers, the cleanest action is deletion — the surviving
+  explicit-`conflictState` overloads (which take the value as a parameter) cover
+  every legitimate use, and callers always know whether they're in a preview or
+  committed context.
+
+#### Stale `@Deprecated` on `INationParcel.getBlacklist()` / `setBlacklist()`
+The blacklist mechanism is current and in active use. The `@Deprecated(forRemoval
+= true, since = "2.0")` annotations on `getBlacklist()`, `setBlacklist()`, and
+the corresponding `NationParcel.blacklist` field were incorrect. Removed.
+ 
+---
+
 ## [2.5.1] - 2026-04-09
 
 ### 🎉 Highlights

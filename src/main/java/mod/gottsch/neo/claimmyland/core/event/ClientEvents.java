@@ -133,8 +133,8 @@ public class ClientEvents {
 
         if (ClientParcelCache.isProtected(pos.getX(), pos.getY(), pos.getZ(), dimension)) {
             event.setCanceled(true);
-            ClaimMyLand.LOGGER.debug("ClientEvents: block place cancelled by client cache @ {}",
-                    Coords.of(pos).toShortString());
+//            ClaimMyLand.LOGGER.debug("ClientEvents: block place cancelled by client cache @ {}",
+//                    Coords.of(pos).toShortString());
         }
     }
 
@@ -144,21 +144,16 @@ public class ClientEvents {
 
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onPlayerInteractBlock(final PlayerInteractEvent.RightClickBlock event) {
-        ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: hand={}, item={}, pos={}, canceled={}",
-                event.getHand(),
-                event.getItemStack().getItem().getClass().getSimpleName(),
-                event.getPos(),
-                event.isCanceled());
 
         if (!event.getLevel().isClientSide()) {
-            ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: SKIPPING — hand={}, reason=service side",
-                    event.getHand());
+//            ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: SKIPPING — hand={}, reason=service side",
+//                    event.getHand());
             return;
         }
 
         if (!isLocalPlayer(event.getEntity())) {
-            ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: SKIPPING — hand={}, reason=not local player",
-                    event.getHand());
+//            ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: SKIPPING — hand={}, reason=not local player",
+//                    event.getHand());
             return;
         }
 
@@ -167,8 +162,8 @@ public class ClientEvents {
 
         if (ClientParcelCache.isProtected(pos.getX(), pos.getY(), pos.getZ(), dimension)) {
             event.setCanceled(true);
-            ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: CANCELING — hand={}, reason=right-click block cancelled by client cache",
-                    event.getHand());
+//            ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: CANCELING — hand={}, reason=right-click block cancelled by client cache",
+//                    event.getHand());
         }
     }
 

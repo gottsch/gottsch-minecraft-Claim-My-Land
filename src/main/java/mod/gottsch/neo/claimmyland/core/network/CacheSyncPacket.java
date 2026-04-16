@@ -219,7 +219,6 @@ public class CacheSyncPacket implements CustomPacketPayload {
             if (packet.parcelId == null) {
                 ClientParcelCache.setWilderness();
                 ParcelEntryTitleRenderer.onParcelChanged(null);
-                ClaimMyLand.LOGGER.debug("CacheSyncPacket: client cache set to wilderness");
             } else {
                 ClientParcelCache.update(
                         packet.parcelId,
@@ -239,8 +238,7 @@ public class CacheSyncPacket implements CustomPacketPayload {
                 ClientParcel existing = ClientParcelRegistry.findById(packet.parcelId).orElse(null);
 
                 if (existing != null && existing.isPreview()) {
-                    ClaimMyLand.LOGGER.debug("CacheSyncPacket.handle: skipping registry update for preview parcel {}", packet.parcelId);
-                    return;
+                     return;
                 }
 
                 boolean borderVisible = existing != null && existing.isBorderVisible();

@@ -65,7 +65,7 @@ public class CitizenDeed extends Deed {
     @Override
     public Optional<Parcel> createParcel(ItemStack deedStack, ICoords coords, Player player) {
         CompoundTag debugTag = deedStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        ClaimMyLand.LOGGER.debug("CitizenDeed.createParcel() tag = {}", debugTag);
+//        ClaimMyLand.LOGGER.debug("CitizenDeed.createParcel() tag = {}", debugTag);
 
         Optional<Parcel> optionalParcel = super.createParcel(deedStack, coords, player);
 
@@ -84,9 +84,9 @@ public class CitizenDeed extends Deed {
         }
 
         UUID nationId = tag.getUUID(Deed.NATION_ESTATE_ID);
-        ClaimMyLand.LOGGER.debug("CitizenDeed looking up nation estate id={}", nationId);
+//        ClaimMyLand.LOGGER.debug("CitizenDeed looking up nation estate id={}", nationId);
         Optional<Estate> nationEstate = EstateRegistry.get(nationId);
-        ClaimMyLand.LOGGER.debug("CitizenDeed nation estate found={}", nationEstate.isPresent());
+//        ClaimMyLand.LOGGER.debug("CitizenDeed nation estate found={}", nationEstate.isPresent());
 
 
 //        Optional<Estate> nationEstate = EstateRegistry.get(tag.getUUID(Deed.NATION_ESTATE_ID));

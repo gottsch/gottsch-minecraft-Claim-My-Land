@@ -203,56 +203,95 @@ public Box getAbsoluteBox() {
      * @author Mark Gottschling on Mar 11, 2026
      */
     public void placeParcelBorder(ServerPlayer placingPlayer) {
-//        ClaimMyLand.LOGGER.debug("parcel id -> {}", getParcelId());
         if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;
 
         Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
         Box absoluteBox = parcel.isPresent() ? getAbsoluteBox(parcel.get()) : getAbsoluteBox();
-//        UUID ownerId = parcel.isPresent()
-//                ? parcel.get().getEstate().getOwnerId()
-//                : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
 
-        // resolve the effective owner for border visibility:
-        // reclaiming player takes precedence over the registered estate owner when they differ
         UUID ownerId = parcel.isPresent()
                 ? (parcel.get().getEstate().isRelinquished() && placingPlayer != null
-                ? placingPlayer.getUUID()
-                : parcel.get().getEstate().getOwnerId())
+                   ? placingPlayer.getUUID()
+                   : parcel.get().getEstate().getOwnerId())
                 : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
 
-//        ClaimMyLand.LOGGER.debug("ownerId -> {}", String.valueOf(ownerId));
-
         String dimension = level.dimension().location().toString();
-        int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? getParcelId() : null,
-                parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())), dimension);
-
-//        ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
-//                getParcelId(), parcel.isPresent(), conflictState, getBlockPos().getY(),
-//                placingPlayer != null ? placingPlayer.getName().getString() : "null");
 
         if (parcel.isPresent()) {
+            // Committed parcels always get conflictState=0.
+            // resolveConflictState() is for Foundation Stone placement preview only —
+            // calling it on a committed parcel with adjacent different-owner siblings
+            // incorrectly returns 1, which broadcasts red borders to tracking players.
+            // All parcels reached here via ActiveBorderStoneRegistry are committed.
             if (placingPlayer != null) {
-//                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrakcingPlayersAndSelf...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayersAndSelf(
-                        serverLevel, placingPlayer, parcel.get(), conflictState, getBlockPos().getY());
+                        serverLevel, placingPlayer, parcel.get(), 0, getBlockPos().getY());
             } else {
-//                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrackingPlayers...");
                 CMLNetwork.syncBorderVisibilityToTrackingPlayers(
-                        serverLevel, parcel.get(), conflictState, getBlockPos().getY());
+                        serverLevel, parcel.get(), 0, getBlockPos().getY());
             }
             ActiveBorderStoneRegistry.add(this);
         } else if (placingPlayer != null) {
-//            ClaimMyLand.LOGGER.debug("syncPreviewParcelToTrackingPlayersAndSelf...");
-            // phase 1 preview — parcel not yet registered; register on client first
-//            CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
+            // phase 1 preview — parcel not yet registered; conflictState is valid here
+            int conflictState = ParcelRegistry.resolveConflictState(
+                    absoluteBox, ownerId, null,
+                    ParcelType.fromString(getParcelType()), dimension);
+
             CMLNetwork.syncPreviewParcelToOwner(
                     serverLevel, placingPlayer.getUUID(),
-                    getParcelId(), getParcelId(),   // estateId = parcelId (throwaway for preview)
+                    getParcelId(), getParcelId(),
                     ParcelType.fromString(getParcelType()),
                     absoluteBox, getBlockPos().getY(),
                     dimension, conflictState);
         }
     }
+//    public void placeParcelBorder(ServerPlayer placingPlayer) {
+////        ClaimMyLand.LOGGER.debug("parcel id -> {}", getParcelId());
+//        if (!(level instanceof ServerLevel serverLevel) || getParcelId() == null) return;
+//
+//        Optional<Parcel> parcel = ParcelRegistry.findByParcelId(getParcelId());
+//        Box absoluteBox = parcel.isPresent() ? getAbsoluteBox(parcel.get()) : getAbsoluteBox();
+//
+//        // resolve the effective owner for border visibility:
+//        // reclaiming player takes precedence over the registered estate owner when they differ
+//        UUID ownerId = parcel.isPresent()
+//                ? (parcel.get().getEstate().isRelinquished() && placingPlayer != null
+//                ? placingPlayer.getUUID()
+//                : parcel.get().getEstate().getOwnerId())
+//                : (placingPlayer != null ? placingPlayer.getUUID() : getOwnerId());
+//
+////        ClaimMyLand.LOGGER.debug("ownerId -> {}", String.valueOf(ownerId));
+//
+//        String dimension = level.dimension().location().toString();
+//        int conflictState = ParcelRegistry.resolveConflictState(absoluteBox, ownerId, parcel.isPresent() ? getParcelId() : null,
+//                parcel.map(Parcel::getType).orElse(ParcelType.fromString(getParcelType())), dimension);
+//
+////        ClaimMyLand.LOGGER.debug("placeParcelBorder: parcelId={}, parcelPresent={}, conflictState={}, stoneY={}, player={}",
+////                getParcelId(), parcel.isPresent(), conflictState, getBlockPos().getY(),
+////                placingPlayer != null ? placingPlayer.getName().getString() : "null");
+//
+//        if (parcel.isPresent()) {
+//            if (placingPlayer != null) {
+////                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrakcingPlayersAndSelf...");
+//                CMLNetwork.syncBorderVisibilityToTrackingPlayersAndSelf(
+//                        serverLevel, placingPlayer, parcel.get(), conflictState, getBlockPos().getY());
+//            } else {
+////                ClaimMyLand.LOGGER.debug("syncBorderVisibilityToTrackingPlayers...");
+//                CMLNetwork.syncBorderVisibilityToTrackingPlayers(
+//                        serverLevel, parcel.get(), conflictState, getBlockPos().getY());
+//            }
+//            ActiveBorderStoneRegistry.add(this);
+//        } else if (placingPlayer != null) {
+////            ClaimMyLand.LOGGER.debug("syncPreviewParcelToTrackingPlayersAndSelf...");
+//            // phase 1 preview — parcel not yet registered; register on client first
+////            CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
+//            CMLNetwork.syncPreviewParcelToOwner(
+//                    serverLevel, placingPlayer.getUUID(),
+//                    getParcelId(), getParcelId(),   // estateId = parcelId (throwaway for preview)
+//                    ParcelType.fromString(getParcelType()),
+//                    absoluteBox, getBlockPos().getY(),
+//                    dimension, conflictState);
+//        }
+//    }
 
     @Override
     public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {

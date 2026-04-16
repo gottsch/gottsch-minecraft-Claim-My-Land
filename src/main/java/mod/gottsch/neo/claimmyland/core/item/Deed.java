@@ -261,6 +261,18 @@ public abstract class Deed extends Item {
                 Box parcelBox = foundationStoneBlockEntity.getAbsoluteBox();
                 applyWorldPosition(parcel, foundationStoneBlockEntity);
 
+                // Pre-assign a stable UUID before the claim. The pre-claim parcel object
+                // built by createParcel() has no UUID — it is normally assigned inside
+                // nameAndRegister(). In the PlayerParcel→CitizenParcel conversion path,
+                // claimWithinZone() copies this ID via citizenParcel.setId(getId()), so
+                // nameAndRegister() on the CitizenParcel sees a non-null ID and uses it
+                // rather than generating a fresh one. findByParcelId() in the success
+                // branch below can then resolve the registered CitizenParcel correctly
+                // for fireworks color and celebration type.
+                if (parcel.getId() == null) {
+                    parcel.setId(UUID.randomUUID());
+                }
+
                 ClaimResult claimResult = registryParcel.map(parentParcel -> parcel.handleEmbeddedClaim(context.getLevel(), parentParcel)).orElseGet(() -> parcel.handleClaim(context.getLevel()));
 
                 if (claimResult.isSuccess()) {
@@ -275,7 +287,11 @@ public abstract class Deed extends Item {
                      * of purple Citizen fireworks. The parcel UUID is stable across both conversion
                      * paths, so findByParcelId() is the right key.
                      */
-                    Parcel registeredParcel = ParcelRegistry.findByParcelId(parcel.getId()).orElse(parcel);
+//                         Parcel registeredParcel = ParcelRegistry.findByParcelId(parcel.getId()).orElse(parcel);
+                    Parcel registeredParcel = ParcelRegistry.findByParcelId(parcel.getId())
+                            .or(() -> Optional.ofNullable(foundationStoneBlockEntity.getParcelId())
+                                    .flatMap(ParcelRegistry::findByParcelId))
+                            .orElse(parcel);
 
                     // register user name
                     PlayerRegistry.register(context.getPlayer().getUUID(), context.getPlayer().getScoreboardName());

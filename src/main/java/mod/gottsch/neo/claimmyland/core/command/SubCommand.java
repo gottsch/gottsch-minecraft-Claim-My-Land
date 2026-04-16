@@ -216,13 +216,13 @@ public interface SubCommand {
         Set<String> names = new HashSet<>();
 
         // TEMP log the entire parcel registry
-        for (Parcel p : ParcelRegistry.getParcels()) {
-            ClaimMyLand.LOGGER.debug("estate.name {} parcel.id {} .name {} .ownerId {}", p.getEstate().getName(), p.getId(), p.getName(), p.getOwnerId());
-        }
+//        for (Parcel p : ParcelRegistry.getParcels()) {
+//            ClaimMyLand.LOGGER.debug("estate.name {} parcel.id {} .name {} .ownerId {}", p.getEstate().getName(), p.getId(), p.getName(), p.getOwnerId());
+//        }
 
         Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
         // TEMP
-        ClaimMyLand.LOGGER.debug("ownerUuid {}", ownerUuid.map(UUID::toString).orElseGet(() -> "null"));
+//        ClaimMyLand.LOGGER.debug("ownerUuid {}", ownerUuid.map(UUID::toString).orElseGet(() -> "null"));
 
         if (ownerUuid.isPresent()) {
             Optional<Estate> estate = CommandHelper.getEstateByOwner(source.getSource(), ownerUuid.get(), estateName);

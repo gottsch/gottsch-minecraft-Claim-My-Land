@@ -221,7 +221,7 @@ public class PlayerParcel extends AbstractClaimableParcel {
         citizenParcel.setOwnerId(getOwnerId());
 
         // register the player before the parcel to save a network call to Mojang API
-        PlayerRegistry.register(level, getOwnerId());
+        ClaimResult result = citizenParcel.nameAndRegister(level);
 
         return citizenParcel.nameAndRegister(level);
     }

@@ -19,6 +19,7 @@
  */
 package mod.gottsch.neo.claimmyland.core.parcel;
 
+import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.neo.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.neo.claimmyland.core.config.Config;
