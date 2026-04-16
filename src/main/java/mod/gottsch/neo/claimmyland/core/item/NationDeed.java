@@ -51,8 +51,6 @@ import java.util.Optional;
  *
  */
 public class NationDeed extends Deed {
-//    @Deprecated
-//    public static final String NATION_ID = "nation_id";
 
     public NationDeed(Properties properties) {
         super(properties);

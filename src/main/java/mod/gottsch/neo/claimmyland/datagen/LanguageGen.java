@@ -314,6 +314,7 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.tooltip("deed.type"), "Type: %s");
         add(LangUtil.tooltip("deed.size"), "Size: (%s)");
         add(LangUtil.tooltip("deed.id"), "ID: %s");
+        add(LangUtil.tooltip("deed.nation"), "Nation: %s");
         add(LangUtil.tooltip("deed.nation_id"), "Nation ID: %s");
 
         add(LangUtil.tooltip("player_deed.usage"), "Can be used on any unclaimed land and within nations with OPEN borders.");

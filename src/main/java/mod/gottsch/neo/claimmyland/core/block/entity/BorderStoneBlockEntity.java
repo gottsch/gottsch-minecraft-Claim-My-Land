@@ -244,10 +244,11 @@ public Box getAbsoluteBox() {
         } else if (placingPlayer != null) {
 //            ClaimMyLand.LOGGER.debug("syncPreviewParcelToTrackingPlayersAndSelf...");
             // phase 1 preview — parcel not yet registered; register on client first
-            CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
-                    serverLevel, placingPlayer,
+//            CMLNetwork.syncPreviewParcelToTrackingPlayersAndSelf(
+            CMLNetwork.syncPreviewParcelToOwner(
+                    serverLevel, placingPlayer.getUUID(),
                     getParcelId(), getParcelId(),   // estateId = parcelId (throwaway for preview)
-                    placingPlayer.getUUID(), ParcelType.fromString(getParcelType()),
+                    ParcelType.fromString(getParcelType()),
                     absoluteBox, getBlockPos().getY(),
                     dimension, conflictState);
         }

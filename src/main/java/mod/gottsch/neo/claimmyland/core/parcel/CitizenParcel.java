@@ -193,6 +193,18 @@ public class CitizenParcel extends AbstractClaimableParcel implements Nationaliz
             return PlacementResult.SUCCESS;
         }
 
+        if (parent.isCitizen() && parent.getEstate().isRelinquished()) {
+            /*
+             * Reclaiming a relinquished Citizen — placement is allowed at this
+             * gate. The actual reclaim eligibility (geometry match, owner rules,
+             * estate validity) is checked downstream in
+             * claimRelinquishedCitizenParcel / transferParcelOwnership. Returning
+             * SUCCESS here lets the Foundation Stone preview and the deed click
+             * proceed; downstream still has the final say.
+             */
+            return PlacementResult.SUCCESS;
+        }
+
         // enclosing parcel is a Citizen or Player
         return PlacementResult.INVALID_PARENT_TYPE;
     }

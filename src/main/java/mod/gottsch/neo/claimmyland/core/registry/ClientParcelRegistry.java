@@ -72,8 +72,8 @@ public class ClientParcelRegistry {
         // Remove existing entry with same ID (re-sync / update case)
         PARCELS.removeIf(p -> p.parcelId().equals(parcel.parcelId()));
         PARCELS.add(parcel);
-        LOGGER.debug("ClientParcelRegistry: registered parcel '{}' [{}]",
-                parcel.parcelName(), parcel.parcelId());
+//        LOGGER.debug("ClientParcelRegistry: registered parcel '{}' [{}]",
+//                parcel.parcelName(), parcel.parcelId());
     }
 
     /**
@@ -82,7 +82,7 @@ public class ClientParcelRegistry {
      */
     public static void registerAll(List<ClientParcel> parcels) {
         parcels.forEach(ClientParcelRegistry::register);
-        LOGGER.debug("ClientParcelRegistry: bulk registered {} parcel(s)", parcels.size());
+//        LOGGER.debug("ClientParcelRegistry: bulk registered {} parcel(s)", parcels.size());
     }
 
     /**
@@ -90,9 +90,9 @@ public class ClientParcelRegistry {
      */
     public static void unregister(UUID parcelId) {
         boolean removed = PARCELS.removeIf(p -> p.parcelId().equals(parcelId));
-        if (removed) {
-            LOGGER.debug("ClientParcelRegistry: unregistered parcel [{}]", parcelId);
-        }
+//        if (removed) {
+//            LOGGER.debug("ClientParcelRegistry: unregistered parcel [{}]", parcelId);
+//        }
     }
 
     /**

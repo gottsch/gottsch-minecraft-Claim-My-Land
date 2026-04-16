@@ -198,6 +198,7 @@
   "tooltip.claimmyland.citizen_deed.usage": "Can be used on any unclaimed land within parent nation and within nations with OPEN borders.",
   "tooltip.claimmyland.deed.howto": "Use the deed to place a foundation stone at desired location. Then, use the deed again on the foundation stone to accept location.",
   "tooltip.claimmyland.deed.id": "ID: %s",
+  "tooltip.claimmyland.deed.nation": "Nation: %s",
   "tooltip.claimmyland.deed.nation_id": "Nation ID: %s",
   "tooltip.claimmyland.deed.size": "Size: (%s)",
   "tooltip.claimmyland.deed.type": "Type: %s",

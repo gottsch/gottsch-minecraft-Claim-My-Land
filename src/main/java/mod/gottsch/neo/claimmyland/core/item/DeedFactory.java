@@ -110,8 +110,8 @@ public class DeedFactory {
         CompoundTag tag = deed.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 
         // add the ids
-        tag.putUUID(NationDeed.NATION_ESTATE_ID, nationId);
-        tag.putString(NationDeed.NATION_ESTATE_NAME, nationName);
+        tag.putUUID(Deed.NATION_ESTATE_ID, nationId);
+        tag.putString(Deed.NATION_ESTATE_NAME, nationName);
 
         // add the size
         CompoundTag sizeTag = new CompoundTag();

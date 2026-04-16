@@ -171,7 +171,12 @@ public class ParcelPolygonOverlayFactory {
         List<PolygonOverlay> result = new ArrayList<>();
 
         if (!conflictParcelIds.isEmpty()) {
+            // Remove old overlays from JM BEFORE clearing the maps.
+            // A raw clear() without removal orphans the old overlay objects in JM —
+            // they remain visible and can never be removed because no reference survives.
+            CONFLICT_OVERLAYS.values().forEach(JourneyMapOverlayHandler::removeOverlay);
             CONFLICT_OVERLAYS.clear();
+            CONFLICT_BUFFER_OVERLAYS.values().forEach(JourneyMapOverlayHandler::removeOverlay);
             CONFLICT_BUFFER_OVERLAYS.clear();
 
             for (UUID parcelId : conflictParcelIds) {
@@ -210,18 +215,18 @@ public class ParcelPolygonOverlayFactory {
                 new BlockPos(parcel.minX(),     y, parcel.maxZ() + 1)
         );
         ShapeProperties innerShape = new ShapeProperties()
-                .setFillColor(CONFLICT_TARGET_FILL.getRGB())
+                .setFillColor(CONFLICT_TARGET_FILL.getRGB() & 0x00FFFFFF)
                 .setFillOpacity(CONFLICT_TARGET_FILL.getAlpha() / 255f)
-                .setStrokeColor(CONFLICT_TARGET_STROKE.getRGB())
+                .setStrokeColor(CONFLICT_TARGET_STROKE.getRGB() & 0x00FFFFFF)
                 .setStrokeOpacity(CONFLICT_TARGET_STROKE.getAlpha() / 255f)
                 .setStrokeWidth(2f);
         String innerDisplayId = ClaimMyLand.MOD_ID + ":conflict:" + parcel.parcelId();
         PolygonOverlay innerOverlay = new PolygonOverlay(
-                ClaimMyLand.MOD_ID, dimKey, innerShape, new MapPolygon(corners), null);
+                ClaimMyLand.MOD_ID, dimKey, innerShape, new MapPolygon(corners));
 
         // Label — keeps parcel identified on fullscreen map even during conflict highlight
         TextProperties textProps = new TextProperties()
-                .setColor(CONFLICT_TARGET_STROKE.getRGB())
+                .setColor(CONFLICT_TARGET_STROKE.getRGB() & 0x00FFFFFF)
                 .setFontShadow(true)
                 .setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
         innerOverlay.setLabel(buildFullLabel(parcel))
@@ -242,7 +247,7 @@ public class ParcelPolygonOverlayFactory {
         );
         ShapeProperties bufShape = new ShapeProperties()
                 .setFillColor(0xFFFFFF).setFillOpacity(0f)
-                .setStrokeColor(CONFLICT_TARGET_BUFFER_STROKE.getRGB())
+                .setStrokeColor(CONFLICT_TARGET_BUFFER_STROKE.getRGB() & 0x00FFFFFF)
                 .setStrokeOpacity(CONFLICT_TARGET_BUFFER_STROKE.getAlpha() / 255f)
                 .setStrokeWidth(1f);
         String bufDisplayId = ClaimMyLand.MOD_ID + ":conflict:buffer:" + parcel.parcelId();

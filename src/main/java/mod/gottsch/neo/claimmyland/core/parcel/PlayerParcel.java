@@ -155,6 +155,13 @@ public class PlayerParcel extends AbstractClaimableParcel {
             return PlacementResult.SUCCESS;
         }
 
+        // Reclaiming a relinquished Citizen — placement is allowed at this gate.
+        // The actual reclaim eligibility (geometry match, owner rules) is checked
+        // downstream in claimRelinquishedCitizenParcel / transferParcelOwnership.
+        if (parent.isCitizen() && parent.getEstate().isRelinquished()) {
+            return PlacementResult.SUCCESS;
+        }
+
         // enclosing parcel is a Citizen or Player — invalid host
         return PlacementResult.INVALID_PARENT_TYPE;
     }

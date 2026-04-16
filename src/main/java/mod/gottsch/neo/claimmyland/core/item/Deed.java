@@ -352,7 +352,7 @@ public abstract class Deed extends Item {
             Block foundationStone = getFoundationStone();
             if (foundationStone == null) {
                 PlayerMessageHelper.sendFailure(context.getPlayer(), "foundation_stone.unable_to_locate");
-//                ClaimMyLand.LOGGER.warn("unable to location foundation stone for deed -> {}", parcel.getDeedId());
+                ClaimMyLand.LOGGER.warn("unable to location foundation stone for deed -> {}", parcel.getDeedId());
                 return InteractionResult.FAIL;
             }
 
@@ -372,6 +372,9 @@ public abstract class Deed extends Item {
                 PlayerMessageHelper.sendFailure(context.getPlayer(), placementLangKey(placement));
                 return InteractionResult.FAIL;
             }
+
+            boolean placed = placeBlock(placeContext, foundationStone.defaultBlockState());
+            return placed ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         }
         return super.useOn(context);
     }

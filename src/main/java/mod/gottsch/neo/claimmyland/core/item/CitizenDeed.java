@@ -65,7 +65,7 @@ public class CitizenDeed extends Deed {
     @Override
     public Optional<Parcel> createParcel(ItemStack deedStack, ICoords coords, Player player) {
         CompoundTag debugTag = deedStack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-//        ClaimMyLand.LOGGER.debug("CitizenDeed.createParcel() tag = {}", debugTag);
+        ClaimMyLand.LOGGER.debug("CitizenDeed.createParcel() tag = {}", debugTag);
 
         Optional<Parcel> optionalParcel = super.createParcel(deedStack, coords, player);
 
@@ -83,11 +83,10 @@ public class CitizenDeed extends Deed {
             return Optional.empty();
         }
 
-        // ADD HERE
         UUID nationId = tag.getUUID(Deed.NATION_ESTATE_ID);
-//        ClaimMyLand.LOGGER.debug("CitizenDeed looking up nation estate id={}", nationId);
+        ClaimMyLand.LOGGER.debug("CitizenDeed looking up nation estate id={}", nationId);
         Optional<Estate> nationEstate = EstateRegistry.get(nationId);
-//        ClaimMyLand.LOGGER.debug("CitizenDeed nation estate found={}", nationEstate.isPresent());
+        ClaimMyLand.LOGGER.debug("CitizenDeed nation estate found={}", nationEstate.isPresent());
 
 
 //        Optional<Estate> nationEstate = EstateRegistry.get(tag.getUUID(Deed.NATION_ESTATE_ID));
@@ -147,17 +146,16 @@ public class CitizenDeed extends Deed {
 
     @Override
     public void appendDetailsHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.BLUE + getParcelType().name())); //stack.getTag().getString(Deed.PARCEL_TYPE)));
+        tooltip.add(Component.translatable(LangUtil.tooltip("deed.type"), ChatFormatting.LIGHT_PURPLE + getParcelType().name()));
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        if (tag.contains(NationDeed.NATION_ESTATE_NAME)) {
-            String nationName = tag.getString(NationDeed.NATION_ESTATE_NAME);
-            tooltip.add(Component.translatable("tooltip.claimmyland.deed.nation", nationName)
-                    .withStyle(ChatFormatting.GOLD));
+        if (tag.contains(Deed.NATION_ESTATE_NAME)) {
+            String nationName = tag.getString(Deed.NATION_ESTATE_NAME);
+            tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation"), ChatFormatting.BLUE + nationName));
         }
         if (tag.contains(Deed.NATION_ESTATE_ID)) {
             UUID nationEstateId = tag.getUUID(Deed.NATION_ESTATE_ID);
             EstateRegistry.get(nationEstateId).ifPresent(estate ->
-                tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), ChatFormatting.BLUE + estate.getName()))
+                tooltip.add(Component.translatable(LangUtil.tooltip("deed.nation_id"), estate.getId()))
             );
         } else {
 //            ClaimMyLand.LOGGER.debug("citizen deed doesn't have a nation ID");
