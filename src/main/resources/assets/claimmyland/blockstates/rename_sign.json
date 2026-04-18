@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "claimmyland:block/cml_rename_sign" },
+    "facing=south": { "model": "claimmyland:block/cml_rename_sign", "y": 180 },
+    "facing=west":  { "model": "claimmyland:block/cml_rename_sign", "y": 270 },
+    "facing=east":  { "model": "claimmyland:block/cml_rename_sign", "y": 90 }
+  }
+}
