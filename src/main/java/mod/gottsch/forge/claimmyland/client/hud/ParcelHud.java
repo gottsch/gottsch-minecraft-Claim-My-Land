@@ -19,6 +19,7 @@ package mod.gottsch.forge.claimmyland.client.hud;
 
 import mod.gottsch.forge.claimmyland.ClaimMyLand;
 import mod.gottsch.forge.claimmyland.core.cache.ClientParcelCache;
+import mod.gottsch.forge.claimmyland.core.config.Config;
 import mod.gottsch.forge.claimmyland.core.parcel.ParcelType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -112,6 +113,8 @@ public class ParcelHud {
         if (event.getOverlay() != VanillaGuiOverlay.HOTBAR.type()) {
             return;
         }
+
+        if (!Config.CLIENT.gui.showParcelHud.get()) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui) {

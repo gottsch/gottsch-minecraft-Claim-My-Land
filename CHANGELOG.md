@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.2] - 2026-04-18
+
+### ➕ Added
+
+- **Client config option `showParcelHud`** (under `GUI` category) — toggle the
+  in-world parcel HUD overlay on/off. Default `true` (preserves prior behavior).
+
+### 🐛 Fixed
+
+- **Client config key `enableProtectionChatMessages` malformed** — the define
+  key string had a stray trailing colon, producing an invalid TOML path. Users
+  who had previously set this to `true` will find it reset to the default
+  (`false`) on first load after updating; re-enable from the config file if
+  desired. Orphaned entries under the old key are harmless and can be deleted.
+
+---
+
 ## [2.5.1] - 2026-04-09
 
 ### 🎉 Highlights
