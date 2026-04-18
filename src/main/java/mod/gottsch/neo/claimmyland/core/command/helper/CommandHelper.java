@@ -257,7 +257,13 @@ public class CommandHelper {
 	 * @param level the current server level
 	 */
 	public static void save(Level level) {
-		PersistedData savedData = PersistedData.get(level);
+		// PersistedData uses DimensionDataStorage which is per-dimension.
+		// ParcelRegistry is a global singleton stored in the Overworld — always
+		// resolve to the Overworld ServerLevel regardless of the caller's dimension.
+		Level overworld = level instanceof ServerLevel serverLevel
+				? serverLevel.getServer().overworld()
+				: level;
+		PersistedData savedData = PersistedData.get(overworld);
 		if (savedData != null) {
 			savedData.setDirty();
 		}

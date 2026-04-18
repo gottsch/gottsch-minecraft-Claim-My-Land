@@ -188,6 +188,10 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.rename.success"), "The parcel has been renamed.");
         add(LangUtil.chat("parcel.rename.failure"), "Unable to rename the parcel.");
         add(LangUtil.chat("parcel.rename.exists.failure"), "Unable to rename. Duplicate name within estate.");
+        add(LangUtil.chat("parcel.rename.sign.no_space"),   "No room to place sign — clear a block adjacent to the Border Stone.");
+        add(LangUtil.chat("parcel.rename.sign.empty"),      "Parcel name cannot be empty.");
+        add(LangUtil.chat("parcel.rename.sign.not_owner"),  "You do not own this parcel.");
+        add(LangUtil.chat("parcel.rename.sign.success"),    "Parcel renamed to '%s'.");
 
         add(LangUtil.chat("parcel.transfer.success"), "The parcel has been transferred.");
         add(LangUtil.chat("parcel.transfer.failure"), "Unable to transfer the parcel.");

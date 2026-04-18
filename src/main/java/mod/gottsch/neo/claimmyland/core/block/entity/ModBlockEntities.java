@@ -55,6 +55,12 @@ public class ModBlockEntities {
             Registration.BLOCK_ENTITIES.register("zone_placement_block_entity",
                     () -> BlockEntityType.Builder.of(ZonePlacementBlockEntity::new, ModBlocks.ZONE_PLACEMENT_BLOCK.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RenameSignBlockEntity>>
+            RENAME_SIGN_BLOCK_ENTITY =
+            Registration.BLOCK_ENTITIES.register("rename_sign",
+                    () -> BlockEntityType.Builder
+                            .of(RenameSignBlockEntity::new, ModBlocks.RENAME_SIGN.get())
+                            .build(null));
 
     public static void register(IEventBus bus) {
         Registration.registerBlockEntities(bus);

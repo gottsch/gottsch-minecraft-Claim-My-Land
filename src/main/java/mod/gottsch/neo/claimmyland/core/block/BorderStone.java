@@ -22,6 +22,8 @@ package mod.gottsch.neo.claimmyland.core.block;
 import com.mojang.serialization.MapCodec;
 import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.block.entity.BorderStoneBlockEntity;
+import mod.gottsch.neo.claimmyland.core.block.entity.RenameSignBlockEntity;
+import mod.gottsch.neo.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.neo.claimmyland.core.config.Config;
 import mod.gottsch.neo.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
@@ -33,27 +35,31 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.BaseEntityBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.EntityBlock;
-import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * @author Mark Gottschling on Sep 18, 2024.
@@ -134,14 +140,86 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
         }
     }
 
-//    @Override
-//    public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
-//        BorderStoneBlockEntity blockEntity = (BorderStoneBlockEntity) level.getBlockEntity(pos);
-//        if (blockEntity != null) {
-//            populateBlockEntity(level, blockEntity, Coords.of(pos));
-//        }
-//        super.onPlace(state, level, pos, oldState, isMoving);
-//    }
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack itemStack, BlockState state, Level level,
+                                              BlockPos pos, Player player,
+                                              InteractionHand hand, BlockHitResult hitResult) {
+
+        // --- Parcel rename via sign ---
+        if (itemStack.is(ItemTags.SIGNS) && !level.isClientSide()) {
+            if (!(player instanceof ServerPlayer serverPlayer)) return ItemInteractionResult.FAIL;
+            if (!(level.getBlockEntity(pos) instanceof BorderStoneBlockEntity borderStone)) {
+                return ItemInteractionResult.FAIL;
+            }
+
+            UUID parcelId = borderStone.getParcelId();
+            if (parcelId == null) return ItemInteractionResult.FAIL;
+
+            Optional<Parcel> parcelOpt = ParcelRegistry.findByParcelId(parcelId);
+            if (parcelOpt.isEmpty()) return ItemInteractionResult.FAIL;
+
+            Parcel parcel = parcelOpt.get();
+            if (!parcel.getEstate().getOwnerId().equals(player.getUUID())) {
+                PlayerMessageHelper.sendFailure(player, "parcel.rename.sign.not_owner");
+                return ItemInteractionResult.FAIL;
+            }
+
+            Direction placementFace = resolvePlacementFace(level, pos, hitResult.getDirection());
+            if (placementFace == null) {
+                PlayerMessageHelper.sendFailure(player, "parcel.rename.sign.no_space");
+                return ItemInteractionResult.FAIL;
+            }
+
+            BlockPos signPos = pos.relative(placementFace);
+            BlockState signState = ModBlocks.RENAME_SIGN.get().defaultBlockState()
+                    .setValue(WallSignBlock.FACING, placementFace)
+                    .setValue(WallSignBlock.WATERLOGGED, false);
+            level.setBlock(signPos, signState, Block.UPDATE_ALL);
+
+            if (!(level.getBlockEntity(signPos) instanceof RenameSignBlockEntity renameSign)) {
+                level.removeBlock(signPos, false);
+                return ItemInteractionResult.FAIL;
+            }
+
+            renameSign.setParcelId(parcelId);
+            renameSign.setOwnerPlayerId(player.getUUID());
+
+            // Consume one sign from the stack (skip in creative mode)
+            if (!player.getAbilities().instabuild) {
+                itemStack.shrink(1);
+            }
+
+            serverPlayer.openTextEdit(renameSign, true);
+            return ItemInteractionResult.SUCCESS;
+        }
+        // --- end parcel rename ---
+
+        return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+    }
+
+    /**
+     * Resolves the face on which to place the temporary rename sign.
+     * Tries the clicked face first if it is horizontal; falls back to
+     * NORTH → SOUTH → EAST → WEST for top/bottom clicks or blocked faces.
+     *
+     * @param level       the current level
+     * @param pos         the Border Stone's position
+     * @param clickedFace the face of the Border Stone that was clicked
+     * @return the first free horizontal face, or {@code null} if all four are blocked
+     */
+    private static Direction resolvePlacementFace(Level level, BlockPos pos, Direction clickedFace) {
+        if (clickedFace.getAxis().isHorizontal()
+                && level.getBlockState(pos.relative(clickedFace)).canBeReplaced()) {
+            return clickedFace;
+        }
+        for (Direction face : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+            if (face == clickedFace) continue;
+            if (level.getBlockState(pos.relative(face)).canBeReplaced()) {
+                return face;
+            }
+        }
+        return null;
+    }
 
     // first
     @Override
