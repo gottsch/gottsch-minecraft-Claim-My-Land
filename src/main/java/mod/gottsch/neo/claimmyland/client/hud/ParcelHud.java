@@ -19,6 +19,7 @@ package mod.gottsch.neo.claimmyland.client.hud;
 
 import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.cache.ClientParcelCache;
+import mod.gottsch.neo.claimmyland.core.config.Config;
 import mod.gottsch.neo.claimmyland.core.parcel.ParcelType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -116,6 +117,8 @@ public class ParcelHud {
         if (event.getName() != VanillaGuiLayers.HOTBAR) {
             return;
         }
+
+        if (!Config.CLIENT.gui.showParcelHud.get()) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui) {
