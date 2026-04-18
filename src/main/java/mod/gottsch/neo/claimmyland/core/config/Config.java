@@ -145,12 +145,13 @@ public class Config extends AbstractConfig {
 		public ModConfigSpec.IntValue parcelEntryFadeInTicks;
 		public ModConfigSpec.IntValue parcelEntryStayTicks;
 		public ModConfigSpec.IntValue parcelEntryFadeOutTicks;
+		public ModConfigSpec.BooleanValue showParcelHud;
 
 		public Gui(final ModConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, " Client GUI properties for Protect It  mod.", CATEGORY_DIV).push("GUI");
 			enableProtectionChatMessages = builder
 					.comment(" Enables protection messages in chat. If enabled, when protection is triggered, a message will display in the chat.")
-					.define("enableProtectionChatMessages:", false);
+					.define("enableProtectionChatMessages", false);
 
 			enableParcelEntryTitle = builder
 					.comment("If true, a title overlay is shown when entering a Nation, Citizen,",
@@ -178,6 +179,12 @@ public class Config extends AbstractConfig {
 					.comment("Fade-out duration in ticks for the parcel entry title.",
 							"Default: 20.")
 					.defineInRange("parcelEntryFadeOutTicks", 20, 0, 40);
+
+			showParcelHud = builder
+					.comment("Show the in-world parcel HUD overlay when standing inside a claimed parcel.",
+							"Disable to hide the HUD without affecting gameplay or server behavior.")
+					.translation("config.claimmyland.client.show_parcel_hud")
+					.define("showParcelHud", true);
 
 			builder.pop();
 		}		
