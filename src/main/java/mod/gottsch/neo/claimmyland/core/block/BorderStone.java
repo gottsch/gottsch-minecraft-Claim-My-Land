@@ -176,6 +176,11 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
                     .setValue(WallSignBlock.WATERLOGGED, false);
             level.setBlock(signPos, signState, Block.UPDATE_ALL);
 
+            // TEMP
+            BlockEntity be = level.getBlockEntity(signPos);
+            ClaimMyLand.LOGGER.debug("CMLRenameSign: block entity at signPos is: {}",
+                    be == null ? "null" : be.getClass().getName());
+
             if (!(level.getBlockEntity(signPos) instanceof RenameSignBlockEntity renameSign)) {
                 level.removeBlock(signPos, false);
                 return ItemInteractionResult.FAIL;

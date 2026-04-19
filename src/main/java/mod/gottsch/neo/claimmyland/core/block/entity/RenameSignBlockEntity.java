@@ -26,15 +26,19 @@ import mod.gottsch.neo.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.neo.claimmyland.core.setup.Registration;
+import mod.gottsch.neo.gottschcore.spatial.Coords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.FilteredText;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SignText;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
@@ -80,105 +84,78 @@ public class RenameSignBlockEntity extends SignBlockEntity {
     // Core rename logic
     // -------------------------------------------------------------------------
 
-    /**
-     * Called by vanilla when the player submits the sign editor
-     * ({@code ServerboundSignUpdatePacket}). Calls {@code super.updateText()} first
-     * to commit the player's input into the {@link SignText} state, then reads the
-     * populated text to build the new parcel name.
-     *
-     * <p>Always removes the block on return — whether the rename succeeded or failed —
-     * so the temporary sign never remains in the world.
-     */
     @Override
-    public boolean updateText(UnaryOperator<SignText> updater, boolean isFrontText) {
-        ClaimMyLand.LOGGER.debug("CMLRenameSign: updateText called on thread: {}",
-                Thread.currentThread().getName());
-        super.updateText()
-        // Call super first — this commits the player's typed lines into the SignText
-        // state so that getText(pIsFrontText) below returns the actual input.
-        // Without this, getText() returns the empty default text.
-//        super.updateText(updater, isFrontText);
-        // Manually commit the player's input without calling super, which throws
-        // internally and swallows everything after it in the packet handler.
-        SignText newSignText = updater.apply(getText(isFrontText));
-        setText(newSignText, isFrontText);
-        setChanged();
-//        if (!(level instanceof ServerLevel serverLevel)) return false;
-        if (!(level instanceof ServerLevel serverLevel)) {
-            ClaimMyLand.LOGGER.debug("CMLRenameSign: level is not ServerLevel, type={}", level.getClass().getName());
-            return false;
-        }
-        ClaimMyLand.LOGGER.debug("CMLRenameSign: level is ServerLevel");
+    public void updateSignText(Player player, boolean isFrontText, List<FilteredText> filteredText) {
+        // Let vanilla commit the text first
+        super.updateSignText(player, isFrontText, filteredText);
 
-        String newName = buildName(getText(isFrontText));
-        ClaimMyLand.LOGGER.debug("CMLRenameSign: newName='{}'", newName);
+        if (!(level instanceof ServerLevel serverLevel)) return;
+
+        // Build name directly from filteredText parameter — raw player input,
+        // no dependency on SignText state readback
+        String newName = buildName(filteredText);
+
+        ClaimMyLand.LOGGER.debug("CMLRenameSign: updateSignText called, newName='{}'", newName);
 
         ServerPlayer owner = ownerPlayerId != null
                 ? serverLevel.getServer().getPlayerList().getPlayer(ownerPlayerId)
                 : null;
-        ClaimMyLand.LOGGER.debug("CMLRenameSign: ownerPlayerId={}, owner={}", ownerPlayerId, owner);
 
-        // Validate: name must not be blank
         if (newName.isEmpty()) {
-            if (owner != null) {
-                PlayerMessageHelper.sendFailure(owner, "parcel.rename.sign.empty");
-            }
+            if (owner != null) PlayerMessageHelper.sendFailure(owner, "parcel.rename.sign.empty");
             serverLevel.removeBlock(getBlockPos(), false);
-            return false;
+            return;
         }
 
-        // Resolve the parcel
         Optional<Parcel> parcelOpt = ParcelRegistry.findByParcelId(parcelId);
-        ClaimMyLand.LOGGER.debug("CMLRenameSign: parcelId={}, found={}", parcelId, parcelOpt.isPresent());
-
         if (parcelOpt.isEmpty()) {
-            ClaimMyLand.LOGGER.warn("CMLRenameSignBlockEntity: parcel {} not found during rename — sign removed", parcelId);
+            ClaimMyLand.LOGGER.warn("CMLRenameSign: parcel {} not found", parcelId);
             serverLevel.removeBlock(getBlockPos(), false);
-            return false;
+            return;
         }
 
         Parcel parcel = parcelOpt.get();
-        ClaimMyLand.LOGGER.debug("CMLRenameSign: owner check — parcel owner={}, ourOwner={}",
-                parcel.getEstate().getOwnerId(), ownerPlayerId);
-        // Defensive owner check
+
         if (ownerPlayerId == null || !ownerPlayerId.equals(parcel.getEstate().getOwnerId())) {
-            if (owner != null) {
-                PlayerMessageHelper.sendFailure(owner, "parcel.rename.sign.not_owner");
-            }
+            if (owner != null) PlayerMessageHelper.sendFailure(owner, "parcel.rename.sign.not_owner");
             serverLevel.removeBlock(getBlockPos(), false);
-            return false;
+            return;
         }
 
-        // Perform the rename
         parcel.setName(newName);
-        ClaimMyLand.LOGGER.debug("CMLRenameSign: set name to '{}' on object {}", parcel.getName(), System.identityHashCode(parcel));
-
-        ParcelRegistry.findByParcelId(parcelId).ifPresent(p ->
-                ClaimMyLand.LOGGER.debug("CMLRenameSign: registry object has name '{}' on object {}", p.getName(), System.identityHashCode(p))
-        );
-
         CommandHelper.save(serverLevel);
         CMLNetwork.syncParcelToTrackingPlayers(serverLevel, parcel);
+
+        // If the owner is currently standing in this parcel, refresh their HUD cache
         if (owner != null) {
-            CMLNetwork.syncParcelToPlayer(serverLevel, owner, parcel);
-            PlayerMessageHelper.sendSuccess(owner, "parcel.rename.sign.success", (Object)newName);
+            boolean ownerInParcel = ParcelRegistry.find(
+                            Coords.of((int) owner.getX(), (int) owner.getY(), (int) owner.getZ()),
+                            serverLevel.dimension().location().toString())
+                    .stream()
+                    .anyMatch(p -> p.getId().equals(parcel.getId()));
+            if (ownerInParcel) {
+                CMLNetwork.syncCacheToPlayer(owner, parcel);
+            }
         }
+        if (owner != null) CMLNetwork.syncParcelToPlayer(serverLevel, owner, parcel);
+        if (owner != null) PlayerMessageHelper.sendSuccess(owner, "parcel.rename.sign.success", (Object) newName);
 
         serverLevel.removeBlock(getBlockPos(), false);
-        return true;
     }
+
+
 
     /**
      * Concatenates all non-empty lines from the sign text with a single space,
      * trimming leading/trailing whitespace from each line and the result.
      *
-     * @param signText the text submitted by the player
+     * @param filteredText the text submitted by the player
      * @return the concatenated name, or an empty string if all lines were blank
      */
-    private static String buildName(SignText signText) {
+    private static String buildName(List<FilteredText> filteredText) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4; i++) {
-            String line = signText.getMessage(i, false).getString().trim();
+        for (FilteredText ft : filteredText) {
+            String line = ft.raw().trim();
             if (!line.isEmpty()) {
                 if (!sb.isEmpty()) sb.append(" ");
                 sb.append(line);
