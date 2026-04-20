@@ -26,6 +26,7 @@ import mod.gottsch.neo.claimmyland.core.block.entity.FoundationStoneBlockEntity;
 import mod.gottsch.neo.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.neo.claimmyland.core.config.Config;
 import mod.gottsch.neo.claimmyland.core.network.CMLNetwork;
+import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
 import mod.gottsch.neo.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.neo.claimmyland.core.registry.ActiveBorderStoneRegistry;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelChunkIndex;
@@ -676,6 +677,38 @@ public class ModEvents {
 
         if (!ParcelRegistry.hasAccess(player, dest, dimension)) {
             event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onEnderpearlTeleport(EntityTeleportEvent.EnderPearl event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        if (!Config.SERVER.protection.enableEnderpearlTeleport.get()) return;
+
+        String dimension = player.level().dimension().location().toString();
+        ICoords dest = Coords.of((int) event.getTargetX(), (int) event.getTargetY(), (int) event.getTargetZ());
+
+        // chunk pre-filter — O(1) skip when no parcels exist in the target chunk
+        if (!ParcelChunkIndex.isChunkClaimed((int) event.getTargetX(), (int) event.getTargetZ(), dimension)) return;
+
+        if (!isInProtectedDimension(player.level())) return;
+        if (hasOpsPermission(player)) return;
+
+        /*
+         * Nation bypass — resolve the innermost parcel at the landing position.
+         * If it is a Nation, allow the teleport regardless of ownership:
+         * Nations are public-access by default (embedded Zone/Citizen/Player
+         * parcels are the protection boundary, not the Nation itself). For any
+         * other parcel type, defer to the existing access model via hasAccess
+         * (owner + whitelist check).
+         */
+        Parcel target = ParcelRegistry.findLeastSignificant(dest, dimension).orElse(null);
+        if (target == null) return;                 // wilderness — allow
+        if (target.isNation()) return;              // Nation — allow
+
+        if (!ParcelRegistry.hasAccess(player, dest, dimension)) {
+            event.setCanceled(true);
+            PlayerMessageHelper.sendFailure(player, "teleport.enderpearl.blocked");
         }
     }
 

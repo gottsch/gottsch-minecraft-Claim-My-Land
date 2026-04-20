@@ -23,8 +23,12 @@ import com.mojang.serialization.MapCodec;
 import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.neo.claimmyland.core.block.entity.RenameSignBlockEntity;
+import mod.gottsch.neo.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.neo.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.neo.claimmyland.core.config.Config;
+import mod.gottsch.neo.claimmyland.core.estate.Estate;
+import mod.gottsch.neo.claimmyland.core.item.GoldNameTagItem;
+import mod.gottsch.neo.claimmyland.core.item.IronNameTagItem;
 import mod.gottsch.neo.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
 import mod.gottsch.neo.claimmyland.core.registry.ActiveBorderStoneRegistry;
@@ -33,11 +37,11 @@ import mod.gottsch.neo.gottschcore.spatial.Coords;
 import mod.gottsch.neo.gottschcore.spatial.ICoords;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -144,6 +148,114 @@ public class BorderStone extends BaseEntityBlock implements EntityBlock {
     protected ItemInteractionResult useItemOn(ItemStack itemStack, BlockState state, Level level,
                                               BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hitResult) {
+
+        // --- Iron Name Tag: parcel rename ---
+        if (itemStack.getItem() instanceof IronNameTagItem && !level.isClientSide()) {
+            if (!(player instanceof ServerPlayer serverPlayer)) return ItemInteractionResult.FAIL;
+
+            // Tag must be named in an anvil — CUSTOM_NAME component only present after anvil rename
+            if (!itemStack.has(DataComponents.CUSTOM_NAME)) {
+                PlayerMessageHelper.sendFailure(player, "parcel.rename.tag.not_named");
+                return ItemInteractionResult.FAIL;
+            }
+
+            if (!(level.getBlockEntity(pos) instanceof BorderStoneBlockEntity borderStone)) {
+                return ItemInteractionResult.FAIL;
+            }
+
+            UUID parcelId = borderStone.getParcelId();
+            if (parcelId == null) return ItemInteractionResult.FAIL;
+
+            Optional<Parcel> parcelOpt = ParcelRegistry.findByParcelId(parcelId);
+            if (parcelOpt.isEmpty()) return ItemInteractionResult.FAIL;
+
+            Parcel parcel = parcelOpt.get();
+            if (!parcel.getEstate().getOwnerId().equals(player.getUUID())) {
+                PlayerMessageHelper.sendFailure(player, "parcel.rename.tag.not_owner");
+                return ItemInteractionResult.FAIL;
+            }
+
+            String newName = itemStack.getHoverName().getString().trim();
+            if (newName.isEmpty()) {
+                PlayerMessageHelper.sendFailure(player, "parcel.rename.tag.not_named");
+                return ItemInteractionResult.FAIL;
+            }
+
+            parcel.setName(newName);
+            CommandHelper.save(level);
+            CMLNetwork.syncParcelToTrackingPlayers((ServerLevel) level, parcel);
+            CMLNetwork.syncParcelToPlayer((ServerLevel) level, serverPlayer, parcel);
+
+            // Refresh HUD cache if owner is standing in the renamed parcel
+            boolean ownerInParcel = ParcelRegistry.find(
+                            Coords.of((int) player.getX(), (int) player.getY(), (int) player.getZ()),
+                            level.dimension().location().toString())
+                    .stream().anyMatch(p -> p.getId().equals(parcel.getId()));
+            if (ownerInParcel) CMLNetwork.syncCacheToPlayer(serverPlayer, parcel);
+
+            if (!player.getAbilities().instabuild) itemStack.shrink(1);
+            PlayerMessageHelper.sendSuccess(player, "parcel.rename.tag.success", (Object) newName);
+            return ItemInteractionResult.SUCCESS;
+        }
+        // --- end iron name tag ---
+        
+        // --- Gold Name Tag: estate rename ---
+        if (itemStack.getItem() instanceof GoldNameTagItem && !level.isClientSide()) {
+            if (!(player instanceof ServerPlayer serverPlayer)) return ItemInteractionResult.FAIL;
+
+            // Tag must be named in an anvil
+            if (!itemStack.has(DataComponents.CUSTOM_NAME)) {
+                PlayerMessageHelper.sendFailure(player, "estate.rename.tag.not_named");
+                return ItemInteractionResult.FAIL;
+            }
+
+            if (!(level.getBlockEntity(pos) instanceof BorderStoneBlockEntity borderStone)) {
+                return ItemInteractionResult.FAIL;
+            }
+
+            UUID parcelId = borderStone.getParcelId();
+            if (parcelId == null) return ItemInteractionResult.FAIL;
+
+            Optional<Parcel> parcelOpt = ParcelRegistry.findByParcelId(parcelId);
+            if (parcelOpt.isEmpty()) return ItemInteractionResult.FAIL;
+
+            Parcel parcel = parcelOpt.get();
+            Estate estate = parcel.getEstate();
+
+            if (!estate.getOwnerId().equals(player.getUUID())) {
+                PlayerMessageHelper.sendFailure(player, "estate.rename.tag.not_owner");
+                return ItemInteractionResult.FAIL;
+            }
+
+            String newName = itemStack.getHoverName().getString().trim();
+            if (newName.isEmpty()) {
+                PlayerMessageHelper.sendFailure(player, "estate.rename.tag.not_named");
+                return ItemInteractionResult.FAIL;
+            }
+
+            estate.setName(newName);
+            CommandHelper.save(level);
+
+            // Sync all parcels that share this estate — rename is visible on all of them
+            UUID estateId = estate.getId();
+            String dimension = level.dimension().location().toString();
+            ParcelRegistry.getParcels().stream()
+                    .filter(p -> p.getEstate() != null && estateId.equals(p.getEstate().getId()))
+                    .forEach(p -> CMLNetwork.syncParcelToTrackingPlayers((ServerLevel) level, p));
+            CMLNetwork.syncParcelToPlayer((ServerLevel) level, serverPlayer, parcel);
+
+            // Refresh HUD cache if owner is standing in any parcel of this estate
+            boolean ownerInEstateParcel = ParcelRegistry.find(
+                            Coords.of((int) player.getX(), (int) player.getY(), (int) player.getZ()),
+                            dimension)
+                    .stream().anyMatch(p -> p.getEstate() != null && estateId.equals(p.getEstate().getId()));
+            if (ownerInEstateParcel) CMLNetwork.syncCacheToPlayer(serverPlayer, parcel);
+
+            if (!player.getAbilities().instabuild) itemStack.shrink(1);
+            PlayerMessageHelper.sendSuccess(player, "estate.rename.tag.success", (Object) newName);
+            return ItemInteractionResult.SUCCESS;
+        }
+        // --- end gold name tag ---
 
         // --- Parcel rename via sign ---
         if (itemStack.is(ItemTags.SIGNS) && !level.isClientSide()) {

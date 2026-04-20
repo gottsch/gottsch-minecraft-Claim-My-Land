@@ -17,14 +17,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.7.0] - 2026-04-20
+
+### ➕ Added
+- **`/cml-ops opslist` management command** — manage the CML ops list
+  in-game without editing `claimmyland-server.toml` directly. Subcommands:
+  `list`, `add <player>`, `remove <player>`. Display is name-first with a
+  hoverable UUID fallback for unresolvable players. Player resolution uses
+  the existing online → `PlayerRegistry` → Mojang cache chain via
+  `CommandHelper.getPlayerUuid`. Self-removal is permitted. Chat output uses
+  Chat Plus interactive icons (✚ add, ✘ remove) consistent with the other
+  whitelist list views.
+
+#### Enderpearl teleport protection
+- New server-side protection toggle that, when enabled, blocks enderpearl
+  teleports into non-Nation parcels unless the teleporting player is the
+  parcel owner, on the parcel's whitelist, or a CML op. Nations are always
+  allowed — they function as public transit; embedded Zone, Citizen, and
+  Player parcels still honor the protection.
+- Config key: `protection.enableEnderpearlTeleport`. **Default: false** —
+  opt-in; existing worlds are unchanged on upgrade.
+- Per-Nation override (admin or Nation owner opt-in to block teleports
+  into their own Nation) is out of scope for v2.7 — roadmap item for v3.0.
+- New lang key: `teleport.enderpearl.blocked`.
+- Handler in `ModEvents.onEnderpearlTeleport` subscribes to
+  `EntityTeleportEvent.EnderPearl` and mirrors the guard order used by
+  `onChorusFruitTeleport` with one added step: a Nation-bypass check via
+  `ParcelRegistry.findLeastSignificant → isNation`.
+---
+
+### 🐛 Fixed
+
+#### Client-side double cancel when holding a deed inside a Nation
+- **Root cause:** `ClientEvents.onPlayerInteractBlock` is a fast-path guard
+  that cancels right-click-block interactions inside parcels flagged as
+  protected by `ClientParcelCache`. The guard had no item-intent awareness,
+  so a non-owner holding a deed inside a protected parcel (e.g. a Citizen
+  deed placed inside someone else's Nation) had the placement cancelled
+  client-side even though the server's `canPlaceAt → PlacementResult`
+  gate would have allowed it. The cancel fired twice — once per hand —
+  producing a cosmetic double-cancel. Gameplay was unaffected because the
+  server still processed the interaction packet correctly.
+- **Fix:** `onPlayerInteractBlock` now checks both the main-hand stack and
+  the firing hand's stack, and early-returns (no cancel) if either is an
+  instance of `Deed`. Checking the main-hand item regardless of which hand
+  fired handles the double-cancel cleanly — if the main hand holds a deed,
+  that's what the player intends to use and neither hand's event should
+  cancel. Other CML interaction items (placement tools, name tags) are
+  owner-only and are never invoked inside a protected parcel, so they
+  need no bypass.
+
+---
+
 ## [2.6.1] - 2026-04-16
 
-### Added
+### ➕ Added
 
 - **Client config option `showParcelHud`** (under `GUI` category) — toggle the
   in-world parcel HUD overlay on/off. Default `true` (preserves prior behavior).
 
-### Fixed
+### 🐛 Fixed
 
 - **Client config key `enableProtectionChatMessages` malformed** — the define
   key string had a stray trailing colon, producing an invalid TOML path. Users

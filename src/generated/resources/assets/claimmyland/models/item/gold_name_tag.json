@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "claimmyland:item/gold_name_tag"
+  }
+}

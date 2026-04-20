@@ -24,6 +24,7 @@ import mod.gottsch.neo.claimmyland.client.hud.ParcelEntryTitleRenderer;
 import mod.gottsch.neo.claimmyland.client.renderer.ParcelBorderRenderer;
 import mod.gottsch.neo.claimmyland.core.cache.ClientParcelCache;
 import mod.gottsch.neo.claimmyland.core.integration.journeymap.ParcelPolygonOverlayFactory;
+import mod.gottsch.neo.claimmyland.core.item.Deed;
 import mod.gottsch.neo.gottschcore.spatial.Coords;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -161,9 +162,30 @@ public class ClientEvents {
         String dimension = getDimensionString(event.getEntity());
 
         if (ClientParcelCache.isProtected(pos.getX(), pos.getY(), pos.getZ(), dimension)) {
+            /*
+             * Deeds bypass the client-side cancel — a non-owner can legitimately
+             * use a deed inside a protected parcel (e.g. placing a Citizen deed
+             * inside another player's Nation to claim a Zone-embedded Citizen).
+             * Server-side canPlaceAt → PlacementResult is the authoritative
+             * access gate for deeds.
+             *
+             * The event fires once per hand (MAIN_HAND first, OFF_HAND after);
+             * checking the main-hand item regardless of which hand fired
+             * handles the double-cancel cleanly — if the main hand holds a
+             * deed, that's what the player intends to use and neither hand's
+             * event should cancel. The current-hand check covers the rare
+             * empty-main-hand + off-hand-deed case.
+             *
+             * Other CML interaction items (CitizenTool, ZoningTool, name tags)
+             * are owner-only and are never invoked inside a protected parcel
+             * — no bypass needed.
+             */
+            Player player = event.getEntity();
+            if (player.getMainHandItem().getItem() instanceof Deed
+                    || event.getItemStack().getItem() instanceof Deed) {
+                return;
+            }
             event.setCanceled(true);
-//            ClaimMyLand.LOGGER.debug("onPlayerInteractBlock: CANCELING — hand={}, reason=right-click block cancelled by client cache",
-//                    event.getHand());
         }
     }
 

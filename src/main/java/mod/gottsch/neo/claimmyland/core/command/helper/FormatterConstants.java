@@ -57,6 +57,7 @@ class FormatterConstants {
     // -------------------------------------------------------------------------
 
     static final String ICON_INFO     = "ℹ";   // U+2139 — estate details
+    static final String ICON_ADD = "✚";
     static final String ICON_RENAME   = "✎";   // U+270E — rename
     static final String ICON_DELETE   = "✘";   // U+2718 — delete / remove
     static final String ICON_TRANSFER = "⇄";   // U+21C4 — transfer ownership

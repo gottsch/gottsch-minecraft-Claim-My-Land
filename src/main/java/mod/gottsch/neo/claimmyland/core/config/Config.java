@@ -107,8 +107,6 @@ public class Config extends AbstractConfig {
 		public Dimensions dimensions;
 		public CelebrationConfig celebration;
 
-		public ModConfigSpec.BooleanValue preventFireSpread;
-
         public ServerConfig(ModConfigSpec.Builder builder) {
 			general = new General(builder);
 			borders = new Borders(builder);
@@ -305,6 +303,7 @@ public class Config extends AbstractConfig {
 		public ModConfigSpec.BooleanValue preventFireSpread;
 		public ModConfigSpec.BooleanValue enableFarmlandTrampleEvent;
 		public ModConfigSpec.BooleanValue enableChorusFruitTeleport;
+		public ModConfigSpec.BooleanValue enableEnderpearlTeleport;
 
 		Protection(final ModConfigSpec.Builder builder) {
 			builder.comment(CATEGORY_DIV, 
@@ -365,6 +364,14 @@ public class Config extends AbstractConfig {
 					.comment("If true, prevents players from teleporting into protected parcels via chorus fruit.",
 							"Default: true.")
 					.define("enableChorusFruitTeleport", true);
+
+			enableEnderpearlTeleport = builder
+					.comment("If true, prevents players from teleporting into protected parcels via enderpearl.",
+							"Nation-level parcels are never protected from teleport — Nations are",
+							"public-transit by default. Embedded parcels (Zone, Citizen, Player) still",
+							"honor this setting and block non-owners / non-whitelisted players.",
+							"Default: false.")
+					.define("enableEnderpearlTeleport", false);
 
 			builder.pop();
 		}

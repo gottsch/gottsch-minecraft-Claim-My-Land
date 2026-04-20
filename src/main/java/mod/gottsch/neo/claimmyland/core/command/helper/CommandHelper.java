@@ -19,6 +19,7 @@
 package mod.gottsch.neo.claimmyland.core.command.helper;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import mod.gottsch.neo.claimmyland.core.config.Config;
 import mod.gottsch.neo.claimmyland.core.estate.Estate;
 import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
 import mod.gottsch.neo.claimmyland.core.persistence.PersistedData;
@@ -314,5 +315,16 @@ public class CommandHelper {
 
 	public static Optional<String> getPlayerName(CommandSourceStack source, UUID playerUuid) {
 		return PlayerRegistry.getPlayerName(source.getLevel(), playerUuid);
+	}
+
+	/**
+	 * Force an immediate write of the server config to disk. Call after
+	 * {@code ConfigValue.set(...)} when durability cannot wait for the
+	 * NeoForge config system's natural save cycle.
+	 *
+	 * @author Mark Gottschling on Apr 19, 2026
+	 */
+	public static void saveServerConfig() {
+		Config.SERVER_SPEC.save();
 	}
 }

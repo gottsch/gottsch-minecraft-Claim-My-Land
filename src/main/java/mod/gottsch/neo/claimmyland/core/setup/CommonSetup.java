@@ -63,6 +63,9 @@ public class CommonSetup {
             event.accept(ModItems.CITIZEN_PLACEMENT_TOOL.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
             event.accept(ModItems.ZONING_PLACEMENT_TOOL.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
 
+            event.accept(ModItems.IRON_NAME_TAG.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+            event.accept(ModItems.GOLD_NAME_TAG.get(), CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+
         }
     }
 }

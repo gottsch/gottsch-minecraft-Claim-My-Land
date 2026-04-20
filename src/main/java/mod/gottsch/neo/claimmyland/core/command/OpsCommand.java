@@ -51,6 +51,8 @@ public class OpsCommand {
                                         .contains(p.getUUID().toString())))
                                 ///// BACKUP /////
                                 .then(new BackupSubCommand().buildOps())
+                                ///// OPSLIST /////
+                                .then(new OpsListSubCommand().buildOps())
 
                                 ///// DEED TOP-LEVEL OPTION /////
                                 ///// NEW DEED /////
