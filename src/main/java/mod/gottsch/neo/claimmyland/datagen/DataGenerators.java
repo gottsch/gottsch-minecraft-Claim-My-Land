@@ -34,7 +34,11 @@ public class DataGenerators {
 			generator.addProvider(true, ModLootTableProvider.create(output, lookupProvider));
 			event.getGenerator().addProvider(
 					event.includeServer(),
-					new NameTagRecipeProvider(output, event.getLookupProvider())
+					new ModRecipesProvider(output, event.getLookupProvider())
+			);
+			event.getGenerator().addProvider(
+					event.includeServer(),
+					new LootModifierProvider(output, event.getLookupProvider())
 			);
 		}
 		if (event.includeClient()) {

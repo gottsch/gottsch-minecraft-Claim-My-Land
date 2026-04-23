@@ -19,6 +19,7 @@
  */
 package mod.gottsch.neo.claimmyland.datagen;
 
+import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.item.ModItems;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
@@ -44,9 +45,9 @@ import java.util.concurrent.CompletableFuture;
  *
  * @author Mark Gottschling on Apr 19, 2026
  */
-public class NameTagRecipeProvider extends RecipeProvider {
+public class ModRecipesProvider extends RecipeProvider {
 
-    public NameTagRecipeProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
+    public ModRecipesProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> registries) {
         super(output, registries);
     }
 

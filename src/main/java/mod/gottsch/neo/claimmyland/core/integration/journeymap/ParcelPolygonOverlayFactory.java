@@ -368,15 +368,11 @@ public class ParcelPolygonOverlayFactory {
                 .setFontShadow(true)
                 .setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
 
-        String label = parcel.estateName();
-        if (parcel.parcelType() == ParcelType.CITIZEN && parcel.isRelinquished()) {
-            label = label + " (RELINQUISHED)";
-        }
         int z = zIndexForType(parcel.parcelType());
 
         String fullDisplayId = ClaimMyLand.MOD_ID + ":parcel:full:" + parcel.parcelId();
         PolygonOverlay fullOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, dimKey, shapeProps, polygon);
-        fullOverlay.setLabel(label)              // short label drawn on the polygon
+        fullOverlay.setLabel(buildFullLabel(parcel))              // short label drawn on the polygon
                 .setTextProperties(fullscreenTextProps);
         fullOverlay.setActiveUIs(Context.UI.Fullscreen, Context.UI.Webmap);
         fullOverlay.setDisplayOrder(z);
@@ -385,8 +381,12 @@ public class ParcelPolygonOverlayFactory {
                 .setColor(colors[1].getRGB() & 0x00FFFFFF)
                 .setActiveUIs(Context.UI.Minimap);
 
+        String miniLabel = parcel.estateName();
+        if (parcel.parcelType() == ParcelType.CITIZEN && parcel.isRelinquished()) {
+            miniLabel = miniLabel + "\n(RELINQUISHED)";
+        }
         PolygonOverlay miniOverlay = new PolygonOverlay(ClaimMyLand.MOD_ID, dimKey, shapeProps, polygon);
-        miniOverlay.setLabel(label)
+        miniOverlay.setLabel(miniLabel)
                 .setTextProperties(minimapTextProps);
         miniOverlay.setActiveUIs(Context.UI.Minimap);
         miniOverlay.setDisplayOrder(z);
@@ -651,7 +651,13 @@ public class ParcelPolygonOverlayFactory {
 
     private static String buildFullLabel(ClientParcel parcel) {
         String typeName = parcel.parcelType() != null ? parcel.parcelType().name() : "PARCEL";
-        return parcel.estateName() + " (" + typeName + ")\nOwner: " + parcel.ownerName();
+
+        String label =  "- " + parcel.estateName() +
+                " -\n" + parcel.parcelName() + " (" + typeName + ")\nOwner: " + parcel.ownerName();
+        if (parcel.parcelType() == ParcelType.CITIZEN && parcel.isRelinquished()) {
+            label = label + "\n(RELINQUISHED)";
+        }
+        return label;
     }
 
     private static int zIndexForType(ParcelType type) {

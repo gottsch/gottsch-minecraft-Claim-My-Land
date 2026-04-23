@@ -59,6 +59,10 @@ public class LanguageGen extends LanguageProvider {
 
         add(ModBlocks.BORDER_STONE.get(), "Border Stone");
 
+        // Item display names
+        add(ModItems.GOLD_NAME_TAG.get(), "Rename Estate");
+        add(ModItems.IRON_NAME_TAG.get(), "Rename Parcel");
+
         /*
          * Util.chats
          */
@@ -255,10 +259,6 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("opslist.add.already_op.body"), "%s is already a CML op.");
         add(LangUtil.chat("opslist.remove.not_op"),       "Not an Op");
         add(LangUtil.chat("opslist.remove.not_op.body"),  "%s is not a CML op.");
-
-        // Item display names
-        add(ModItems.IRON_NAME_TAG.get(), "Iron Name Tag");
-        add(ModItems.GOLD_NAME_TAG.get(), "Gold Name Tag");
 
         // deeds
         add(LangUtil.chat("deed.claim.success"), "Parcel claimed!");

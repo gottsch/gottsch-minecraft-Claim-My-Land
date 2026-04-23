@@ -1,10 +1,10 @@
-// 1.21.1	2026-04-19T11:51:45.5355805	Item Models: claimmyland
+// 1.21.1	2026-04-22T19:42:16.6804478	Item Models: claimmyland
 074dfe0ccadae784c0f16359e491b01374cef82b assets/claimmyland/models/item/border_stone.json
 f1ccdf638a85491f9267c5527d2d13234dfb3e4e assets/claimmyland/models/item/citizen_deed.json
 204dabb331417584a62a68903914c07261ee9039 assets/claimmyland/models/item/citizen_foundation_stone.json
 22fb5698b5159531063f19ea65347e1941411b46 assets/claimmyland/models/item/citizen_placement.json
-8a4d7e78e125efce72a08da47064a4b2796b1e36 assets/claimmyland/models/item/gold_name_tag.json
-33fdc369c7a9de4def9eca9ccf6a52ca6a3a17a0 assets/claimmyland/models/item/iron_name_tag.json
+ffe05b489e72ff3a47ed4a185e518f616b2cf429 assets/claimmyland/models/item/gold_name_tag.json
+5371e40d54dc4cb4711e2b92f3a9f6d54a586362 assets/claimmyland/models/item/iron_name_tag.json
 29fc3f9dcd43f53680fbb82ba40978e8237016eb assets/claimmyland/models/item/nation_deed.json
 6a0681c7135f6359fbdb69c91dee291ddbfb449d assets/claimmyland/models/item/nation_deed_100.json
 bba98985331d30a1c61af021333b65af70bb7c70 assets/claimmyland/models/item/nation_foundation_stone.json

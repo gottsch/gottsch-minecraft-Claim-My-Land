@@ -1,8 +1,0 @@
-{
-  "name": "Claim My Land",
-  "landing_text": "$(bold)Claim My Land$() started out as a simple land claim mod, known as $(bold)Protect It!$() It has been modified and updated to be a more advanced mod, but hopefully retains its simplicity. Unlike other land claim mods, there are no restrictions to adhering to a chunk-based sizing system. A claim ( known as a Parcel ) can be any size and can be placed anywhere.$(br2)Mod ID: claimmyland",
-  "version": 1.1,
-  "pamphlet": true,
-  "creative_tab": "minecraft:tools_and_utilities",
-  "use_resource_pack": true
-}

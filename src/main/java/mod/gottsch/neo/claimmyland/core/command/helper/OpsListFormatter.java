@@ -106,7 +106,7 @@ public class OpsListFormatter {
         Style style = Style.EMPTY
                 .withColor(ChatFormatting.GREEN)
                 .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
-                        "/cml-ops opslist add "))
+                        "/cml-ops ops_list add "))
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                         Component.literal("Add op")));
         return Component.literal(" " + ICON_ADD).withStyle(style);
@@ -119,7 +119,7 @@ public class OpsListFormatter {
         Style style = Style.EMPTY
                 .withColor(ChatFormatting.RED)
                 .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
-                        "/cml-ops opslist remove " + target))
+                        "/cml-ops ops_list remove " + target))
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                         Component.literal("Remove " + target + " from ops")));
         return Component.literal(" " + ICON_DELETE).withStyle(style);
