@@ -155,6 +155,11 @@ public class LanguageGen extends LanguageProvider {
 
         add(LangUtil.chat("estate.prevent_fire_spread.success"), "The prevent fire spread setting was updated.");
 
+        add(LangUtil.chat("estate.whitelist.auto.success"), "Auto-whitelist updated.");
+        add(LangUtil.chat("estate.whitelist.auto.success.body"), "Auto-whitelist for estate '%s' is now %s.");
+        add(LangUtil.chat("estate.whitelist.auto.no_change"), "No change.");
+        add(LangUtil.chat("estate.whitelist.auto.no_change.body"), "Auto-whitelist for estate '%s' is already %s.");
+
         // parcels
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");

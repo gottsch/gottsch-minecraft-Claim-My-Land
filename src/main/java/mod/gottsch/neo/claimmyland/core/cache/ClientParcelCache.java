@@ -83,11 +83,11 @@ public class ClientParcelCache {
             this.estateName = estateName;
             this.nationName = nationName;
             this.ownerName  = ownerName;
-            this.ownerId = ownerId;
+            this.ownerId    = ownerId;
             this.parcelType = parcelType;
             this.minX = minX; this.minY = minY; this.minZ = minZ;
             this.maxX = maxX; this.maxY = maxY; this.maxZ = maxZ;
-            this.dimension  = dimension;
+            this.dimension    = dimension;
             this.relinquished = relinquished;
         }
 

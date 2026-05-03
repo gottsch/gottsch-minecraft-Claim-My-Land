@@ -23,12 +23,15 @@ package mod.gottsch.neo.claimmyland.core.event;
 import mod.gottsch.neo.claimmyland.ClaimMyLand;
 import mod.gottsch.neo.claimmyland.core.block.entity.BorderStoneBlockEntity;
 import mod.gottsch.neo.claimmyland.core.block.entity.FoundationStoneBlockEntity;
+import mod.gottsch.neo.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.neo.claimmyland.core.command.helper.PlayerMessageHelper;
 import mod.gottsch.neo.claimmyland.core.config.Config;
+import mod.gottsch.neo.claimmyland.core.estate.Estate;
 import mod.gottsch.neo.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
 import mod.gottsch.neo.claimmyland.core.persistence.PersistedData;
 import mod.gottsch.neo.claimmyland.core.registry.ActiveBorderStoneRegistry;
+import mod.gottsch.neo.claimmyland.core.registry.EstateRegistry;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelChunkIndex;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.neo.gottschcore.spatial.Coords;
@@ -44,6 +47,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.UseAnim;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -62,6 +66,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -109,6 +114,23 @@ public class ModEvents {
                 player.getServer().getTickCount() + 1,
                 () -> CMLNetwork.syncAllParcelsToPlayer(player)
         ));
+
+        // Auto-whitelist: add the logging-in player to every estate that has autoWhitelist enabled
+        applyAutoWhitelist(player);
+    }
+
+    private static void applyAutoWhitelist(ServerPlayer player) {
+        UUID playerUuid = player.getUUID();
+        boolean changed = false;
+        for (Estate estate : EstateRegistry.getAll()) {
+            if (estate.isAutoWhitelist() && !estate.getOwnerId().equals(playerUuid) && !estate.getPlayerWhitelist().contains(playerUuid)) {
+                estate.getPlayerWhitelist().add(playerUuid);
+                changed = true;
+            }
+        }
+        if (changed) {
+            CommandHelper.save(player.getServer().overworld());
+        }
     }
 
     @SubscribeEvent
@@ -250,7 +272,6 @@ public class ModEvents {
             }
         }
         // prevent protected blocks from breaking
-//        if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID())) {
         if (!ParcelRegistry.hasAccess(
                 (ServerPlayer) event.getPlayer(),
                 Coords.of(event.getPos()),
@@ -272,10 +293,6 @@ public class ModEvents {
         if (event.getLevel().isClientSide()) {
             return;
         }
-
-//        ClaimMyLand.LOGGER.debug("player is attempting to place block");
-//        ClaimMyLand.LOGGER.debug("onBlockPlace — entity={}, block={}, pos={}",
-//                event.getEntity(), event.getPlacedBlock().getBlock(), event.getPos());
 
         // chunk pre-filter
         BlockPos pos = event.getPos();
@@ -337,10 +354,6 @@ public class ModEvents {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
-//        if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-//            ClaimMyLand.LOGGER.debug("attempt to place multi-block by player -> {} @ {}", event.getEntity().getDisplayName().getString(), Coords.of(event.getPos()).toShortString());
-//        }
-
         if (!Config.SERVER.protection.enableEntityMultiPlaceEvent.get()
                 || hasOpsPermission((Player) event.getEntity())) {
             return;
@@ -371,12 +384,6 @@ public class ModEvents {
                     ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND))) {
 
                 event.setCanceled(true);
-                if (!event.getLevel().isClientSide()) {
-//                    if (ClaimMyLand.LOGGER.isDebugEnabled()) {
-//                        ClaimMyLand.LOGGER.debug("denied multi-block place -> {} @ {}", event.getEntity().getDisplayName().getString(), new Coords(event.getPos()).toShortString());
-//                    }
-//                    sendProtectedMessage(event.getLevel(), (Player) event.getEntity());
-                }
             }
         } else if (ParcelRegistry.intersectsParcel(Coords.of(event.getPos()), dimension)) {
             event.setCanceled(true);
@@ -463,10 +470,13 @@ public class ModEvents {
 //            ClaimMyLand.LOGGER.debug("event.placement pos -> {}", event.getPos().relative(event.getFace()));
 
             BlockState state = event.getLevel().getBlockState(event.getPos());
-//            if (!ParcelRegistry.hasInteractAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), state, heldItem)) {
+            // Use event.getPos() (the actual clicked block), NOT pos.relative(face).
+            // The face-offset was pushing the lookup outside the parcel for boundary blocks,
+            // causing block-whitelist checks to find the wrong (or no) parcel and always
+            // granting access from outside while denying it from inside.
             if (!ParcelRegistry.hasInteractAccess(
                     (ServerPlayer) event.getEntity(),
-                    Coords.of(event.getPos().relative(event.getFace())),
+                    Coords.of(event.getPos()),
                     getDimensionString(event.getLevel()),
                     state,
                     heldItem)) {
@@ -499,8 +509,6 @@ public class ModEvents {
             return; // O(1) — this chunk has no parcels, skip BST entirely
         }
 
-        // TEMP log
-        ClaimMyLand.LOGGER.debug("player -> {} attempting to use item -> {}", event.getEntity().getDisplayName().getString(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
         if (!Config.SERVER.protection.enableRightClickItemEvent.get() || hasOpsPermission(event.getEntity())) {
             return;
         }
@@ -515,10 +523,14 @@ public class ModEvents {
         ItemStack heldItem = ItemStack.EMPTY;
         if (event.getHand() == InteractionHand.MAIN_HAND) {
             heldItem = ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND);
-            ClaimMyLand.LOGGER.debug("player -> {} is hold item in main hand -> {}", event.getEntity().getDisplayName().getString(), ((Player) event.getEntity()).getItemInHand(InteractionHand.MAIN_HAND));
         } // TODO check other hand
 
-//        if (!ParcelRegistry.hasInteractAccess(Coords.of(event.getPos()), event.getEntity().getUUID(), heldItem)) {
+        // Consumables (food, potions, milk) only affect the player — never restrict them inside a parcel.
+        UseAnim useAnim = heldItem.getUseAnimation();
+        if (useAnim == UseAnim.EAT || useAnim == UseAnim.DRINK) {
+            return;
+        }
+
         if (!ParcelRegistry.hasInteractAccess(
                 (ServerPlayer) event.getEntity(),
                 Coords.of(event.getPos()),

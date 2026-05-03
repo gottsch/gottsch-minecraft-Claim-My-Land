@@ -1,4 +1,4 @@
-# Changelog for Claim My Land 1.21.1
+# Changelog for Claim My Land for Neoforge 1.21.1
 
 All notable changes to this project will be documented in this file.
 
@@ -18,6 +18,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 # Claim My Land — Changelog
+
+## [2.8.0] - 2026-05-03
+
+### 🎉 Highlights
+
+- **Auto-whitelist** — estate owners can now opt a single estate into automatically adding every
+  player who logs in to the estate's player whitelist. Ideal for public shops, community farms,
+  and shared facilities that should be open to all players without manual whitelist management.
+
+---
+
+### ➕ Added
+
+#### Auto-whitelist per estate
+- New toggle per estate: when enabled, any player who logs into the server is automatically added
+  to that estate's player whitelist on login.
+- The estate owner is never added to their own whitelist. Players already on the whitelist are
+  not duplicated.
+- Changes are saved to disk only when at least one player was newly added, avoiding unnecessary
+  writes.
+- New commands:
+  - `/cml estate whitelist auto <estateName> <true|false>` — enable or disable auto-whitelist for the estate (owner)
+  - `/cml-ops estate whitelist auto <ownerName> <estateName> <true|false>` — ops variant
+- Idempotent: re-running the command with the current value returns a "no change" message.
+- New lang keys: `estate.whitelist.auto.success`, `estate.whitelist.auto.success.body`,
+  `estate.whitelist.auto.no_change`, `estate.whitelist.auto.no_change.body`.
+- New class: `AutoWhitelistSubCommand`.
+- Persistent: the `autoWhitelist` flag is stored in the estate's NBT and survives server restarts.
+
+---
+
+### 🐛 Fixed
+
+#### Modded doors and block-state interactions broken for all players inside any parcel
+- **Root cause:** `ClientEvents.onPlayerInteractBlock` cancelled every right-click-on-block event
+  client-side for protected parcels, regardless of whether the player had access. Cancelling on
+  the client prevents `ServerboundUseItemOnPacket` from ever being sent. For blocks that drive
+  their interaction through `useItemOn()` — such as ManyIdeasDoors — the server never saw the
+  click and the door would not open, even for the owner. Vanilla doors work via `useWithoutItem()`
+  which is driven by a separate packet path and was coincidentally unaffected.
+- **Fix:** removed `onPlayerInteractBlock` from `ClientEvents` entirely. The server-side handler
+  in `ModEvents.onPlayerInteractBlock` already performs the correct whitelist + ownership check
+  and blocks unauthorized access.
+- **Scope:** any modded door, lever, button, or block-state mechanism that uses `useItemOn()`
+  now works correctly inside parcels for authorized players.
+
+#### Foreign players cannot eat food or drink potions inside protected parcels
+- **Root cause:** `ModEvents.onPlayerInteractItem` applied `hasInteractAccess` to all held-item
+  right-click events regardless of item type. Food items and potions are not in the item
+  whitelist by default, so non-whitelisted players had the event cancelled server-side while the
+  client played the eating/drinking animation normally — resulting in the animation completing
+  but hunger/effect never being applied.
+- **Fix:** added an early return in `onPlayerInteractItem` for items whose `UseAnim` is `EAT` or
+  `DRINK` (covers all food, potions, milk buckets, honey bottles, and similar consumables).
+  Consumables only affect the consuming player and have no impact on the parcel, so they are
+  never restricted regardless of parcel ownership.
+
+---
 
 ## [2.7.0] - 2026-04-22
 
