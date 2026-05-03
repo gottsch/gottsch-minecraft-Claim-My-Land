@@ -51,6 +51,8 @@ public class OpsCommand {
                                         .contains(p.getUUID().toString())))
                                 ///// BACKUP /////
                                 .then(new BackupSubCommand().buildOps())
+                                ///// OPSLIST /////
+                                .then(new OpsListSubCommand().buildOps())
 
                                 ///// DEED TOP-LEVEL OPTION /////
                                 ///// NEW DEED /////
@@ -119,6 +121,8 @@ public class OpsCommand {
                                                 .then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY_TAG))
                                                 .then(new EntitySpawnWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY))
                                                 .then(new FriendsWhitelistSubCommand().build())
+                                                ///// AUTO-WHITELIST /////
+                                                .then(new AutoWhitelistSubCommand().buildOps())
                                         )
                                         /// // NATION BLACKLIST /////
                                         .then(new NationBlacklistSubCommand().buildOps())

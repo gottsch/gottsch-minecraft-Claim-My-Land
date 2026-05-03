@@ -1,4 +1,4 @@
-# Changelog for Claim My Land 1.21.1
+# Changelog for Claim My Land for Neoforge 1.21.1
 
 All notable changes to this project will be documented in this file.
 
@@ -17,14 +17,207 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+# Claim My Land — Changelog
+
+## [2.8.0] - 2026-05-03
+
+### 🎉 Highlights
+
+- **Auto-whitelist** — estate owners can now opt a single estate into automatically adding every
+  player who logs in to the estate's player whitelist. Ideal for public shops, community farms,
+  and shared facilities that should be open to all players without manual whitelist management.
+
+---
+
+### ➕ Added
+
+#### Auto-whitelist per estate
+- New toggle per estate: when enabled, any player who logs into the server is automatically added
+  to that estate's player whitelist on login.
+- The estate owner is never added to their own whitelist. Players already on the whitelist are
+  not duplicated.
+- Changes are saved to disk only when at least one player was newly added, avoiding unnecessary
+  writes.
+- New commands:
+  - `/cml estate whitelist auto <estateName> <true|false>` — enable or disable auto-whitelist for the estate (owner)
+  - `/cml-ops estate whitelist auto <ownerName> <estateName> <true|false>` — ops variant
+- Idempotent: re-running the command with the current value returns a "no change" message.
+- New lang keys: `estate.whitelist.auto.success`, `estate.whitelist.auto.success.body`,
+  `estate.whitelist.auto.no_change`, `estate.whitelist.auto.no_change.body`.
+- New class: `AutoWhitelistSubCommand`.
+- Persistent: the `autoWhitelist` flag is stored in the estate's NBT and survives server restarts.
+
+---
+
+### 🐛 Fixed
+
+#### Modded doors and block-state interactions broken for all players inside any parcel
+- **Root cause:** `ClientEvents.onPlayerInteractBlock` cancelled every right-click-on-block event
+  client-side for protected parcels, regardless of whether the player had access. Cancelling on
+  the client prevents `ServerboundUseItemOnPacket` from ever being sent. For blocks that drive
+  their interaction through `useItemOn()` — such as ManyIdeasDoors — the server never saw the
+  click and the door would not open, even for the owner. Vanilla doors work via `useWithoutItem()`
+  which is driven by a separate packet path and was coincidentally unaffected.
+- **Fix:** removed `onPlayerInteractBlock` from `ClientEvents` entirely. The server-side handler
+  in `ModEvents.onPlayerInteractBlock` already performs the correct whitelist + ownership check
+  and blocks unauthorized access.
+- **Scope:** any modded door, lever, button, or block-state mechanism that uses `useItemOn()`
+  now works correctly inside parcels for authorized players.
+
+#### Foreign players cannot eat food or drink potions inside protected parcels
+- **Root cause:** `ModEvents.onPlayerInteractItem` applied `hasInteractAccess` to all held-item
+  right-click events regardless of item type. Food items and potions are not in the item
+  whitelist by default, so non-whitelisted players had the event cancelled server-side while the
+  client played the eating/drinking animation normally — resulting in the animation completing
+  but hunger/effect never being applied.
+- **Fix:** added an early return in `onPlayerInteractItem` for items whose `UseAnim` is `EAT` or
+  `DRINK` (covers all food, potions, milk buckets, honey bottles, and similar consumables).
+  Consumables only affect the consuming player and have no impact on the parcel, so they are
+  never restricted regardless of parcel ownership.
+
+---
+
+## [2.7.0] - 2026-04-22
+
+### 🎉 Highlights
+
+- **Parcel rename via Border Stone** — right-click any Border Stone with any
+  sign variant to open the sign editor pre-filled with the current parcel name.
+  All four lines are concatenated into the new name. Sign is consumed on submit.
+  Owner only.
+- **Parcel rename via Iron Name Tag** — name a tag in an anvil, then right-click
+  a Border Stone to instantly rename the parcel. Tag consumed on success.
+- **Estate rename via Gold Name Tag** — name a tag in an anvil, then right-click
+  a Border Stone to rename its estate across all parcels that share it. Tag
+  consumed on success.
+- **Parcel and estate rename persistence fixed for Nether/End** — a pre-existing
+  bug caused all persistence operations (rename, claim, demolish, etc.) to
+  silently fail for players in the Nether or End. Fixed centrally in
+  `CommandHelper.save()`.
+- **`/cml-ops opslist` management command** — add, remove, and list CML ops
+  directly in-game without editing `claimmyland-server.toml`.
+- **Client-side double cancel fix** — deeds placed inside a protected parcel
+  no longer fire a cosmetic double cancel on the client.
+- **Enderpearl teleport protection** — opt-in server config to block enderpearl
+  teleports into protected parcels. Nations always bypass. Default: off.
+- **Deeds as Loot** — deeds appear as chest loot in YUNG's
+  Better Dungeons, and Twilight Forest structures now. Configurable via
+  `enableDeedLoot` server config. Four tiers: common, uncommon, rare, epic.
+
+---
+
+### ➕ Added
+
+#### Parcel rename via Border Stone (sign)
+- Right-click any Border Stone while holding any sign variant (any wood type).
+- Sign editor opens on the adjacent face of the Border Stone, pre-filled with
+  the current parcel name on line 1.
+- Placement face: clicked face used if horizontal and unobstructed; falls back
+  through NORTH → SOUTH → EAST → WEST; failure message if all four blocked.
+- All non-empty sign lines concatenated with spaces → new parcel name.
+- Sign consumed on submit (not in creative mode). Owner only.
+- JM overlay updates live. HUD updates immediately if owner is standing in the
+  parcel; otherwise updates on re-entry.
+- New blocks: `CMLRenameSignBlock`, `CMLRenameSignBlockEntity`.
+- New lang keys: `parcel.rename.sign.no_space`, `parcel.rename.sign.empty`,
+  `parcel.rename.sign.not_owner`, `parcel.rename.sign.success`.
+
+#### Iron Name Tag — parcel rename
+- New item `IronNameTagItem` (`claimmyland:iron_name_tag`).
+- Crafted: vanilla name tag + iron nugget (shapeless).
+- Obtainable via `/cml give iron_name_tag`.
+- Must be named in an anvil before use — failure message if unnamed.
+- Right-click a Border Stone to rename the parcel to the tag's name.
+- Tag consumed on success. Owner only.
+- New lang keys: `parcel.rename.tag.not_named`, `parcel.rename.tag.not_owner`,
+  `parcel.rename.tag.success`.
+
+#### Gold Name Tag — estate rename
+- New item `GoldNameTagItem` (`claimmyland:gold_name_tag`).
+- Crafted: vanilla name tag + gold nugget (shapeless).
+- Obtainable via `/cml give gold_name_tag`.
+- Must be named in an anvil before use — failure message if unnamed.
+- Right-click a Border Stone to rename its estate. Rename applies to all parcels
+  sharing that estate simultaneously.
+- Tag consumed on success. Owner only.
+- New lang keys: `estate.rename.tag.not_named`, `estate.rename.tag.not_owner`,
+  `estate.rename.tag.success`.
+
+#### `/cml give` — new items
+- `iron_name_tag` and `gold_name_tag` added to the give command suggestion list
+  and switch cases.
+
+#### `/cml-ops opslist` management command
+- New subcommand group under `/cml-ops`: `opslist list`, `opslist add <player>`,
+  `opslist remove <player>`.
+- `list` — chat display with ✚ add / ✘ remove interactive icons per entry.
+  UUIDs shown as hoverable 12-char suffixes via `FormatterConstants.hoverableUuid`.
+- `add` — suggests online players; falls back to PlayerRegistry → Mojang-cache
+  UUID resolution for offline players.
+- `remove` — suggests current ops list members by name; UUID resolved per entry.
+- Self-removal permitted (matches vanilla `/deop` semantics).
+- Malformed UUIDs in config are logged and skipped from display and suggestions.
+- New files: `OpsListSubCommand.java`, `OpsListFormatter.java`.
+- New lang keys: `opslist.add.success`, `opslist.add.already_op`,
+  `opslist.remove.success`, `opslist.remove.not_op` (title + body pairs).
+
+#### `FormatterConstants.hoverableUuid(UUID)`
+- New static helper that displays the trailing 12 characters of a UUID with the
+  full UUID on hover. Canonical way to show parcel/estate/player UUIDs compactly
+  in chat output. Used by `OpsListFormatter`.
+
+#### Client-side double cancel fix
+- `ClientEvents.onPlayerInteractBlock` now bypasses the protected-parcel cancel
+  when the player is holding a `Deed` in either hand.
+- Covers the legitimate case of a non-owner placing a deed inside someone else's
+  Nation — `canPlaceAt` / `PlacementResult` on the server handles actual
+  permission; the client cancel was purely cosmetic interference.
+- Scope is Deed-only: other CML items (`CitizenTool`, `ZoningTool`, name tags)
+  are owner-only by design and never trigger the cancel in their valid use case.
+
+#### Enderpearl teleport protection
+- New server config boolean `enableEnderpearlTeleport` (default: `false`).
+- When enabled, blocks enderpearl teleports into Zone, Citizen, and Player
+  parcels unless the teleporting player is the owner, on the whitelist, or a
+  CML op.
+- Nation parcels always bypass — Nations are public-transit by design.
+- Guard order mirrors `onChorusFruitTeleport`: server-side check → feature flag
+  → chunk pre-filter → dimension guard → ops bypass → Nation bypass →
+  `hasAccess` gate.
+- New lang key: `teleport.enderpearl.blocked`.
+
+---
+
+### 🐛 Fixed
+
+#### Parcel/estate persistence silently fails for players in the Nether or End
+- **Root cause:** `CommandHelper.save(Level)` passed the caller's level directly
+  to `PersistedData.get()`. `PersistedData` uses `DimensionDataStorage`, which
+  is per-dimension. `ParcelRegistry` is stored in the Overworld. Any persistence
+  call originating from a player in the Nether or End received `null` from
+  `PersistedData.get()`, which the null check silently swallowed — dirty flag
+  never set, changes never written to disk.
+- **Affected operations:** all commands and interactions that call
+  `CommandHelper.save()`, including parcel rename, estate rename, claim,
+  demolish, relinquish, whitelist edits, and the new Border Stone rename.
+- **Fix:** `CommandHelper.save()` now resolves to the Overworld `ServerLevel`
+  internally before calling `PersistedData.get()`. All call sites are unchanged
+  — the fix is transparent and centralized.
+
+---
+
+*Requires GottschCore NeoForge v2.6 or later.*
+
+---
+
 ## [2.6.1] - 2026-04-16
 
-### Added
+### ➕ Added
 
 - **Client config option `showParcelHud`** (under `GUI` category) — toggle the
   in-world parcel HUD overlay on/off. Default `true` (preserves prior behavior).
 
-### Fixed
+### 🐛 Fixed
 
 - **Client config key `enableProtectionChatMessages` malformed** — the define
   key string had a stray trailing colon, producing an invalid TOML path. Users

@@ -726,14 +726,24 @@ public class ParcelRegistry {
                                             BlockState state, ItemStack heldItem) {
         return resolveParcelCached(player, coords, dimension)
                 .map(parcel -> {
-//                    ClaimMyLand.LOGGER.debug("trying to use block {} in parcel -> {}",
-//                            state.getBlock().getName().getString(), parcel);
+                    ClaimMyLand.LOGGER.debug("[hasInteractAccess] block={}, coords={}, parcel={}, blockWhitelist={}",
+                            ModUtil.getName(state.getBlock()), coords.toShortString(),
+                            parcel.getName(), parcel.getEstate().getBlockWhitelist());
 
                     for (String tagName : parcel.getEstate().getBlockTagWhitelist()) {
-                        if (TagHelper.doesBlockBelongToTag(state.getBlock(), ResourceLocation.parse(tagName))) return true;
+                        if (TagHelper.doesBlockBelongToTag(state.getBlock(), ResourceLocation.parse(tagName))) {
+                            ClaimMyLand.LOGGER.debug("[hasInteractAccess] ALLOWED via block-tag: {}", tagName);
+                            return true;
+                        }
                     }
                     for (String blockName : parcel.getEstate().getBlockWhitelist()) {
-                        if (ModUtil.getName(state.getBlock()).equals(ResourceLocation.parse(blockName))) return true;
+                        ClaimMyLand.LOGGER.debug("[hasInteractAccess] comparing block={} vs whitelist={}  match={}",
+                                ModUtil.getName(state.getBlock()), blockName,
+                                ModUtil.getName(state.getBlock()).equals(ResourceLocation.parse(blockName)));
+                        if (ModUtil.getName(state.getBlock()).equals(ResourceLocation.parse(blockName))) {
+                            ClaimMyLand.LOGGER.debug("[hasInteractAccess] ALLOWED via block-whitelist: {}", blockName);
+                            return true;
+                        }
                     }
                     if (heldItem != null && !heldItem.isEmpty()) {
                         for (String tagName : parcel.getEstate().getItemTagWhitelist()) {

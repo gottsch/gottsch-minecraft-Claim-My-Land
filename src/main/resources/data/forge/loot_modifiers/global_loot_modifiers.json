@@ -1,9 +1,0 @@
-{
-  "replace": false,
-  "entries": [
-    "claimmyland:deed_loot_common",
-    "claimmyland:deed_loot_uncommon",
-    "claimmyland:deed_loot_rare",
-    "claimmyland:deed_loot_epic"
-  ]
-}

@@ -59,6 +59,10 @@ public class LanguageGen extends LanguageProvider {
 
         add(ModBlocks.BORDER_STONE.get(), "Border Stone");
 
+        // Item display names
+        add(ModItems.GOLD_NAME_TAG.get(), "Rename Estate");
+        add(ModItems.IRON_NAME_TAG.get(), "Rename Parcel");
+
         /*
          * Util.chats
          */
@@ -151,6 +155,11 @@ public class LanguageGen extends LanguageProvider {
 
         add(LangUtil.chat("estate.prevent_fire_spread.success"), "The prevent fire spread setting was updated.");
 
+        add(LangUtil.chat("estate.whitelist.auto.success"), "Auto-whitelist updated.");
+        add(LangUtil.chat("estate.whitelist.auto.success.body"), "Auto-whitelist for estate '%s' is now %s.");
+        add(LangUtil.chat("estate.whitelist.auto.no_change"), "No change.");
+        add(LangUtil.chat("estate.whitelist.auto.no_change.body"), "Auto-whitelist for estate '%s' is already %s.");
+
         // parcels
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");
@@ -188,6 +197,10 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.rename.success"), "The parcel has been renamed.");
         add(LangUtil.chat("parcel.rename.failure"), "Unable to rename the parcel.");
         add(LangUtil.chat("parcel.rename.exists.failure"), "Unable to rename. Duplicate name within estate.");
+        add(LangUtil.chat("parcel.rename.sign.no_space"),   "No room to place sign — clear a block adjacent to the Border Stone.");
+        add(LangUtil.chat("parcel.rename.sign.empty"),      "Parcel name cannot be empty.");
+        add(LangUtil.chat("parcel.rename.sign.not_owner"),  "You do not own this parcel.");
+        add(LangUtil.chat("parcel.rename.sign.success"),    "Parcel renamed to '%s'.");
 
         add(LangUtil.chat("parcel.transfer.success"), "The parcel has been transferred.");
         add(LangUtil.chat("parcel.transfer.failure"), "Unable to transfer the parcel.");
@@ -229,6 +242,28 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("parcel.nation.not_owner"), "You are not the owner of the nation.");
 
         add(LangUtil.chat("parcel.unknown_type"), "Unknown parcel type.");
+
+        // Iron Name Tag — parcel rename
+        add(LangUtil.chat("parcel.rename.tag.not_named"),  "Name the tag in an anvil first.");
+        add(LangUtil.chat("parcel.rename.tag.not_owner"),  "You do not own this parcel.");
+        add(LangUtil.chat("parcel.rename.tag.success"),    "Parcel renamed to '%s'.");
+
+        // Gold Name Tag — estate rename
+        add(LangUtil.chat("estate.rename.tag.not_named"),  "Name the tag in an anvil first.");
+        add(LangUtil.chat("estate.rename.tag.not_owner"),  "You do not own this estate.");
+        add(LangUtil.chat("estate.rename.tag.success"),    "Estate renamed to '%s'.");
+
+        // /cml-ops opslist — success
+        add(LangUtil.chat("opslist.add.success"),         "Op Added");
+        add(LangUtil.chat("opslist.add.success.body"),    "Added %s to the CML ops list.");
+        add(LangUtil.chat("opslist.remove.success"),      "Op Removed");
+        add(LangUtil.chat("opslist.remove.success.body"), "Removed %s from the CML ops list.");
+
+        // /cml-ops opslist — failure
+        add(LangUtil.chat("opslist.add.already_op"),      "Already an Op");
+        add(LangUtil.chat("opslist.add.already_op.body"), "%s is already a CML op.");
+        add(LangUtil.chat("opslist.remove.not_op"),       "Not an Op");
+        add(LangUtil.chat("opslist.remove.not_op.body"),  "%s is not a CML op.");
 
         // deeds
         add(LangUtil.chat("deed.claim.success"), "Parcel claimed!");
@@ -272,6 +307,10 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("zone_placement.not_nation"), "That block is not within a nation parcel or it is claimed.");
         add(LangUtil.chat("zone_placement.not_owner"), "You are not the owner of this nation.");
         add(LangUtil.chat("zone_placement.not_same_nation"), "That block is not within the same nation parcel as the start block.");
+
+        // teleport
+        // Enderpearl teleport protection
+        add(LangUtil.chat("teleport.enderpearl.blocked"), "Cannot teleport into this parcel.");
 
         // info
         add(LangUtil.chat("parcel.claimed_by"), "The block at %s is claimed by %s:");

@@ -18,6 +18,7 @@ import java.util.UUID;
 public interface Estate {
     String ID_KEY = "id";
     String PREVENT_FIRE_SPREAD_KEY = "preventFireSpread";
+    String AUTO_WHITELIST_KEY = "autoWhitelist";
 
     boolean isRelinquished();
     void setRelinquished(boolean relinquished);
@@ -40,6 +41,9 @@ public interface Estate {
 
     boolean isPreventFireSpread();
     void setPreventFireSpread(boolean preventFireSpread);
+
+    boolean isAutoWhitelist();
+    void setAutoWhitelist(boolean autoWhitelist);
 
     default public boolean isNation() {
         return this.getParcelType() == ParcelType.NATION;

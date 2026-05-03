@@ -74,5 +74,11 @@ public class ItemModelsProvider extends ItemModelProvider {
 		withExistingParent(ModItems.ZONING_PLACEMENT_TOOL.getId().getPath(), modLoc("block/zone_placement"));
 		withExistingParent(ModItems.CITIZEN_PLACEMENT_TOOL.getId().getPath(), modLoc("block/citizen_placement"));
 
+		singleTexture(ModItems.IRON_NAME_TAG.getId().getPath(),
+				mcLoc("item/generated"), "layer0", modLoc("item/iron_name_tag"));
+
+		singleTexture(ModItems.GOLD_NAME_TAG.getId().getPath(),
+				mcLoc("item/generated"), "layer0", modLoc("item/gold_name_tag"));
+
 	}
 }

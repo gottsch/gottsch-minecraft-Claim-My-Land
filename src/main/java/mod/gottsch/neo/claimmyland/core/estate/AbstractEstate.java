@@ -58,6 +58,7 @@ public abstract class AbstractEstate implements Estate {
 
     private boolean relinquished;
     private boolean preventFireSpread = true;  // default ON
+    private boolean autoWhitelist = false;     // default OFF
 
     public AbstractEstate() {
         setId(UUID.randomUUID());
@@ -67,26 +68,13 @@ public abstract class AbstractEstate implements Estate {
 
     public AbstractEstate(Player player) {
         this();
-//        setId(UUID.randomUUID());
         setOwnerId(player.getUUID());
-//        setName(defaultName(player));
-//        initEntitySpawnTags();
     }
 
     public AbstractEstate(UUID ownerId) {
         this();
-//        setId(UUID.randomUUID());
         setOwnerId(ownerId);
-//        setName(defaultName(ownerId));
-//        initEntitySpawnTags();
     }
-
-//    public AbstractEstate(UUID ownerId, String estateName) {
-//        setId(UUID.randomUUID());
-//        setOwnerId(ownerId);
-//        setName(estateName);
-//        initEntitySpawnTags();
-//    }
 
     public AbstractEstate copyFrom(Estate source) {
         setOwnerId(source.getOwnerId());
@@ -113,27 +101,13 @@ public abstract class AbstractEstate implements Estate {
         return "Estate-" + getId().toString().substring(0, 8);
     }
 
-    // TODO rename to generateName()
-//    @Override
-//    public String defaultName(Player player) {
-//        // checks against the ClaimRegistry for any claims by ownerID
-////        Set<Estate> estates = EstateRegistry.findByOwner(player.getUUID());
-////        return player.getScoreboardName() + "-estate-" + (estates.size() + 1);
-//        int index = PlayerRegistry.nextEstateNameIndex(player.getUUID());
-//        return player.getScoreboardName() + "-estate-" + index;
-//    }
-
-    // TODO rename to generateName()
     @Override
     public String defaultName(UUID ownerId) {
         Optional<String> name = PlayerRegistry.getNameFromUUIDSynchronized(ownerId);
         int index = PlayerRegistry.nextEstateNameIndex(ownerId);
         return name.orElseGet(ownerId::toString) + "-estate-" + index;
-//        Set<Estate> estates = EstateRegistry.findByOwner(ownerId);
-//        return name.orElseGet(ownerId::toString) + "-estate-" + (estates.size() + 1);
     }
 
-    // TODO rename to generateName()
     @Override
     public String defaultName(Estate estate) {
         Set<Estate> estates = EstateRegistry.findByOwner(estate.getOwnerId());
@@ -248,6 +222,7 @@ public abstract class AbstractEstate implements Estate {
         }
 
         tag.putBoolean(PREVENT_FIRE_SPREAD_KEY, isPreventFireSpread());
+        tag.putBoolean(AUTO_WHITELIST_KEY, isAutoWhitelist());
 
         return tag;
     }
@@ -360,6 +335,12 @@ public abstract class AbstractEstate implements Estate {
             setPreventFireSpread(tag.getBoolean(PREVENT_FIRE_SPREAD_KEY));
         } else {
             setPreventFireSpread(true);  // default ON for existing estates
+        }
+
+        if (tag.contains(AUTO_WHITELIST_KEY)) {
+            setAutoWhitelist(tag.getBoolean(AUTO_WHITELIST_KEY));
+        } else {
+            setAutoWhitelist(false);  // default OFF for existing estates
         }
     }
 
@@ -498,6 +479,16 @@ public abstract class AbstractEstate implements Estate {
     @Override
     public void setPreventFireSpread(boolean preventFireSpread) {
         this.preventFireSpread = preventFireSpread;
+    }
+
+    @Override
+    public boolean isAutoWhitelist() {
+        return autoWhitelist;
+    }
+
+    @Override
+    public void setAutoWhitelist(boolean autoWhitelist) {
+        this.autoWhitelist = autoWhitelist;
     }
 
     @Override

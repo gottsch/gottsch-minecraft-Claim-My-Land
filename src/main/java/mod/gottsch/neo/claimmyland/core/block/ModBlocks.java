@@ -22,6 +22,7 @@ package mod.gottsch.neo.claimmyland.core.block;
 import mod.gottsch.neo.claimmyland.core.setup.Registration;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
@@ -49,6 +50,17 @@ public class ModBlocks {
 
     public static final DeferredHolder<Block, ZonePlacementBlock> ZONE_PLACEMENT_BLOCK = Registration.BLOCKS.register("zone_placement",
             () -> new ZonePlacementBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).instabreak().pushReaction(PushReaction.IGNORE)));
+
+    public static final DeferredHolder<Block, RenameSignBlock> RENAME_SIGN =
+            Registration.BLOCKS.register("rename_sign",
+                    () -> new RenameSignBlock(
+                            BlockBehaviour.Properties.of()
+                                    .noCollission()
+                                    .noOcclusion()
+                                    .strength(1.0F)
+                                    .sound(SoundType.WOOD)
+                                    .noLootTable()));
+
 
     public static void register(IEventBus bus) {
         // cycle through all block and create items

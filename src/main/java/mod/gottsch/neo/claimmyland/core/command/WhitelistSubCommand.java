@@ -31,6 +31,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.blocks.BlockInput;
 import net.minecraft.commands.arguments.item.ItemInput;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
@@ -77,16 +78,6 @@ public abstract class WhitelistSubCommand implements SubCommand {
         return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
     };
 
-//    static final SuggestionProvider<CommandSourceStack> CURRENT_ITEM_TAGS = (source, builder) -> {
-//        String parcelName = StringArgumentType.getString(source, ESTATE_NAME);
-//        Optional<Set<String>> list = Optional.empty();
-//        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource());
-//        if (ownerUuid.isPresent()) {
-//            list = getEstateWhitelistByType(source.getSource(), ownerUuid.get(), parcelName, WhitelistType.ITEM_TAG);
-//        }
-//        return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
-//    };
-
     static final SuggestionProvider<CommandSourceStack> CURRENT_ITEMS = (source, builder) -> {
         String estateName = StringArgumentType.getString(source, ESTATE_NAME);
         Optional<Set<String>> list = Optional.empty();
@@ -106,6 +97,26 @@ public abstract class WhitelistSubCommand implements SubCommand {
             list = getEstateWhitelistByType(source.getSource(), ownerUuid.get(), estateName, WhitelistType.ENTITY);
         }
         return SharedSuggestionProvider.suggest(list.orElseGet(Collections::emptySet), builder);
+    };
+
+    // Suggests all registered entity type resource IDs (eg. "minecraft:creeper", "create:contraption")
+    static final SuggestionProvider<CommandSourceStack> ALL_ENTITY_TYPES = (source, builder) -> {
+        List<String> ids = BuiltInRegistries.ENTITY_TYPE.keySet().stream()
+                .map(ResourceLocation::toString)
+                .sorted()
+                .toList();
+        return SharedSuggestionProvider.suggest(ids, builder);
+    };
+
+    static final SuggestionProvider<CommandSourceStack> OPS_CURRENT_ENTITIES = (source, builder) -> {
+        String ownerName = StringArgumentType.getString(source, OWNER_NAME);
+        String estateName = StringArgumentType.getString(source, ESTATE_NAME);
+        Optional<Set<String>> whitelist = Optional.empty();
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source.getSource(), ownerName);
+        if (ownerUuid.isPresent()) {
+            whitelist = getEstateWhitelistByType(source.getSource(), ownerUuid.get(), estateName, WhitelistType.ENTITY);
+        }
+        return SharedSuggestionProvider.suggest(whitelist.orElseGet(Collections::emptySet), builder);
     };
 
     static final SuggestionProvider<CommandSourceStack> OPS_CURRENT_BLOCKS = (source, builder) -> {

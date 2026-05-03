@@ -25,113 +25,104 @@ import mod.gottsch.neo.claimmyland.core.command.helper.WhitelistType;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
-import net.minecraft.commands.arguments.item.ItemArgument;
 
 /**
+ * Whitelist sub-command for entity spawn types (by resource ID, e.g. "create:contraption").
+ *
+ * ADD accepts a resource-location argument so the player can type any registered entity
+ * type ID directly — including modded entities that are never present in the world as
+ * selectable targets.
+ *
  * @author by Mark Gottschling on 2/20/2026
  */
 public class EntitySpawnWhitelistSubCommand extends WhitelistSubCommand {
 
     public LiteralArgumentBuilder<CommandSourceStack> build(CommandBuildContext buildContext, WhitelistType type) {
         return Commands.literal(type.getCommand())
-                ///// WHITELIST ADD /////
+                ///// ENTITY WHITELIST ADD /////
                 .then(Commands.literal(ADD)
                         .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                                 .suggests(OWNER_ESTATE_NAMES)
-                                .then(Commands.argument(ENTITY, EntityArgument.entity()))
-                                        .executes(source -> {
-                                            return addToEstate(source.getSource(),
-                                                    StringArgumentType.getString(source, ESTATE_NAME),
-                                                    EntityArgument.getEntity(source, ENTITY),
-                                                    WhitelistType.ENTITY);
-                                        })
+                                .then(Commands.argument(ENTITY, ResourceLocationArgument.id())
+                                        .suggests(ALL_ENTITY_TYPES)
+                                        .executes(source -> addToEstate(source.getSource(),
+                                                StringArgumentType.getString(source, ESTATE_NAME),
+                                                ResourceLocationArgument.getId(source, ENTITY),
+                                                WhitelistType.ENTITY))
                                 )
-                        )
-
-
-                ///// WHITELIST REMOVE /////
-                .then(Commands.literal(REMOVE)
-
-                        .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
-                                .suggests(OWNER_ESTATE_NAMES)
-                                .then(Commands.argument(BLOCK_NAME, ResourceLocationArgument.id())
-                                        .suggests(CURRENT_ENTITIES)
-                                        .executes(source -> {
-                                            return removeFromEstate(source.getSource(),
-                                                    StringArgumentType.getString(source, ESTATE_NAME),
-                                                    ResourceLocationArgument.getId(source, BLOCK_NAME),
-                                                    WhitelistType.ENTITY);
-                                        })
-                                )
-
                         )
                 )
-                ///// WHITELIST LIST /////
+                ///// ENTITY WHITELIST REMOVE /////
+                .then(Commands.literal(REMOVE)
+                        .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
+                                .suggests(OWNER_ESTATE_NAMES)
+                                .then(Commands.argument(ENTITY, ResourceLocationArgument.id())
+                                        .suggests(CURRENT_ENTITIES)
+                                        .executes(source -> removeFromEstate(source.getSource(),
+                                                StringArgumentType.getString(source, ESTATE_NAME),
+                                                ResourceLocationArgument.getId(source, ENTITY),
+                                                WhitelistType.ENTITY))
+                                )
+                        )
+                )
+                ///// ENTITY WHITELIST LIST /////
                 .then(Commands.literal(LIST)
                         .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                                 .suggests(OWNER_ESTATE_NAMES)
-                                .executes(source -> {
-                                    return listFromEstate(source.getSource(),
-                                            StringArgumentType.getString(source, ESTATE_NAME),
-                                            WhitelistType.ENTITY);
-                                })
+                                .executes(source -> listFromEstate(source.getSource(),
+                                        StringArgumentType.getString(source, ESTATE_NAME),
+                                        WhitelistType.ENTITY))
                         )
                 );
     }
 
     public LiteralArgumentBuilder<CommandSourceStack> buildOps(CommandBuildContext buildContext, WhitelistType type) {
         return Commands.literal(type.getCommand())
-                ///// BLOCK WHITELIST ADD /////
+                ///// ENTITY WHITELIST ADD /////
                 .then(Commands.literal(ADD)
                         .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
                                 .suggests(OPS_OWNER_NAMES)
                                 .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                                         .suggests(OPS_OWNER_ESTATE_NAMES)
-                                        .then(Commands.argument(ITEM, ItemArgument.item(buildContext))
-                                                .executes(source -> {
-                                                    return addToEstate(source.getSource(),
-                                                            StringArgumentType.getString(source, OWNER_NAME),
-                                                            StringArgumentType.getString(source, ESTATE_NAME),
-                                                            ItemArgument.getItem(source, ITEM),
-                                                            type);
-                                                })
+                                        .then(Commands.argument(ENTITY, ResourceLocationArgument.id())
+                                                .suggests(ALL_ENTITY_TYPES)
+                                                .executes(source -> addToEstate(source.getSource(),
+                                                        StringArgumentType.getString(source, OWNER_NAME),
+                                                        StringArgumentType.getString(source, ESTATE_NAME),
+                                                        ResourceLocationArgument.getId(source, ENTITY),
+                                                        WhitelistType.ENTITY))
                                         )
                                 )
                         )
                 )
-                ///// BLOCK WHITELIST REMOVE /////
+                ///// ENTITY WHITELIST REMOVE /////
                 .then(Commands.literal(REMOVE)
                         .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
                                 .suggests(OPS_OWNER_NAMES)
                                 .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                                         .suggests(OPS_OWNER_ESTATE_NAMES)
-                                        .then(Commands.argument(TAG_NAME, ResourceLocationArgument.id())
-                                                .suggests(OPS_CURRENT_BLOCKS)
-                                                .executes(source -> {
-                                                    return removeFromEstate(source.getSource(),
-                                                            StringArgumentType.getString(source, OWNER_NAME),
-                                                            StringArgumentType.getString(source, ESTATE_NAME),
-                                                            ResourceLocationArgument.getId(source, TAG_NAME),
-                                                            WhitelistType.BLOCK);
-                                                })
+                                        .then(Commands.argument(ENTITY, ResourceLocationArgument.id())
+                                                .suggests(OPS_CURRENT_ENTITIES)
+                                                .executes(source -> removeFromEstate(source.getSource(),
+                                                        StringArgumentType.getString(source, OWNER_NAME),
+                                                        StringArgumentType.getString(source, ESTATE_NAME),
+                                                        ResourceLocationArgument.getId(source, ENTITY),
+                                                        WhitelistType.ENTITY))
                                         )
                                 )
                         )
                 )
-                ///// BLOCK WHITELIST LIST /////
+                ///// ENTITY WHITELIST LIST /////
                 .then(Commands.literal(LIST)
                         .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
                                 .suggests(OPS_OWNER_NAMES)
                                 .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
                                         .suggests(OPS_OWNER_ESTATE_NAMES)
-                                        .executes(source -> {
-                                            return listFromEstate(source.getSource(),
-                                                    StringArgumentType.getString(source, OWNER_NAME),
-                                                    StringArgumentType.getString(source, ESTATE_NAME),
-                                                    WhitelistType.BLOCK);
-                                        })
+                                        .executes(source -> listFromEstate(source.getSource(),
+                                                StringArgumentType.getString(source, OWNER_NAME),
+                                                StringArgumentType.getString(source, ESTATE_NAME),
+                                                WhitelistType.ENTITY))
                                 )
                         )
                 );
@@ -146,6 +137,4 @@ public class EntitySpawnWhitelistSubCommand extends WhitelistSubCommand {
     public LiteralArgumentBuilder<CommandSourceStack> buildOps() {
         return null;
     }
-
-
 }

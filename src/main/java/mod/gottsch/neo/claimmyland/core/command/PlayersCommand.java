@@ -104,6 +104,8 @@ public class PlayersCommand {
 										.then(new TagWhitelistSubCommand().build(buildContext, WhitelistType.ENTITY_TAG))
 										///// FRIENDS WHITELIST /////
 										.then(new FriendsWhitelistSubCommand().build())
+										///// AUTO-WHITELIST /////
+										.then(new AutoWhitelistSubCommand().build())
 
 								) // end of whitelist
 								/// // BLACK LIST /////

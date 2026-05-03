@@ -41,7 +41,9 @@ public class GiveSubCommand implements SubCommand {
     public static final String GIVE_ITEM = "give_item";
 
     static final SuggestionProvider<CommandSourceStack> GIVABLE_ITEMS = (source, builder) -> {
-        return SharedSuggestionProvider.suggest(Stream.of("border_stone", "citizen_tool", "zoning_tool"), builder);
+        return SharedSuggestionProvider.suggest(Stream.of("border_stone", "citizen_tool", "zoning_tool",
+                "iron_name_tag",
+                "gold_name_tag"), builder);
     };
 
     @Override
@@ -66,6 +68,8 @@ public class GiveSubCommand implements SubCommand {
                 case "border_stone" -> new ItemStack(ModItems.BORDER_STONE.get());
                 case "citizen_tool" -> new ItemStack(ModItems.CITIZEN_PLACEMENT_TOOL.get()); // TODO test if you are a nation owner
                 case "zoning_tool" -> new ItemStack(ModItems.ZONING_PLACEMENT_TOOL.get()); // TODO test if you are a nation owner
+                case "iron_name_tag" -> new ItemStack(ModItems.IRON_NAME_TAG.get());
+                case "gold_name_tag" -> new ItemStack(ModItems.GOLD_NAME_TAG.get());
                 default -> ItemStack.EMPTY;
             };
 

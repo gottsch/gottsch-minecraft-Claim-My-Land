@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 public interface SubCommand {
     static final String ACCESS_TYPE ="access_type" ;
     static final String ADD = "add";
+    static final String AUTO = "auto";
     static final String BLOCK = "block";
     static final String BLOCK_NAME = "block_name";
     static final String BY_OWNER = "by_owner";

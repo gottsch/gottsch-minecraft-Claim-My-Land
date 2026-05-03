@@ -35,6 +35,7 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredItem;
 
 import java.util.function.Supplier;
 
@@ -107,6 +108,13 @@ public class ModItems {
 
     // tools
 //    public static DeferredHolder<Item> ZONING_TOOL = Registration.ITEMS.register("zoning_tool", () -> new ZoningTool(new Item.Properties()));
+    public static final DeferredHolder<Item, IronNameTagItem> IRON_NAME_TAG =
+            Registration.ITEMS.register("iron_name_tag",
+                    () -> new IronNameTagItem(new Item.Properties().stacksTo(16)));
+
+    public static final DeferredHolder<Item, GoldNameTagItem> GOLD_NAME_TAG =
+            Registration.ITEMS.register("gold_name_tag",
+                    () -> new GoldNameTagItem(new Item.Properties().stacksTo(16)));
 
     /**
      *
