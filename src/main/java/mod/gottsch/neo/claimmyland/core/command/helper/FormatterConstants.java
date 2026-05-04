@@ -509,4 +509,56 @@ class FormatterConstants {
 
         return Component.literal("..." + StringUtils.right(uuid.toString(), 12)).withStyle(style);
     }
+
+    /**
+     * [✘ Clear All] icon — player version. Runs the clear command (first step: shows confirmation prompt).
+     */
+    static Component whitelistClearIcon(String estateName, WhitelistType type) {
+        String cmd = "/cml estate whitelist " + type.getCommand() + " clear \"" + estateName + "\"";
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.RED)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Clear all entries from this whitelist")));
+        return Component.literal(" " + ICON_DELETE + ICON_DELETE).withStyle(style);
+    }
+
+    /**
+     * ✘✘ icon — ops version.
+     */
+    static Component whitelistClearIconOps(String ownerName, String estateName, WhitelistType type) {
+        String cmd = "/cml-ops estate whitelist " + type.getCommand() + " clear " + ownerName + " \"" + estateName + "\"";
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.RED)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Clear all entries from this whitelist")));
+        return Component.literal(" " + ICON_DELETE + ICON_DELETE).withStyle(style);
+    }
+
+    /**
+     * [✔ Confirm] button — player version. Actually executes the clear when clicked.
+     */
+    static Component whitelistClearConfirmIcon(String estateName, WhitelistType type) {
+        String cmd = "/cml estate whitelist " + type.getCommand() + " clear \"" + estateName + "\" confirm";
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.GREEN)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Confirm — this cannot be undone")));
+        return Component.literal(" [✔ Confirm]").withStyle(style);
+    }
+
+    /**
+     * [✔ Confirm] button — ops version.
+     */
+    static Component whitelistClearConfirmIconOps(String ownerName, String estateName, WhitelistType type) {
+        String cmd = "/cml-ops estate whitelist " + type.getCommand() + " clear " + ownerName + " \"" + estateName + "\" confirm";
+        Style style = Style.EMPTY
+                .withColor(ChatFormatting.GREEN)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, cmd))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                        Component.literal("Confirm — this cannot be undone")));
+        return Component.literal(" [✔ Confirm]").withStyle(style);
+    }
 }

@@ -41,8 +41,8 @@ import java.util.function.Supplier;
  */
 public class RollingJsonSaver<T> {
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+    private final Gson gson;
     private final File saveDirectory;
     private final String fileBaseName;
     private final int maxFiles;
@@ -62,12 +62,19 @@ public class RollingJsonSaver<T> {
      */
     public RollingJsonSaver(File saveDirectory, String fileBaseName, int maxFiles,
                             int saveIntervalMinutes, Supplier<T> dataSupplier, Type dataType) {
+        this(saveDirectory, fileBaseName, maxFiles, saveIntervalMinutes, dataSupplier, dataType,
+                new GsonBuilder().setPrettyPrinting().create());
+    }
+
+    public RollingJsonSaver(File saveDirectory, String fileBaseName, int maxFiles,
+                            int saveIntervalMinutes, Supplier<T> dataSupplier, Type dataType, Gson gson) {
         this.saveDirectory = saveDirectory;
         this.fileBaseName = fileBaseName;
         this.maxFiles = maxFiles;
-        this.saveIntervalTicks = saveIntervalMinutes * 60 * 20; // Convert minutes to ticks
+        this.saveIntervalTicks = saveIntervalMinutes * 60 * 20;
         this.dataSupplier = dataSupplier;
         this.dataType = dataType;
+        this.gson = gson;
 
         if (!saveDirectory.exists()) {
             saveDirectory.mkdirs();
@@ -102,7 +109,7 @@ public class RollingJsonSaver<T> {
 
             // Write JSON
             try (FileWriter writer = new FileWriter(saveFile)) {
-                GSON.toJson(data, writer);
+                gson.toJson(data, writer);
             }
 
             LOGGER.debug("Saved data to: {}", saveFile.getName());
@@ -164,7 +171,7 @@ public class RollingJsonSaver<T> {
      */
     public T loadFromFile(File file) {
         try (FileReader reader = new FileReader(file)) {
-            T data = GSON.fromJson(reader, dataType);
+            T data = gson.fromJson(reader, dataType);
             LOGGER.debug("Loaded data from: {}", file.getName());
             return data;
         } catch (IOException e) {
