@@ -306,6 +306,112 @@ public class WhitelistFormatter {
         return lines;
     }
 
+    // ===== STAND-ALONE PLAYER WHITELIST WITH CLEAR ICON =====
+
+    /**
+     * Overload of {@link #formatStandAlonePlayerWhitelist} that appends a clear icon to the header.
+     * Pass {@code ownerName} for ops context (generates /cml-ops command), or {@code null} for player context.
+     */
+    public static List<Component> formatStandAlonePlayerWhitelist(ServerLevel level,
+                                                                  Set<UUID> players,
+                                                                  String title,
+                                                                  UUID estateId,
+                                                                  String estateName,
+                                                                  @Nullable String ownerName) {
+        List<Component> lines = new ArrayList<>();
+
+        Component clearIcon = ownerName != null
+                ? whitelistClearIconOps(ownerName, estateName, WhitelistType.FRIENDS)
+                : whitelistClearIcon(estateName, WhitelistType.FRIENDS);
+
+        lines.add(Component.literal(TITLE_BAR).withStyle(BOLD_YELLOW));
+        lines.add(Component.literal(LangUtil.INDENT4 + title).withStyle(BOLD_YELLOW)
+                .append(playerWhitelistAddIcon(estateName))
+                .append(clearIcon));
+        lines.add(Component.literal(TITLE_BAR).withStyle(BOLD_YELLOW));
+        lines.add(newline());
+
+        if (players == null || players.isEmpty()) {
+            lines.add(Component.literal("No friends whitelisted").withStyle(ChatFormatting.GRAY));
+            lines.add(newline());
+            return lines;
+        }
+
+        lines.add(Component.literal("Total Friends: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(String.valueOf(players.size())).withStyle(ChatFormatting.WHITE)));
+        lines.add(newline());
+
+        lines.addAll(formatPlayerList(level, players, "", estateId, estateName));
+        lines.add(newline());
+        return lines;
+    }
+
+    // ===== STAND-ALONE GENERIC WHITELIST WITH CLEAR ICON =====
+
+    /**
+     * Overload of {@link #formatStandAloneGenericWhitelist} that appends a clear icon to the header.
+     * Pass {@code ownerName} for ops context (generates /cml-ops command), or {@code null} for player context.
+     */
+    public static List<Component> formatStandAloneGenericWhitelist(Set<String> data,
+                                                                   WhitelistType type,
+                                                                   String title,
+                                                                   UUID estateId,
+                                                                   String estateName,
+                                                                   @Nullable String ownerName) {
+        List<Component> lines = new ArrayList<>();
+
+        Component clearIcon = ownerName != null
+                ? whitelistClearIconOps(ownerName, estateName, type)
+                : whitelistClearIcon(estateName, type);
+
+        lines.add(Component.literal(TITLE_BAR).withStyle(ChatFormatting.BOLD, type.getColor()));
+        lines.add(Component.literal(LangUtil.INDENT4 + title)
+                .withStyle(ChatFormatting.BOLD, type.getColor())
+                .append(clearIcon));
+        lines.add(Component.literal(TITLE_BAR).withStyle(ChatFormatting.BOLD, type.getColor()));
+        lines.add(newline());
+
+        if (data == null || data.isEmpty()) {
+            lines.add(Component.literal("No entries in whitelist").withStyle(ChatFormatting.GRAY));
+            lines.add(newline());
+            return lines;
+        }
+
+        lines.add(Component.literal("Total: ").withStyle(ChatFormatting.GRAY)
+                .append(Component.literal(String.valueOf(data.size())).withStyle(ChatFormatting.WHITE)));
+        lines.add(newline());
+
+        lines.addAll(formatGenericList(data, type, ""));
+        lines.add(newline());
+        return lines;
+    }
+
+    // ===== CLEAR CONFIRMATION PROMPT =====
+
+    /**
+     * Builds the warning prompt shown before committing a whitelist clear.
+     * Includes a clickable [✔ Confirm] button that runs the confirmed clear command.
+     */
+    public static List<Component> formatClearConfirmation(String estateName, WhitelistType type, int count, @Nullable String ownerName) {
+        List<Component> lines = new ArrayList<>();
+
+        Component confirmIcon = ownerName != null
+                ? whitelistClearConfirmIconOps(ownerName, estateName, type)
+                : whitelistClearConfirmIcon(estateName, type);
+
+        lines.add(Component.literal("⚠ WARNING").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD));
+        lines.add(Component.literal(TITLE_BAR).withStyle(ChatFormatting.YELLOW));
+        lines.add(newline());
+        lines.add(Component.translatable(LangUtil.chat("estate.whitelist.clear.confirm"))
+                .withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD));
+        lines.add(newline());
+        lines.add(Component.translatable(LangUtil.chat("estate.whitelist.clear.confirm.body"), count, estateName)
+                .withStyle(ChatFormatting.GRAY)
+                .append(confirmIcon));
+        lines.add(newline());
+        return lines;
+    }
+
     // private constructor — static utility class.
     private WhitelistFormatter() {}
 }

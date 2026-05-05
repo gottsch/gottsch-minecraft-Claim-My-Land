@@ -27,6 +27,8 @@ import mod.gottsch.neo.claimmyland.core.command.helper.WhitelistFormatter;
 import mod.gottsch.neo.claimmyland.core.command.helper.WhitelistType;
 import mod.gottsch.neo.claimmyland.core.estate.Estate;
 import mod.gottsch.neo.claimmyland.core.util.ModUtil;
+
+import javax.annotation.Nullable;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.blocks.BlockInput;
@@ -190,7 +192,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
     public int listFromEstate(CommandSourceStack source, String estateName, WhitelistType type) {
         Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
         if (playerUuid.isPresent()) {
-            return listFromEstate(source, playerUuid.get(), estateName, type);
+            return listFromEstateInternal(source, playerUuid.get(), estateName, type, null);
         } else {
             sendUnableToLocatePlayerMessage(source);
         }
@@ -203,7 +205,7 @@ public abstract class WhitelistSubCommand implements SubCommand {
     public int listFromEstate(CommandSourceStack source, String ownerName, String estateName, WhitelistType type) {
         Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
         if (ownerUuid.isPresent()) {
-            return listFromEstate(source, ownerUuid.get(), estateName, type);
+            return listFromEstateInternal(source, ownerUuid.get(), estateName, type, ownerName);
         } else {
             sendUnableToLocatePlayerMessage(source, ownerName);
         }
@@ -214,17 +216,78 @@ public abstract class WhitelistSubCommand implements SubCommand {
      * estate common version
      */
     public int listFromEstate(CommandSourceStack source, UUID ownerUuid, String estateName, WhitelistType type) {
+        return listFromEstateInternal(source, ownerUuid, estateName, type, null);
+    }
 
+    private int listFromEstateInternal(CommandSourceStack source, UUID ownerUuid, String estateName, WhitelistType type, @Nullable String ownerName) {
         Optional<Set<String>> whitelist = WhitelistSubCommand.getEstateWhitelistByType(source, ownerUuid, estateName, type);
-
         whitelist.ifPresentOrElse(data -> {
                     List<Component> messages = WhitelistFormatter
-                            .formatStandAloneGenericWhitelist(data, type, type.getTitle() + " - " + estateName, null);
-
+                            .formatStandAloneGenericWhitelist(data, type, type.getTitle() + " - " + estateName, null, estateName, ownerName);
                     CommandHelper.sendLines(source, messages);
                 },
                 () -> failure(source, "estate." + type.name().toLowerCase() + ".list.failure")
         );
+        return 1;
+    }
+
+    // ===== CLEAR =====
+
+    /** estate player version — sends confirmation prompt */
+    public int clearFromEstate(CommandSourceStack source, String estateName, WhitelistType type) {
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
+        if (playerUuid.isPresent()) {
+            return clearFromEstateInternal(source, playerUuid.get(), estateName, type, false, null);
+        }
+        sendUnableToLocatePlayerMessage(source);
+        return -1;
+    }
+
+    /** estate ops version — sends confirmation prompt */
+    public int clearFromEstate(CommandSourceStack source, String ownerName, String estateName, WhitelistType type) {
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (ownerUuid.isPresent()) {
+            return clearFromEstateInternal(source, ownerUuid.get(), estateName, type, false, ownerName);
+        }
+        sendUnableToLocatePlayerMessage(source, ownerName);
+        return -1;
+    }
+
+    /** estate player version — actually clears after confirmation */
+    public int clearFromEstateConfirmed(CommandSourceStack source, String estateName, WhitelistType type) {
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
+        if (playerUuid.isPresent()) {
+            return clearFromEstateInternal(source, playerUuid.get(), estateName, type, true, null);
+        }
+        sendUnableToLocatePlayerMessage(source);
+        return -1;
+    }
+
+    /** estate ops version — actually clears after confirmation */
+    public int clearFromEstateConfirmed(CommandSourceStack source, String ownerName, String estateName, WhitelistType type) {
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (ownerUuid.isPresent()) {
+            return clearFromEstateInternal(source, ownerUuid.get(), estateName, type, true, ownerName);
+        }
+        sendUnableToLocatePlayerMessage(source, ownerName);
+        return -1;
+    }
+
+    private int clearFromEstateInternal(CommandSourceStack source, UUID ownerUuid, String estateName, WhitelistType type, boolean confirmed, @Nullable String ownerName) {
+        Optional<Set<String>> whitelist = WhitelistSubCommand.getEstateWhitelistByType(source, ownerUuid, estateName, type);
+        whitelist.ifPresentOrElse(action -> {
+            if (!confirmed) {
+                List<Component> lines = WhitelistFormatter.formatClearConfirmation(estateName, type, action.size(), ownerName);
+                sendLines(source, lines);
+            } else if (action.isEmpty()) {
+                sendSuccess(source, "estate.whitelist.clear.no_change", "estate.whitelist.clear.no_change.body", estateName);
+            } else {
+                action.clear();
+                CommandHelper.save(source.getLevel());
+                sendSuccess(source, "estate." + type.name().toLowerCase() + ".clear.success",
+                        "estate." + type.name().toLowerCase() + ".clear.success.body", estateName);
+            }
+        }, () -> failure(source, "estate." + type.name().toLowerCase() + ".add.failure"));
         return 1;
     }
 

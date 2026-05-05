@@ -9,6 +9,7 @@ import mod.gottsch.neo.claimmyland.core.item.ModItems;
 import mod.gottsch.neo.claimmyland.core.loot.ModLootModifiers;
 import mod.gottsch.neo.claimmyland.core.network.CMLNetwork;
 import mod.gottsch.neo.claimmyland.core.parcel.Parcel;
+import mod.gottsch.neo.claimmyland.core.persistence.ParcelGson;
 import mod.gottsch.neo.claimmyland.core.persistence.RollingJsonSaver;
 import mod.gottsch.neo.claimmyland.core.registry.ParcelRegistry;
 import mod.gottsch.neo.claimmyland.core.setup.ClientSetup;
@@ -22,13 +23,14 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
+import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.File;
 import java.lang.reflect.Type;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -45,6 +47,7 @@ public class ClaimMyLand {
     public static final String MOD_ID = "claimmyland";
 
     private static RollingJsonSaver<List<Parcel>> parcelSaver;
+    private static Path serverDataPath;
 
     /**
      *
@@ -66,16 +69,19 @@ public class ClaimMyLand {
         modEventBus.addListener(ClientSetup::init);
         modEventBus.addListener(this::onConfigReload);
 
-        // register FORGE bus events separately
-        NeoForge.EVENT_BUS.register(new ForgeEventHandler());
+        // register NEOFORGE bus events separately
+        NeoForge.EVENT_BUS.register(new ModEventHandler());
+        NeoForge.EVENT_BUS.addListener(this::onServerStarting);
 
         if (FMLEnvironment.dist == Dist.CLIENT) {
             modEventBus.register(ParcelBorderRendererSetup.class);
         }
     }
 
-    @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
+        serverDataPath = event.getServer()
+                .getWorldPath(LevelResource.ROOT)
+                .resolve("data/claimmyland");
         ClaimMyLand.reinitBackup();
     }
 
@@ -89,27 +95,28 @@ public class ClaimMyLand {
     }
 
     /**
-     * constructs or reconstructs the RollingJsonSaver from current config values.
-     * called once at startup and again on config reload.
+     * Constructs or reconstructs the RollingJsonSaver from current config values.
+     * Called once at startup (after serverDataPath is set) and again on config reload.
      */
     public static void reinitBackup() {
+        if (serverDataPath == null) return;
         if (Config.SERVER.backup.enabled.get()) {
-            File saveDir = new File("world/data/claimmyland");
             Type listType = new TypeToken<List<Parcel>>(){}.getType();
             parcelSaver = new RollingJsonSaver<>(
-                    saveDir,
+                    serverDataPath.toFile(),
                     "parcels",
                     Config.SERVER.backup.maxFiles.get(),
                     Config.SERVER.backup.intervalMinutes.get(),
                     ParcelRegistry::getParcels,
-                    listType
+                    listType,
+                    ParcelGson.create()
             );
         } else {
             parcelSaver = null;
         }
     }
 
-    public static class ForgeEventHandler {
+    public static class ModEventHandler {
         @SubscribeEvent
         public void onServerTick(ServerTickEvent.Post event) {
             if (parcelSaver != null) {

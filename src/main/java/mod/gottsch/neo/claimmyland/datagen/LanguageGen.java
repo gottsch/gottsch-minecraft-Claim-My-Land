@@ -160,6 +160,25 @@ public class LanguageGen extends LanguageProvider {
         add(LangUtil.chat("estate.whitelist.auto.no_change"), "No change.");
         add(LangUtil.chat("estate.whitelist.auto.no_change.body"), "Auto-whitelist for estate '%s' is already %s.");
 
+        add(LangUtil.chat("estate.whitelist.clear.confirm"), "Clear Whitelist?");
+        add(LangUtil.chat("estate.whitelist.clear.confirm.body"), "This will remove all %d entries from estate '%s'.");
+        add(LangUtil.chat("estate.whitelist.clear.no_change"), "No change.");
+        add(LangUtil.chat("estate.whitelist.clear.no_change.body"), "The whitelist for estate '%s' is already empty.");
+        add(LangUtil.chat("estate.friends.clear.success"), "Friends whitelist cleared.");
+        add(LangUtil.chat("estate.friends.clear.success.body"), "All friends removed from whitelist for estate '%s'.");
+        add(LangUtil.chat("estate.block.clear.success"), "Block whitelist cleared.");
+        add(LangUtil.chat("estate.block.clear.success.body"), "All blocks removed from whitelist for estate '%s'.");
+        add(LangUtil.chat("estate.block_tag.clear.success"), "Block tag whitelist cleared.");
+        add(LangUtil.chat("estate.block_tag.clear.success.body"), "All block tags removed from whitelist for estate '%s'.");
+        add(LangUtil.chat("estate.item.clear.success"), "Item whitelist cleared.");
+        add(LangUtil.chat("estate.item.clear.success.body"), "All items removed from whitelist for estate '%s'.");
+        add(LangUtil.chat("estate.item_tag.clear.success"), "Item tag whitelist cleared.");
+        add(LangUtil.chat("estate.item_tag.clear.success.body"), "All item tags removed from whitelist for estate '%s'.");
+        add(LangUtil.chat("estate.entity.clear.success"), "Entity spawn whitelist cleared.");
+        add(LangUtil.chat("estate.entity.clear.success.body"), "All entity types removed from whitelist for estate '%s'.");
+        add(LangUtil.chat("estate.entity_tag.clear.success"), "Entity spawn tag whitelist cleared.");
+        add(LangUtil.chat("estate.entity_tag.clear.success.body"), "All entity spawn tags removed from whitelist for estate '%s'.");
+
         // parcels
         add(LangUtil.chat("parcel.block_protected"),"Block is protected.");
         add(LangUtil.chat("parcel.outside_world_boundaries"), "The parcel extends beyond the world boundaries.");
@@ -339,8 +358,16 @@ public class LanguageGen extends LanguageProvider {
 
 
         add(LangUtil.chat("backup.success"),"Backup saved:");
-        add(LangUtil.chat( "backup.failure"), "Backup failed. Check server logs for details.");
+        add(LangUtil.chat("backup.failure"), "Backup failed. Check server logs for details.");
         add(LangUtil.chat("backup.disabled"), "Backup system is disabled. Enable it in claimmyland-server.toml.");
+        add(LangUtil.chat("backup.list"), "Available backups:");
+        add(LangUtil.chat("backup.list.empty"), "No backup files found.");
+        add(LangUtil.chat("backup.load.confirm"), "Load Backup?");
+        add(LangUtil.chat("backup.load.confirm.body"), "This will replace ALL parcel data with '%s'. This cannot be undone.");
+        add(LangUtil.chat("backup.load.not_found"), "Backup file not found.");
+        add(LangUtil.chat("backup.load.failure"), "Failed to load backup. Check server logs for details.");
+        add(LangUtil.chat("backup.load.success"), "Backup restored.");
+        add(LangUtil.chat("backup.load.success.body"), "Loaded %d parcels from '%s'.");
 
         /*
          *  Util.tooltips

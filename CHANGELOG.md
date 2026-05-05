@@ -19,6 +19,108 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # Claim My Land — Changelog
 
+## [2.9.0] - 2026-05-04
+
+### 🎉 Highlights
+
+- **Whitelist clear** — every whitelist (player, block, block-tag, item, item-tag,
+  entity-spawn, entity-spawn-tag) now supports a `clear` subcommand with a confirmation
+  prompt and an inline `✘✘ Clear All` button at the bottom of every list display.
+- **Backup load / list** — restore parcel state from any rolling backup with
+  `/cml-ops backup load <file>`. New `list` subcommand shows available backups.
+  Inline `✔ Confirm` button drives the destructive replace.
+- **Backup persistence rewrite** — backups are now written to the world-specific
+  data directory (fixes single-player saves), serialized through a polymorphic
+  GSON `ParcelGson` builder so new parcel/estate fields are picked up automatically.
+
+---
+
+### ➕ Added
+
+#### Whitelist `clear` subcommand (all 7 whitelist types)
+- `/cml estate whitelist <type> clear <estateName>` — owner version
+- `/cml-ops estate whitelist <type> clear <ownerName> <estateName>` — ops version
+- Two-step destructive command: first invocation shows a confirmation prompt with
+  entry count and an inline `[✔ Confirm]` button; the `... clear ... confirm` form
+  performs the actual clear.
+- Idempotent: clearing an already-empty whitelist returns a "no change" message.
+- Saves via `CommandHelper.save(level)` after a successful clear.
+- New lang keys (per type):
+  `estate.whitelist.clear.confirm` / `.body`,
+  `estate.whitelist.clear.no_change` / `.body`,
+  `estate.<type>.clear.success` / `.body` for `friends`, `block`, `block_tag`,
+  `item`, `item_tag`, `entity`, `entity_tag`.
+- New `whitelistClearIcon` / `whitelistClearIconOps` / `whitelistClearConfirmIcon`
+  helpers in `FormatterConstants`; appended to every whitelist list display.
+
+#### Backup management commands (ops-only)
+- `/cml-ops backup` — immediate on-demand save (existed in v2.5; reorganized).
+- `/cml-ops backup list` — list available backup files (newest first).
+- `/cml-ops backup load <file>` — show a confirmation prompt with an inline
+  `[✔ Confirm]` button; tab completion suggests existing backup filenames.
+- `/cml-ops backup load <file> confirm` — clear `EstateRegistry` and
+  `ParcelRegistry`, repopulate from the backup (NATION parcels first so
+  estates are registered before Citizen/Zone reference them), persist the
+  restored state, and resync to all online players.
+- New lang keys: `backup.list`, `backup.list.empty`, `backup.load.confirm` /
+  `.body`, `backup.load.not_found`, `backup.load.failure`, `backup.load.success`
+  / `.body`.
+- New class: `BackupSubCommand` (split out of `OpsCommand` ad-hoc handling).
+
+---
+
+### 🐛 Fixed
+
+#### Backup save directory was wrong for single-player worlds
+- **Root cause:** `RollingJsonSaver` was constructed with `new File("world/data/claimmyland")`,
+  a relative path that resolved against the server working directory. In dedicated server
+  this happened to land in the right place; in single-player it created a stray
+  `world/` folder next to the game launcher instead of writing to the active save.
+- **Fix:** capture the world's data path in `ServerStartingEvent` via
+  `event.getServer().getWorldPath(LevelResource.ROOT).resolve("data/claimmyland")`,
+  store it as `ClaimMyLand.serverDataPath`, and rebuild the `RollingJsonSaver`
+  from that path on startup and on config reload.
+
+#### Backup restore corrupted parcel coordinates and crashed clients
+- **Root cause:** the original field-by-field JSON loader assumed UUID was
+  serialized as `{mostSigBits, leastSigBits}`; GSON actually writes UUIDs as
+  hyphenated strings. Every UUID-bearing field silently failed to load,
+  leaving `ownerId` null. `SyncParcelPacket.encode()` then called
+  `buf.writeUUID(null)` → NPE → Netty `EncoderException` → client kicked
+  with `Failed to encode packet 'clientbound/minecraft:custom_payload'`.
+- **Fix:** replaced the hand-rolled loader with a polymorphic GSON builder
+  (`ParcelGson`) that registers TypeAdapters for `UUID`, `ICoords`, `Box`,
+  `Parcel`, `Estate`, and `NationEstate`. `Parcel` dispatches to the concrete
+  class via `ParcelTypeRegistry.create(type).getClass()`; `Estate` chooses
+  `EstateContext` vs `NationEstateContext` by the presence of an `accessType`
+  field. Same `Gson` instance is now used for both write and read, so any new
+  field added to a parcel or estate is automatically round-tripped.
+- **Removed:** `ParcelBackupLoader` (dead after the GSON refactor).
+
+#### Backup restore put parcels at impossible Y coordinates
+- **Root cause:** the `BoxAdapter` wrote box JSON with keys `"minCoords"` and
+  `"maxCoords"`, but `gottschcore`'s `Box.save()` / `Box.load()` use `"min"`
+  and `"max"`. On load, `Box.load(tag)` couldn't find its keys and returned
+  `Box.EMPTY`, which is statically initialized as `new Box(Coords(0,-255,0),
+  Coords(0,-255,0))`. The result: every restored parcel had its minCoords Y
+  shifted by -255 (e.g. `49` displayed as `-206`).
+- **Fix:** `BoxAdapter` now writes `"min"` / `"max"` to match `Box.save()`.
+  The reader accepts both `"min"` / `"max"` (correct) and the legacy
+  `"minCoords"` / `"maxCoords"` keys for any backups written before this fix.
+
+#### Citizen/Zone `nationEstate` reference diverged from `EstateRegistry` after restore
+- **Root cause:** during JSON restore, every parcel's `nationEstate` field
+  was deserialized into its own `NationEstateContext` instance, so live
+  mutations to the Nation's access type (via `/cml estate nation accessType`)
+  would update only the `NationParcel`'s registered estate, not the cached
+  `nationEstate` on Citizen/Zone parcels.
+- **Fix:** `BackupSubCommand.executeLoadConfirmed` now re-links every
+  `NationalizedParcel.nationEstate` to the registered `NationEstate` in
+  `EstateRegistry`, mirroring the behavior of
+  `NationalizedParcel.loadNationEstate(tag)` on the NBT load path.
+
+---
+
 ## [2.8.0] - 2026-05-03
 
 ### 🎉 Highlights

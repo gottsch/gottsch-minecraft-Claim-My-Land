@@ -73,6 +73,10 @@ public interface SubCommand {
     static final String REMOVE = "remove";
     static final String RENAME = "rename";
     static final String TAG_NAME = "tag_name";
+    static final String CLEAR = "clear";
+    static final String CONFIRM = "confirm";
+    static final String FILENAME = "filename";
+    static final String LOAD = "load";
     static final String TRANSFER = "transfer";
     static final String ZONE_ESTATE_NAME = "zone_estate_name";
 

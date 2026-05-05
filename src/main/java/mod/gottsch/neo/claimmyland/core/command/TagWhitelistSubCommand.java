@@ -149,6 +149,20 @@ public class TagWhitelistSubCommand extends WhitelistSubCommand {
                                 )
                         )
 
+                )
+                ///// TAGS WHITELIST CLEAR /////
+                .then(Commands.literal(CLEAR)
+                        .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
+                                .suggests(OWNER_ESTATE_NAMES)
+                                .executes(source -> clearFromEstate(source.getSource(),
+                                        StringArgumentType.getString(source, ESTATE_NAME),
+                                        type))
+                                .then(Commands.literal(CONFIRM)
+                                        .executes(source -> clearFromEstateConfirmed(source.getSource(),
+                                                StringArgumentType.getString(source, ESTATE_NAME),
+                                                type))
+                                )
+                        )
                 );
 
     }
@@ -224,6 +238,25 @@ public class TagWhitelistSubCommand extends WhitelistSubCommand {
                                                             ResourceLocationArgument.getId(source, TAG_NAME),
                                                             WhitelistType.BLOCK_TAG);
                                                 })
+                                        )
+                                )
+                        )
+                )
+                ///// TAGS WHITELIST CLEAR /////
+                .then(Commands.literal(CLEAR)
+                        .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
+                                .suggests(OPS_OWNER_NAMES)
+                                .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
+                                        .suggests(OPS_OWNER_ESTATE_NAMES)
+                                        .executes(source -> clearFromEstate(source.getSource(),
+                                                StringArgumentType.getString(source, OWNER_NAME),
+                                                StringArgumentType.getString(source, ESTATE_NAME),
+                                                type))
+                                        .then(Commands.literal(CONFIRM)
+                                                .executes(source -> clearFromEstateConfirmed(source.getSource(),
+                                                        StringArgumentType.getString(source, OWNER_NAME),
+                                                        StringArgumentType.getString(source, ESTATE_NAME),
+                                                        type))
                                         )
                                 )
                         )

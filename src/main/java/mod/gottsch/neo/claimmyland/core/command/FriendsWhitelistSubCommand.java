@@ -23,11 +23,13 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import mod.gottsch.neo.claimmyland.core.command.helper.CommandHelper;
 import mod.gottsch.neo.claimmyland.core.command.helper.WhitelistFormatter;
+import mod.gottsch.neo.claimmyland.core.command.helper.WhitelistType;
 import mod.gottsch.neo.claimmyland.core.estate.Estate;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -77,6 +79,18 @@ public class FriendsWhitelistSubCommand implements SubCommand {
                                     return listFromEstate(source.getSource(),
                                             StringArgumentType.getString(source, ESTATE_NAME));
                                 })
+                        )
+                )
+                ///// FRIENDS WHITELIST CLEAR /////
+                .then(Commands.literal(CLEAR)
+                        .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
+                                .suggests(OWNER_ESTATE_NAMES)
+                                .executes(source -> clearFromEstate(source.getSource(),
+                                        StringArgumentType.getString(source, ESTATE_NAME)))
+                                .then(Commands.literal(CONFIRM)
+                                        .executes(source -> clearFromEstateConfirmed(source.getSource(),
+                                                StringArgumentType.getString(source, ESTATE_NAME)))
+                                )
                         )
                 );
 
@@ -129,11 +143,27 @@ public class FriendsWhitelistSubCommand implements SubCommand {
                                         .executes(source -> {
                                             return listFromEstate(source.getSource(),
                                                     StringArgumentType.getString(source, OWNER_NAME),
-                                                    StringArgumentType.getString(source, PARCEL_NAME));
+                                                    StringArgumentType.getString(source, ESTATE_NAME));
                                         })
                                 )
                         )
-
+                )
+                ///// FRIENDS WHITELIST CLEAR /////
+                .then(Commands.literal(CLEAR)
+                        .then(Commands.argument(OWNER_NAME, StringArgumentType.string())
+                                .suggests(OPS_OWNER_NAMES)
+                                .then(Commands.argument(ESTATE_NAME, StringArgumentType.string())
+                                        .suggests(OPS_OWNER_ESTATE_NAMES)
+                                        .executes(source -> clearFromEstate(source.getSource(),
+                                                StringArgumentType.getString(source, OWNER_NAME),
+                                                StringArgumentType.getString(source, ESTATE_NAME)))
+                                        .then(Commands.literal(CONFIRM)
+                                                .executes(source -> clearFromEstateConfirmed(source.getSource(),
+                                                        StringArgumentType.getString(source, OWNER_NAME),
+                                                        StringArgumentType.getString(source, ESTATE_NAME)))
+                                        )
+                                )
+                        )
                 );
     }
 
@@ -288,7 +318,7 @@ public class FriendsWhitelistSubCommand implements SubCommand {
         Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
         estate.ifPresentOrElse(action -> {
                     List<Component> messages = WhitelistFormatter
-                            .formatStandAlonePlayerWhitelist(source.getLevel(), action.getPlayerWhitelist(), "PLAYER WHITELIST - " + estateName, action.getId(), estateName);
+                            .formatStandAlonePlayerWhitelist(source.getLevel(), action.getPlayerWhitelist(), "PLAYER WHITELIST - " + estateName, action.getId(), estateName, null);
 
                     sendLines(source, messages);
 //                    messages.forEach(component -> {
@@ -310,6 +340,66 @@ public class FriendsWhitelistSubCommand implements SubCommand {
                 () -> failure(source, "estate.whitelist.list.failure")
 //                () -> source.sendSuccess(() -> Component.translatable(LangUtil.chat("estate.whitelist.list.failure")).withStyle(ChatFormatting.RED), false)
         );
+        return 1;
+    }
+
+    // ===== CLEAR =====
+
+    /** estate player version — sends confirmation prompt */
+    public static int clearFromEstate(CommandSourceStack source, String estateName) {
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
+        if (playerUuid.isPresent()) {
+            return clearFromEstateInternal(source, playerUuid.get(), estateName, false, null);
+        }
+        sendUnableToLocatePlayerMessage(source);
+        return -1;
+    }
+
+    /** estate ops version — sends confirmation prompt */
+    public static int clearFromEstate(CommandSourceStack source, String ownerName, String estateName) {
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (ownerUuid.isPresent()) {
+            return clearFromEstateInternal(source, ownerUuid.get(), estateName, false, ownerName);
+        }
+        sendUnableToLocatePlayerMessage(source, ownerName);
+        return -1;
+    }
+
+    /** estate player version — actually clears after confirmation */
+    public static int clearFromEstateConfirmed(CommandSourceStack source, String estateName) {
+        Optional<UUID> playerUuid = CommandHelper.getPlayerUuid(source);
+        if (playerUuid.isPresent()) {
+            return clearFromEstateInternal(source, playerUuid.get(), estateName, true, null);
+        }
+        sendUnableToLocatePlayerMessage(source);
+        return -1;
+    }
+
+    /** estate ops version — actually clears after confirmation */
+    public static int clearFromEstateConfirmed(CommandSourceStack source, String ownerName, String estateName) {
+        Optional<UUID> ownerUuid = CommandHelper.getPlayerUuid(source, ownerName);
+        if (ownerUuid.isPresent()) {
+            return clearFromEstateInternal(source, ownerUuid.get(), estateName, true, ownerName);
+        }
+        sendUnableToLocatePlayerMessage(source, ownerName);
+        return -1;
+    }
+
+    private static int clearFromEstateInternal(CommandSourceStack source, UUID ownerUuid, String estateName, boolean confirmed, @Nullable String ownerName) {
+        Optional<Estate> estate = CommandHelper.getEstateByOwner(source, ownerUuid, estateName);
+        estate.ifPresentOrElse(action -> {
+            java.util.Set<UUID> whitelist = action.getPlayerWhitelist();
+            if (!confirmed) {
+                List<Component> lines = WhitelistFormatter.formatClearConfirmation(estateName, WhitelistType.FRIENDS, whitelist.size(), ownerName);
+                sendLines(source, lines);
+            } else if (whitelist.isEmpty()) {
+                sendSuccess(source, "estate.whitelist.clear.no_change", "estate.whitelist.clear.no_change.body", estateName);
+            } else {
+                whitelist.clear();
+                CommandHelper.save(source.getLevel());
+                sendSuccess(source, "estate.friends.clear.success", "estate.friends.clear.success.body", estateName);
+            }
+        }, () -> failure(source, "estate.whitelist.add.failure"));
         return 1;
     }
 }
