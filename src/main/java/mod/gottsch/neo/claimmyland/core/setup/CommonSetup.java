@@ -25,10 +25,12 @@ import mod.gottsch.neo.claimmyland.core.integration.journeymap.JourneyMapIntegra
 import mod.gottsch.neo.claimmyland.core.item.ModItems;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 
 /**
@@ -47,7 +49,10 @@ public class CommonSetup {
         Config.instance.addRollingFileAppender(ClaimMyLand.MOD_ID);
         ClaimMyLand.LOGGER.debug("file appender created");
 
-        if (ModList.get().isLoaded("journeymap")) {
+        // JourneyMap may be installed on a dedicated server for its own server-side
+        // features. JourneyMapOverlayHandler is @OnlyIn(Dist.CLIENT), so this must also
+        // gate on physical side or the server crashes loading that class (see CHANGELOG 2.9.1).
+        if (FMLEnvironment.dist == Dist.CLIENT && ModList.get().isLoaded("journeymap")) {
             JourneyMapIntegration.init();
         }
     }

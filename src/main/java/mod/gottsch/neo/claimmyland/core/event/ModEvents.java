@@ -650,18 +650,16 @@ public class ModEvents {
 
     @SubscribeEvent
     public static void onExplosion(final ExplosionEvent.Detonate event) {
+        if (!Config.SERVER.protection.enableExplosionDetonateEvent.get()) return;
+        if (!isInProtectedDimension(event.getLevel())) return;
+
         String dimension = getDimensionString(event.getLevel());
         List<BlockPos> affectedBlocks = event.getAffectedBlocks();
-        affectedBlocks.removeIf(pos ->
-                !ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)
-        );
-        // remove any affected blocks that are protected
-        affectedBlocks.removeIf(block -> {
-            // prevent protected blocks from breaking
-            return Config.SERVER.protection.enableExplosionDetonateEvent.get()
-//                    && event.getLevel().dimensionTypeId() != BuiltinDimensionTypes.OVERWORLD
-                    && !isInProtectedDimension(event.getLevel())
-                    && ParcelRegistry.intersectsParcel(Coords.of(block.getX(), block.getY(), block.getZ()), dimension);
+
+        // remove (protect) any affected blocks that fall inside a claimed parcel
+        affectedBlocks.removeIf(pos -> {
+            if (!ParcelChunkIndex.isChunkClaimed(pos.getX(), pos.getZ(), dimension)) return false;
+            return ParcelRegistry.intersectsParcel(Coords.of(pos.getX(), pos.getY(), pos.getZ()), dimension);
         });
     }
 
