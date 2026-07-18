@@ -108,6 +108,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   The reader accepts both `"min"` / `"max"` (correct) and the legacy
   `"minCoords"` / `"maxCoords"` keys for any backups written before this fix.
 
+#### Dispenser firing tool (e.g. shears) inside a claimed parcel crashed the server
+- **Root cause:** `ModEvents.onToolInteract` cast `event.getPlayer()` directly to
+  `ServerPlayer` and passed it to `ParcelRegistry.hasAccess(...)`, which dereferences
+  `player.getUUID()` inside `resolveParcelCached`. Vanilla's
+  `ShearsDispenseItemBehavior` posts `BlockToolModificationEvent` with a `null`
+  player (no entity is wielding the dispensed item), producing an NPE that
+  killed the server tick.
+- **Fix:** added an explicit null-player branch in `onToolInteract`. With no
+  player there is no UUID to check whitelists against, so the position is
+  default-denied: if `ParcelRegistry.intersectsParcel(coords, dim)` is true,
+  cancel the event; otherwise allow it.
+
 #### Citizen/Zone `nationEstate` reference diverged from `EstateRegistry` after restore
 - **Root cause:** during JSON restore, every parcel's `nationEstate` field
   was deserialized into its own `NationEstateContext` instance, so live
