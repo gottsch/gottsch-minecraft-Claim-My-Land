@@ -414,13 +414,23 @@ public class ModEvents {
         }
 
         ItemStack heldItemStack = event.getHeldItemStack();
-//        ClaimMyLand.LOGGER.debug("player -> {} is hold item in main hand -> {}", event.getPlayer().getDisplayName().getString(), ((Player)event.getPlayer()).getItemInHand(InteractionHand.MAIN_HAND));
 
-//        if (!ParcelRegistry.hasAccess(Coords.of(event.getPos()), event.getPlayer().getUUID(), heldItemStack)) {
+        ICoords coords = Coords.of(event.getPos());
+
+        // No-player source (e.g. dispenser firing shears at a beehive/pumpkin).
+        // Whitelist resolution requires a player UUID, so default-deny: cancel
+        // if the position is inside any claimed parcel.
+        if (event.getPlayer() == null) {
+            if (ParcelRegistry.intersectsParcel(coords, dimension)) {
+                event.setCanceled(true);
+            }
+            return;
+        }
+
         if (!ParcelRegistry.hasAccess(
                 (ServerPlayer) event.getPlayer(),
-                Coords.of(event.getPos()),
-                getDimensionString(event.getLevel()),
+                coords,
+                dimension,
                 heldItemStack)) {
             event.setCanceled(true);
 //            if (ClaimMyLand.LOGGER.isDebugEnabled()) {
