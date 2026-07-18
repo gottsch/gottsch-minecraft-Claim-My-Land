@@ -17,6 +17,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.3] - 2026-07-18
+
+### 🐛 Fixed
+
+- **Dedicated server crash on launch when JourneyMap is installed server-side** —
+  `CommonSetup` only checked whether the JourneyMap mod was present before
+  initializing Claim My Land's JourneyMap integration, not whether it was
+  running on the physical client. Since JourneyMap supports being installed on
+  a dedicated server for its own server-side features, this let the
+  integration attempt to load a client-only class (`JourneyMapOverlayHandler`)
+  during `common_setup` on the server, crashing it immediately. The
+  integration now also checks that it is running on the physical client
+  before initializing, so JourneyMap can be installed server-side without
+  crashing the server.
+
+---
+
 ## [2.5.2] - 2026-04-18
 
 ### ➕ Added
