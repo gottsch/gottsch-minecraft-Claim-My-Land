@@ -30,7 +30,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   during `common_setup` on the server, crashing it immediately. The
   integration now also checks that it is running on the physical client
   before initializing, so JourneyMap can be installed server-side without
-  crashing the server.
+  crashing the server. Same underlying bug and fix as the 1.21.1 NeoForge
+  build's v2.9.1.
+
+- **Explosion protection was inverted** — `onExplosion` removed wilderness
+  (unclaimed) blocks from the explosion's affected-block list instead of
+  claimed ones, and separately protected claimed blocks only in dimensions
+  *excluded* from protection instead of the ones actually protected. Net
+  effect: explosions were blocked outside claimed parcels and allowed to
+  destroy blocks inside them — the opposite of intended behavior. The block
+  filter now matches the claimed-chunk/protected-dimension pattern used by
+  every other protection handler in `ModEvents`, so explosions are blocked
+  inside claimed parcels (in protected dimensions) and proceed normally
+  everywhere else. Same underlying bug and fix as the 1.21.1 NeoForge
+  build's v2.9.1.
 
 ---
 
