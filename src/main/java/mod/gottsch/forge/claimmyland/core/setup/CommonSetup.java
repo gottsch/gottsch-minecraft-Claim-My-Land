@@ -26,11 +26,13 @@ import mod.gottsch.forge.claimmyland.core.item.ModItems;
 import mod.gottsch.forge.claimmyland.core.network.CMLNetwork;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.loading.FMLEnvironment;
 
 /**
  *
@@ -51,7 +53,10 @@ public class CommonSetup {
 
         CMLNetwork.register();
 
-        if (ModList.get().isLoaded("journeymap")) {
+        // JourneyMap may be installed on a dedicated server for its own server-side
+        // features. JourneyMapOverlayHandler is @OnlyIn(Dist.CLIENT), so this must also
+        // gate on physical side or the server crashes loading that class (see CHANGELOG 2.5.3).
+        if (FMLEnvironment.dist == Dist.CLIENT && ModList.get().isLoaded("journeymap")) {
             JourneyMapIntegration.init();
         }
     }

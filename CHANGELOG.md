@@ -17,6 +17,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.5.3] - 2026-07-18
+
+### 🐛 Fixed
+
+- **Dedicated server crash on launch when JourneyMap is installed server-side** —
+  `CommonSetup` only checked whether the JourneyMap mod was present before
+  initializing Claim My Land's JourneyMap integration, not whether it was
+  running on the physical client. Since JourneyMap supports being installed on
+  a dedicated server for its own server-side features, this let the
+  integration attempt to load a client-only class (`JourneyMapOverlayHandler`)
+  during `common_setup` on the server, crashing it immediately. The
+  integration now also checks that it is running on the physical client
+  before initializing, so JourneyMap can be installed server-side without
+  crashing the server. Same underlying bug and fix as the 1.21.1 NeoForge
+  build's v2.9.1.
+
+- **Explosion protection was inverted** — `onExplosion` removed wilderness
+  (unclaimed) blocks from the explosion's affected-block list instead of
+  claimed ones, and separately protected claimed blocks only in dimensions
+  *excluded* from protection instead of the ones actually protected. Net
+  effect: explosions were blocked outside claimed parcels and allowed to
+  destroy blocks inside them — the opposite of intended behavior. The block
+  filter now matches the claimed-chunk/protected-dimension pattern used by
+  every other protection handler in `ModEvents`, so explosions are blocked
+  inside claimed parcels (in protected dimensions) and proceed normally
+  everywhere else. Same underlying bug and fix as the 1.21.1 NeoForge
+  build's v2.9.1.
+
+---
+
 ## [2.5.2] - 2026-04-18
 
 ### ➕ Added
